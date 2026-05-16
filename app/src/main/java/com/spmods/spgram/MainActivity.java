@@ -1,5 +1,6 @@
 package com.spmods.spgram;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
@@ -10,9 +11,14 @@ public class MainActivity extends AppCompatActivity {
 
     private Client client;
     private static final String TAG = "SPGram";
+    private static String libraryError = null;
 
     static {
-        System.loadLibrary("tdjni");
+        try {
+            System.loadLibrary("tdjni");
+        } catch (Throwable t) {
+            libraryError = t.toString() + "\n\n" + Log.getStackTraceString(t);
+        }
     }
 
     @Override
@@ -20,6 +26,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         CrashHandler.init(this);
         setContentView(R.layout.activity_main);
+
+        if (libraryError != null) {
+            new AlertDialog.Builder(this)
+                .setTitle("Library Load Error")
+                .setMessage(libraryError)
+                .setPositiveButton("OK", null)
+                .show();
+            return;
+        }
+
         initTelegram();
     }
 
