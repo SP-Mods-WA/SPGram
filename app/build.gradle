@@ -45,7 +45,6 @@ android {
     packagingOptions {
         jniLibs {
             useLegacyPackaging = true
-            pickFirsts += ['**/libtdjni.so']
         }
     }
 }
@@ -55,6 +54,6 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 
-    // TDLib
-    implementation 'ca.denisab85:tdlib:v1.8.8-20221107'
+    // TDLib via JitPack (Java classes + .so files bundled, Android 11 compatible)
+    implementation 'com.github.tdlibx:td:v1.8.19.0'
 }
