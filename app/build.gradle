@@ -45,6 +45,7 @@ android {
     packagingOptions {
         jniLibs {
             useLegacyPackaging = true
+            pickFirsts += ['**/libtdjni.so']
         }
     }
 }
