@@ -38,18 +38,19 @@ jobs:
 
       - name: Download TDLib native libs
         run: |
-          curl -L "https://core.telegram.org/tdlib/tdlib.zip" -o tdlib.zip
-          unzip -q tdlib.zip -d tdlib_extracted
           mkdir -p app/src/main/jniLibs/arm64-v8a
           mkdir -p app/src/main/jniLibs/armeabi-v7a
           mkdir -p app/src/main/jniLibs/x86_64
           mkdir -p app/src/main/jniLibs/x86
-          find tdlib_extracted -name "libtdjni.so" | while read f; do
-            arch_dir=$(basename $(dirname "$f"))
-            cp "$f" "app/src/main/jniLibs/${arch_dir}/libtdjni.so" 2>/dev/null || true
-          done
+
+          BASE="https://github.com/TGX-Android/tdlib/raw/main/libs"
+          curl -fsSL "$BASE/arm64-v8a/libtdjni.so" -o app/src/main/jniLibs/arm64-v8a/libtdjni.so
+          curl -fsSL "$BASE/armeabi-v7a/libtdjni.so" -o app/src/main/jniLibs/armeabi-v7a/libtdjni.so
+          curl -fsSL "$BASE/x86_64/libtdjni.so" -o app/src/main/jniLibs/x86_64/libtdjni.so
+          curl -fsSL "$BASE/x86/libtdjni.so" -o app/src/main/jniLibs/x86/libtdjni.so
+
           echo "=== jniLibs contents ==="
-          find app/src/main/jniLibs -type f
+          find app/src/main/jniLibs -type f -exec ls -lh {} \;
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
