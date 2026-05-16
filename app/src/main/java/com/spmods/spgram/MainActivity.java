@@ -11,6 +11,10 @@ public class MainActivity extends AppCompatActivity {
     private Client client;
     private static final String TAG = "SPGram";
 
+    static {
+        System.loadLibrary("tdjni");
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -40,13 +44,10 @@ public class MainActivity extends AppCompatActivity {
     private void handleAuth(TdApi.AuthorizationState state) {
         if (state instanceof TdApi.AuthorizationStateWaitPhoneNumber) {
             Log.d(TAG, "Waiting for phone number");
-            // Phone number UI show කරන්න
         } else if (state instanceof TdApi.AuthorizationStateWaitCode) {
             Log.d(TAG, "Waiting for OTP");
-            // OTP UI show කරන්න
         } else if (state instanceof TdApi.AuthorizationStateReady) {
             Log.d(TAG, "Logged in!");
-            // Main chat screen show කරන්න
         }
     }
 }
