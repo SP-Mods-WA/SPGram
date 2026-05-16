@@ -18,9 +18,9 @@ android {
     signingConfigs {
         release {
             storeFile file('release.keystore')
-            storePassword System.getenv('RELEASE_STORE_PASSWORD')
-            keyAlias System.getenv('RELEASE_KEY_ALIAS')
-            keyPassword System.getenv('RELEASE_KEY_PASSWORD')
+            storePassword System.getenv('STORE_PASSWORD')
+            keyAlias System.getenv('KEY_ALIAS')
+            keyPassword System.getenv('KEY_PASSWORD')
         }
     }
 
@@ -43,5 +43,5 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 
     // TDLib
-    implementation 'org.drinkless:tdlib:+'
+    implementation 'com.github.tdlib:td:v1.8.37'
 }
