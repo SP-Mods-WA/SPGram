@@ -43,5 +43,5 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 
     // TDLib
-    implementation 'com.github.tdlib:td:v1.8.37'
+    implementation 'ca.denisab85:tdlib:v1.8.8-20221107'
 }
