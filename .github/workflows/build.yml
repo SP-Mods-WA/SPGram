@@ -42,6 +42,9 @@ jobs:
           sed -i "s/API_HASH_PLACEHOLDER/${{ secrets.TELEGRAM_API_HASH }}/g" \
             app/src/main/java/com/spmods/spgram/BuildVars.java
 
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
