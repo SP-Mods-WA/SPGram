@@ -18,8 +18,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        CrashHandler.init(this);
         setContentView(R.layout.activity_main);
-
         initTelegram();
     }
 
