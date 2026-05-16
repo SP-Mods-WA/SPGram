@@ -54,6 +54,17 @@ jobs:
           echo "=== jniLibs contents ==="
           find app/src/main/jniLibs -type f -exec ls -lh {} \;
 
+      - name: Verify lib sizes
+        run: |
+          find app/src/main/jniLibs -name "*.so" | while read f; do
+            size=$(stat -c%s "$f")
+            echo "$f => $size bytes"
+            if [ "$size" -lt 100000 ]; then
+              echo "ERROR: $f is too small - likely a submodule pointer!"
+              exit 1
+            fi
+          done
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
