@@ -25,15 +25,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Generate Keystore
+      - name: Decode Keystore
         run: |
-          keytool -genkey -v \
-            -keystore app/release.keystore \
-            -alias ${{ secrets.KEY_ALIAS }} \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=SPMods, OU=SPMods, O=SPMods, L=Colombo, S=WP, C=LK" \
-            -storepass ${{ secrets.STORE_PASSWORD }} \
-            -keypass ${{ secrets.KEY_PASSWORD }}
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
 
       - name: Inject API credentials
         run: |
@@ -54,7 +48,8 @@ jobs:
             arch_dir=$(basename $(dirname "$f"))
             cp "$f" "app/src/main/jniLibs/${arch_dir}/libtdjni.so" 2>/dev/null || true
           done
-          ls app/src/main/jniLibs/
+          echo "=== jniLibs contents ==="
+          find app/src/main/jniLibs -type f
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
