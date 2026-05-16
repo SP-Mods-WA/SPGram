@@ -44,9 +44,11 @@ jobs:
 
           for ARCH in $ARCHS; do
             mkdir -p app/src/main/jniLibs/$ARCH
-            curl -fsSL "$TDLIB_BASE/$ARCH/libtdjni.so" -o app/src/main/jniLibs/$ARCH/libtdjni.so
-            curl -fsSL "$OPENSSL_BASE/$ARCH/lib/libsslx.so" -o app/src/main/jniLibs/$ARCH/libsslx.so
+            curl -fsSL "$TDLIB_BASE/$ARCH/libtdjni.so"        -o app/src/main/jniLibs/$ARCH/libtdjni.so
+            curl -fsSL "$OPENSSL_BASE/$ARCH/lib/libsslx.so"   -o app/src/main/jniLibs/$ARCH/libsslx.so
             curl -fsSL "$OPENSSL_BASE/$ARCH/lib/libcryptox.so" -o app/src/main/jniLibs/$ARCH/libcryptox.so
+            curl -fsSL "$OPENSSL_BASE/$ARCH/lib/libssl.so"    -o app/src/main/jniLibs/$ARCH/libssl.so
+            curl -fsSL "$OPENSSL_BASE/$ARCH/lib/libcrypto.so" -o app/src/main/jniLibs/$ARCH/libcrypto.so
           done
 
           echo "=== jniLibs contents ==="
