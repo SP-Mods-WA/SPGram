@@ -36,6 +36,29 @@ jobs:
           sed -i "s/API_HASH_PLACEHOLDER/${{ secrets.TELEGRAM_API_HASH }}/g" \
             app/src/main/java/com/spmods/spgram/BuildVars.java
 
+      - name: Download TDLib native libs
+        run: |
+          ARCHS="arm64-v8a armeabi-v7a x86_64 x86"
+          TDLIB_BASE="https://github.com/TGX-Android/tdlib/raw/main/src/main/libs"
+          OPENSSL_BASE="https://github.com/TGX-Android/tdlib/raw/main/openssl"
+
+          for ARCH in $ARCHS; do
+            mkdir -p app/src/main/jniLibs/$ARCH
+            curl -fsSL "$TDLIB_BASE/$ARCH/libtdjni.so"         -o app/src/main/jniLibs/$ARCH/libtdjni.so
+            curl -fsSL "$OPENSSL_BASE/$ARCH/lib/libsslx.so"    -o app/src/main/jniLibs/$ARCH/libsslx.so
+            curl -fsSL "$OPENSSL_BASE/$ARCH/lib/libcryptox.so" -o app/src/main/jniLibs/$ARCH/libcryptox.so
+          done
+
+          echo "=== Verifying lib sizes ==="
+          find app/src/main/jniLibs -name "*.so" | while read f; do
+            size=$(stat -c%s "$f")
+            echo "$f => $size bytes"
+            if [ "$size" -lt 100000 ]; then
+              echo "ERROR: $f too small!"
+              exit 1
+            fi
+          done
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
