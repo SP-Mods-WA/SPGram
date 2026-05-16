@@ -1,0 +1,53 @@
+name: Build SPGram APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Generate Keystore
+        run: |
+          keytool -genkey -v \
+            -keystore app/release.keystore \
+            -alias ${{ secrets.KEY_ALIAS }} \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=SPMods, OU=SPMods, O=SPMods, L=Colombo, S=WP, C=LK" \
+            -storepass ${{ secrets.STORE_PASSWORD }} \
+            -keypass ${{ secrets.KEY_PASSWORD }}
+
+      - name: Inject API credentials
+        run: |
+          sed -i "s/API_ID_PLACEHOLDER/${{ secrets.TELEGRAM_API_ID }}/g" \
+            app/src/main/java/com/spmods/spgram/BuildVars.java
+          sed -i "s/API_HASH_PLACEHOLDER/${{ secrets.TELEGRAM_API_HASH }}/g" \
+            app/src/main/java/com/spmods/spgram/BuildVars.java
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SPGram-release
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 30
