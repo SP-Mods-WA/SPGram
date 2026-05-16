@@ -43,7 +43,7 @@ jobs:
           mkdir -p app/src/main/jniLibs/x86_64
           mkdir -p app/src/main/jniLibs/x86
 
-          BASE="https://github.com/TGX-Android/tdlib/raw/main/libs"
+          BASE="https://github.com/TGX-Android/tdlib/raw/main/src/main/libs"
           curl -fsSL "$BASE/arm64-v8a/libtdjni.so" -o app/src/main/jniLibs/arm64-v8a/libtdjni.so
           curl -fsSL "$BASE/armeabi-v7a/libtdjni.so" -o app/src/main/jniLibs/armeabi-v7a/libtdjni.so
           curl -fsSL "$BASE/x86_64/libtdjni.so" -o app/src/main/jniLibs/x86_64/libtdjni.so
