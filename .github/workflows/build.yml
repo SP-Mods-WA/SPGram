@@ -42,6 +42,20 @@ jobs:
           sed -i "s/API_HASH_PLACEHOLDER/${{ secrets.TELEGRAM_API_HASH }}/g" \
             app/src/main/java/com/spmods/spgram/BuildVars.java
 
+      - name: Download TDLib native libs
+        run: |
+          curl -L "https://core.telegram.org/tdlib/tdlib.zip" -o tdlib.zip
+          unzip -q tdlib.zip -d tdlib_extracted
+          mkdir -p app/src/main/jniLibs/arm64-v8a
+          mkdir -p app/src/main/jniLibs/armeabi-v7a
+          mkdir -p app/src/main/jniLibs/x86_64
+          mkdir -p app/src/main/jniLibs/x86
+          find tdlib_extracted -name "libtdjni.so" | while read f; do
+            arch_dir=$(basename $(dirname "$f"))
+            cp "$f" "app/src/main/jniLibs/${arch_dir}/libtdjni.so" 2>/dev/null || true
+          done
+          ls app/src/main/jniLibs/
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
