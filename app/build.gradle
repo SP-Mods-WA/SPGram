@@ -55,5 +55,5 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 
     // TDLib via JitPack (Java classes + .so files bundled, Android 11 compatible)
-    implementation 'com.github.tdlibx:td:v1.8.19.0'
+    implementation 'com.github.tdlibx:td:1.8.56'
 }
