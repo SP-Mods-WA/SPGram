@@ -165,8 +165,8 @@ class TelegramManager(private val context: Context) : Client.ResultHandler {
             }
 
             // Typing indicator
-            TdApi.UpdateUserChatAction.CONSTRUCTOR -> {
-                val upd = result as TdApi.UpdateUserChatAction
+            TdApi.UpdateChatAction.CONSTRUCTOR -> {
+                val upd = result as TdApi.UpdateChatAction
                 val text = when (upd.action.constructor) {
                     TdApi.ChatActionTyping.CONSTRUCTOR          -> "typing..."
                     TdApi.ChatActionRecordingVoiceNote.CONSTRUCTOR -> "recording voice..."
@@ -242,8 +242,8 @@ class TelegramManager(private val context: Context) : Client.ResultHandler {
 
     fun sendMessage(chatId: Long, text: String, replyToId: Long = 0L) {
         val content     = TdApi.InputMessageText(TdApi.FormattedText(text, emptyArray()), null, false)
-        val replyTo     = if (replyToId != 0L) TdApi.InputMessageReplyToMessage(chatId, replyToId, null) else null
-        val sendOptions = TdApi.MessageSendOptions(false, false, false, false, null, 0, false)
+        val replyTo     = if (replyToId != 0L) TdApi.InputMessageReplyToMessage(replyToId, null, 0, null) else null
+        val sendOptions = TdApi.MessageSendOptions()
         client?.send(TdApi.SendMessage(chatId, 0, replyTo, sendOptions, null, content)) {}
     }
 
