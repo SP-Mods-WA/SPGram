@@ -7,10 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -30,11 +27,15 @@ import com.spmods.spgram.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatListScreen(manager: TelegramManager) {
-    val chatIds     by manager.chatIds.collectAsState()
-    val chats       by manager.chats.collectAsState()
-    val myName      by manager.myName.collectAsState()
-    val myPhotoPath by manager.myPhotoPath.collectAsState()
+fun ChatListScreen(
+    manager: TelegramManager,
+    isDark: Boolean,
+    onToggleTheme: () -> Unit
+) {
+    val chatIds      by manager.chatIds.collectAsState()
+    val chats        by manager.chats.collectAsState()
+    val myName       by manager.myName.collectAsState()
+    val myPhotoPath  by manager.myPhotoPath.collectAsState()
 
     Scaffold(
         containerColor = Background,
@@ -44,9 +45,19 @@ fun ChatListScreen(manager: TelegramManager) {
                     Text("SPGram", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = OnBackground)
                 },
                 actions = {
+                    // Search
                     IconButton(onClick = {}) {
                         Icon(Icons.Default.Search, contentDescription = "Search", tint = OnSurfaceVar)
                     }
+                    // Dark / Light toggle
+                    IconButton(onClick = onToggleTheme) {
+                        Icon(
+                            imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = "Toggle Theme",
+                            tint = OnSurfaceVar
+                        )
+                    }
+                    // My avatar
                     Box(
                         modifier = Modifier
                             .padding(end = 8.dp)
@@ -131,13 +142,13 @@ private fun ArchivedChatsRow() {
             modifier = Modifier.size(46.dp).clip(CircleShape).background(SurfaceVar),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.PushPin, contentDescription = null, tint = OnSurfaceVar, modifier = Modifier.size(22.dp))
+            Icon(Icons.Default.Archive, contentDescription = null, tint = OnSurfaceVar, modifier = Modifier.size(22.dp))
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text("Archived Chats", fontWeight = FontWeight.SemiBold, color = OnBackground, fontSize = 15.sp)
             Text("Hidden from the main list", color = OnSurfaceVar, fontSize = 13.sp)
         }
-        Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = OnSurfaceVar)
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = OnSurfaceVar)
     }
 }
