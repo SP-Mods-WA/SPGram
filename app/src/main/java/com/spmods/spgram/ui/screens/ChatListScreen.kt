@@ -18,10 +18,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.spmods.spgram.engine.TelegramManager
 import com.spmods.spgram.ui.components.ChatListItem
 import com.spmods.spgram.ui.theme.*
@@ -29,13 +30,21 @@ import com.spmods.spgram.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(manager: TelegramManager) {
-    val chatIds by manager.chatIds.collectAsState()
-    val chats   by manager.chats.collectAsState()
+    val chatIds        by manager.chatIds.collectAsState()
+    val chats          by manager.chats.collectAsState()
+    val downloadedFiles by manager.downloadedFiles.collectAsState()
 
-    // me StateFlow — nullable safe
-    val myName: String = run {
-        val user = manager.me.collectAsState().value
-        user?.firstName?.firstOrNull()?.uppercaseChar()?.toString() ?: "S"
+    // me — safe, no by-delegate on nullable
+    val meUser         = manager.me.collectAsState().value
+    val meFirstLetter  = meUser?.firstName?.firstOrNull()?.uppercaseChar()?.toString() ?: "S"
+
+    // My profile photo path
+    val myPhotoPath: String? = meUser?.profilePhoto?.small?.let { file ->
+        when {
+            file.local.isDownloadingCompleted -> file.local.path
+            downloadedFiles[file.id] != null  -> downloadedFiles[file.id]
+            else -> { manager.downloadFile(file.id); null }
+        }
     }
 
     Scaffold(
@@ -54,15 +63,36 @@ fun ChatListScreen(manager: TelegramManager) {
                     IconButton(onClick = {}) {
                         Icon(Icons.Default.Search, contentDescription = "Search", tint = OnSurfaceVar)
                     }
+                    // Profile avatar — top right
                     Box(
                         modifier = Modifier
                             .padding(end = 8.dp)
                             .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Primary),
+                            .clip(CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(myName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        if (myPhotoPath != null) {
+                            AsyncImage(
+                                model = myPhotoPath,
+                                contentDescription = "My Profile",
+                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Primary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    meFirstLetter,
+                                    color = androidx.compose.ui.graphics.Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
