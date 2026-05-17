@@ -1,6 +1,7 @@
 package com.spmods.spgram.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,9 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,24 +31,32 @@ fun ChatListScreen(
     isDark: Boolean,
     onToggleTheme: () -> Unit
 ) {
-    val chatIds      by manager.chatIds.collectAsState()
-    val chats        by manager.chats.collectAsState()
-    val myName       by manager.myName.collectAsState()
-    val myPhotoPath  by manager.myPhotoPath.collectAsState()
+    val chatIds     by manager.chatIds.collectAsState()
+    val chats       by manager.chats.collectAsState()
+    val myName      by manager.myName.collectAsState()
+    val myPhotoPath by manager.myPhotoPath.collectAsState()
+
+    var openChatId by remember { mutableStateOf<Long?>(null) }
+
+    // Navigate to chat screen
+    if (openChatId != null) {
+        ChatScreen(
+            chatId  = openChatId!!,
+            manager = manager,
+            onBack  = { openChatId = null }
+        )
+        return
+    }
 
     Scaffold(
         containerColor = Background,
         topBar = {
             TopAppBar(
-                title = {
-                    Text("SPGram", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = OnBackground)
-                },
+                title = { Text("SPGram", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = OnBackground) },
                 actions = {
-                    // Search
                     IconButton(onClick = {}) {
                         Icon(Icons.Default.Search, contentDescription = "Search", tint = OnSurfaceVar)
                     }
-                    // Dark / Light toggle
                     IconButton(onClick = onToggleTheme) {
                         Icon(
                             imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
@@ -57,18 +64,14 @@ fun ChatListScreen(
                             tint = OnSurfaceVar
                         )
                     }
-                    // My avatar
                     Box(
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(36.dp)
-                            .clip(CircleShape),
+                        modifier = Modifier.padding(end = 8.dp).size(36.dp).clip(CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         if (myPhotoPath != null) {
                             AsyncImage(
                                 model = myPhotoPath,
-                                contentDescription = "My Profile",
+                                contentDescription = null,
                                 modifier = Modifier.fillMaxSize().clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
@@ -96,9 +99,7 @@ fun ChatListScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding)
-        ) {
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
             item { ArchivedChatsRow() }
 
             if (chatIds.isEmpty()) {
@@ -106,15 +107,17 @@ fun ChatListScreen(
                     Box(
                         modifier = Modifier.fillParentMaxSize().padding(top = 80.dp),
                         contentAlignment = Alignment.TopCenter
-                    ) {
-                        CircularProgressIndicator(color = Primary)
-                    }
+                    ) { CircularProgressIndicator(color = Primary) }
                 }
             } else {
                 items(chatIds, key = { it }) { id ->
                     val chat = chats[id]
                     if (chat != null) {
-                        ChatListItem(chat = chat, manager = manager)
+                        ChatListItem(
+                            chat    = chat,
+                            manager = manager,
+                            onClick = { openChatId = id }
+                        )
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 82.dp),
                             color = Divider,
