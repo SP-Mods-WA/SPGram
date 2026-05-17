@@ -2,8 +2,8 @@ package com.spmods.spgram
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -19,9 +19,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.lifecycleScope
 import com.spmods.spgram.engine.TelegramManager
 import com.spmods.spgram.ui.screens.ChatListScreen
 import com.spmods.spgram.ui.theme.*
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.drinkless.tdlib.TdApi
 
 class MainActivity : ComponentActivity() {
@@ -34,16 +37,20 @@ class MainActivity : ComponentActivity() {
         telegramManager.initClient()
 
         setContent {
+            // Load saved theme — default dark
             var isDark by remember { mutableStateOf(true) }
 
-            // Status bar color matches app background
-            val bgColor = if (isDark) DarkBackground else LightBackground
-            val statusBarStyle = if (isDark)
-                SystemBarStyle.dark(bgColor.toArgb())
-            else
-                SystemBarStyle.light(bgColor.toArgb(), bgColor.toArgb())
+            LaunchedEffect(Unit) {
+                isDark = ThemePreference.isDarkFlow(applicationContext).first()
+            }
 
-            enableEdgeToEdge(statusBarStyle = statusBarStyle)
+            val bgColor = if (isDark) DarkBackground else LightBackground
+            enableEdgeToEdge(
+                statusBarStyle = if (isDark)
+                    SystemBarStyle.dark(bgColor.toArgb())
+                else
+                    SystemBarStyle.light(bgColor.toArgb(), bgColor.toArgb())
+            )
 
             SPGramTheme(isDark = isDark) {
                 Surface(
@@ -51,6 +58,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val authState by telegramManager.authState.collectAsState()
+
                     Crossfade(
                         targetState = authState,
                         animationSpec = tween(300),
@@ -61,7 +69,13 @@ class MainActivity : ComponentActivity() {
                                 ChatListScreen(
                                     manager = telegramManager,
                                     isDark  = isDark,
-                                    onToggleTheme = { isDark = !isDark }
+                                    onToggleTheme = {
+                                        isDark = !isDark
+                                        // Save to DataStore
+                                        lifecycleScope.launch {
+                                            ThemePreference.save(applicationContext, isDark)
+                                        }
+                                    }
                                 )
                             else ->
                                 AuthScreen(state, telegramManager)
@@ -75,11 +89,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AuthScreen(authState: TdApi.AuthorizationState?, manager: TelegramManager) {
-    val bg = if (LocalDarkTheme.current) DarkBackground else LightBackground
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(28.dp),
+        modifier = Modifier.fillMaxSize().padding(28.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
