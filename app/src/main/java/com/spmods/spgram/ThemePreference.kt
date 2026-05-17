@@ -1,23 +1,20 @@
 package com.spmods.spgram
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 object ThemePreference {
-    private val IS_DARK = booleanPreferencesKey("is_dark")
+    private const val PREFS_NAME = "spgram_prefs"
+    private const val KEY_IS_DARK = "is_dark"
 
-    fun isDarkFlow(context: Context): Flow<Boolean> =
-        context.dataStore.data.map { prefs -> prefs[IS_DARK] ?: true }
+    fun isDark(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_IS_DARK, true)
+    }
 
-    suspend fun save(context: Context, isDark: Boolean) {
-        context.dataStore.edit { prefs -> prefs[IS_DARK] = isDark }
+    fun save(context: Context, isDark: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_IS_DARK, isDark)
+            .apply()
     }
 }
