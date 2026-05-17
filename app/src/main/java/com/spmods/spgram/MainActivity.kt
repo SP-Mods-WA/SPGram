@@ -4,40 +4,47 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import org.drinkless.tdlib.TdApi
+import androidx.compose.ui.unit.sp
 import com.spmods.spgram.engine.TelegramManager
 import com.spmods.spgram.ui.screens.ChatListScreen
+import com.spmods.spgram.ui.theme.SPGramTheme
+import com.spmods.spgram.ui.theme.*
+import org.drinkless.tdlib.TdApi
 
 class MainActivity : ComponentActivity() {
-
     private lateinit var telegramManager: TelegramManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         telegramManager = TelegramManager(applicationContext)
         telegramManager.initClient()
 
         setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme()
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
+            SPGramTheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = Background) {
                     val authState by telegramManager.authState.collectAsState()
-
-                    Crossfade(targetState = authState, label = "Auth Transition") { state ->
-                        AuthRouter(state, telegramManager)
+                    Crossfade(
+                        targetState = authState,
+                        animationSpec = tween(300),
+                        label = "auth"
+                    ) { state ->
+                        when (state?.constructor) {
+                            TdApi.AuthorizationStateReady.CONSTRUCTOR ->
+                                ChatListScreen(telegramManager)
+                            else ->
+                                AuthScreen(state, telegramManager)
+                        }
                     }
                 }
             }
@@ -46,111 +53,88 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AuthRouter(authState: TdApi.AuthorizationState?, manager: TelegramManager) {
+fun AuthScreen(authState: TdApi.AuthorizationState?, manager: TelegramManager) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(28.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Text(
+            "SPGram",
+            fontWeight = FontWeight.Bold,
+            fontSize = 32.sp,
+            color = OnBackground
+        )
+        Spacer(Modifier.height(8.dp))
+
         when (authState?.constructor) {
             TdApi.AuthorizationStateWaitPhoneNumber.CONSTRUCTOR -> {
-                var phoneNumber by remember { mutableStateOf("") }
-
-                Text("Sign in to Telegram", style = MaterialTheme.typography.headlineMedium)
-                Spacer(modifier = Modifier.height(24.dp))
-
+                var phone by remember { mutableStateOf("") }
+                Text("Sign in", color = OnSurfaceVar, fontSize = 15.sp)
+                Spacer(Modifier.height(28.dp))
                 OutlinedTextField(
-                    value = phoneNumber,
-                    onValueChange = { phoneNumber = it },
-                    label = { Text("Phone Number (+CountryCode)") },
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Phone (+CountryCode)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+                Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = { manager.sendPhoneNumber(phoneNumber) },
+                    onClick = { manager.sendPhoneNumber(phone) },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = phoneNumber.isNotBlank()
-                ) {
-                    Text("Send Code")
-                }
+                    enabled = phone.isNotBlank()
+                ) { Text("Send Code") }
             }
 
             TdApi.AuthorizationStateWaitCode.CONSTRUCTOR -> {
                 var code by remember { mutableStateOf("") }
-
-                Text("Enter Code", style = MaterialTheme.typography.headlineMedium)
-                Text(
-                    text = "We've sent a verification code to your Telegram app.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-
+                Text("Enter verification code", color = OnSurfaceVar, fontSize = 15.sp)
+                Spacer(Modifier.height(28.dp))
                 OutlinedTextField(
                     value = code,
                     onValueChange = { code = it },
-                    label = { Text("Verification Code") },
+                    label = { Text("Code") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+                Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = { manager.sendVerificationCode(code) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = code.isNotBlank()
-                ) {
-                    Text("Verify & Login")
-                }
+                ) { Text("Verify") }
             }
 
             TdApi.AuthorizationStateWaitPassword.CONSTRUCTOR -> {
-                var password by remember { mutableStateOf("") }
-
-                Text("Two-Step Verification", style = MaterialTheme.typography.headlineMedium)
-                Text(
-                    text = "Your account is protected with an additional password.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-
+                var pass by remember { mutableStateOf("") }
+                Text("Two-step verification", color = OnSurfaceVar, fontSize = 15.sp)
+                Spacer(Modifier.height(28.dp))
                 OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Enter 2FA Password") },
+                    value = pass,
+                    onValueChange = { pass = it },
+                    label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+                Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = { manager.sendPassword(password) },
+                    onClick = { manager.sendPassword(pass) },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = password.isNotBlank()
-                ) {
-                    Text("Submit Password")
-                }
-            }
-
-            TdApi.AuthorizationStateReady.CONSTRUCTOR -> {
-                // Pointing directly to the Chat List
-                ChatListScreen(manager)
+                    enabled = pass.isNotBlank()
+                ) { Text("Submit") }
             }
 
             else -> {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Booting TDLib Engine...", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(40.dp))
+                CircularProgressIndicator(color = Primary)
+                Spacer(Modifier.height(16.dp))
+                Text("Starting engine...", color = OnSurfaceVar, fontSize = 13.sp)
             }
         }
     }
