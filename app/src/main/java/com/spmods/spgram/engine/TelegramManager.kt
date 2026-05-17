@@ -20,26 +20,49 @@ class TelegramManager(private val context: Context) : Client.ResultHandler {
         init { System.loadLibrary("tdjni") }
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope  = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var client: Client? = null
 
-    private val _authState       = MutableStateFlow<TdApi.AuthorizationState?>(null)
+    // Auth
+    private val _authState = MutableStateFlow<TdApi.AuthorizationState?>(null)
     val authState: StateFlow<TdApi.AuthorizationState?> = _authState.asStateFlow()
 
-    private val _chatIds         = MutableStateFlow<List<Long>>(emptyList())
+    // Chat list
+    private val _chatIds = MutableStateFlow<List<Long>>(emptyList())
     val chatIds: StateFlow<List<Long>> = _chatIds.asStateFlow()
 
-    private val _chats           = MutableStateFlow<Map<Long, TdApi.Chat>>(emptyMap())
+    private val _chats = MutableStateFlow<Map<Long, TdApi.Chat>>(emptyMap())
     val chats: StateFlow<Map<Long, TdApi.Chat>> = _chats.asStateFlow()
 
+    // Files
     private val _downloadedFiles = MutableStateFlow<Map<Int, String>>(emptyMap())
     val downloadedFiles: StateFlow<Map<Int, String>> = _downloadedFiles.asStateFlow()
 
-    private val _myName          = MutableStateFlow("S")
+    // My profile
+    private val _myName      = MutableStateFlow("S")
     val myName: StateFlow<String> = _myName.asStateFlow()
 
-    private val _myPhotoPath     = MutableStateFlow<String?>(null)
+    private val _myPhotoPath = MutableStateFlow<String?>(null)
     val myPhotoPath: StateFlow<String?> = _myPhotoPath.asStateFlow()
+
+    private var myUserId: Long = 0L
+
+    // ── Chat Screen ──────────────────────────────────────────
+    // Messages per chat
+    private val _messages = MutableStateFlow<Map<Long, List<TdApi.Message>>>(emptyMap())
+    val messages: StateFlow<Map<Long, List<TdApi.Message>>> = _messages.asStateFlow()
+
+    // Typing status per chat  (chatId → text)
+    private val _typingStatus = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val typingStatus: StateFlow<Map<Long, String>> = _typingStatus.asStateFlow()
+
+    // Read outbox (last message id the OTHER person read) per chat
+    private val _outboxReadId = MutableStateFlow<Map<Long, Long>>(emptyMap())
+    val outboxReadId: StateFlow<Map<Long, Long>> = _outboxReadId.asStateFlow()
+
+    // Currently open chat
+    private val _openChatId = MutableStateFlow<Long?>(null)
+    val openChatId: StateFlow<Long?> = _openChatId.asStateFlow()
 
     private val apiId   = 35214748
     private val apiHash = "2bc7633d816864cd22fe4173cedc67c9"
@@ -55,13 +78,11 @@ class TelegramManager(private val context: Context) : Client.ResultHandler {
             TdApi.UpdateAuthorizationState.CONSTRUCTOR ->
                 onAuthorizationStateUpdated((result as TdApi.UpdateAuthorizationState).authorizationState)
 
-            // New chat discovered
             TdApi.UpdateNewChat.CONSTRUCTOR -> {
                 val chat = (result as TdApi.UpdateNewChat).chat
                 _chats.value = _chats.value + (chat.id to chat)
             }
 
-            // Last message updated — real-time preview
             TdApi.UpdateChatLastMessage.CONSTRUCTOR -> {
                 val upd      = result as TdApi.UpdateChatLastMessage
                 val existing = _chats.value[upd.chatId] ?: return
@@ -70,36 +91,98 @@ class TelegramManager(private val context: Context) : Client.ResultHandler {
                     c.title       = existing.title
                     c.photo       = existing.photo
                     c.lastMessage = upd.lastMessage
+                    c.unreadCount = existing.unreadCount
                 }
                 _chats.value = _chats.value + (upd.chatId to updated)
             }
 
-            // New message received — update preview & re-sort chat list
+            // New message → update chat preview + append to open chat
             TdApi.UpdateNewMessage.CONSTRUCTOR -> {
-                val msg      = (result as TdApi.UpdateNewMessage).message
-                val chatId   = msg.chatId
-                val existing = _chats.value[chatId] ?: return
+                val msg    = (result as TdApi.UpdateNewMessage).message
+                val chatId = msg.chatId
+                // Update chat list preview
+                val existing = _chats.value[chatId]
+                if (existing != null) {
+                    val updated = TdApi.Chat().also { c ->
+                        c.id          = existing.id
+                        c.title       = existing.title
+                        c.photo       = existing.photo
+                        c.lastMessage = msg
+                        c.unreadCount = existing.unreadCount + 1
+                    }
+                    _chats.value = _chats.value + (chatId to updated)
+                    val newOrder = listOf(chatId) + _chatIds.value.filter { it != chatId }
+                    _chatIds.value = newOrder
+                }
+                // Append to message list
+                val current = _messages.value[chatId] ?: emptyList()
+                _messages.value = _messages.value + (chatId to current + msg)
+
+                // Auto mark as read if chat is open
+                if (_openChatId.value == chatId) {
+                    client?.send(TdApi.ViewMessages(chatId, longArrayOf(msg.id), null, true)) {}
+                }
+            }
+
+            // Message content edited
+            TdApi.UpdateMessageContent.CONSTRUCTOR -> {
+                val upd    = result as TdApi.UpdateMessageContent
+                val list   = _messages.value[upd.chatId]?.toMutableList() ?: return
+                val idx    = list.indexOfFirst { it.id == upd.messageId }
+                if (idx >= 0) {
+                    list[idx].content = upd.newContent
+                    _messages.value   = _messages.value + (upd.chatId to list.toList())
+                }
+            }
+
+            // Message deleted
+            TdApi.UpdateDeleteMessages.CONSTRUCTOR -> {
+                val upd = result as TdApi.UpdateDeleteMessages
+                if (!upd.isPermanent) return
+                val ids    = upd.messageIds.toSet()
+                val list   = _messages.value[upd.chatId]?.filter { it.id !in ids } ?: return
+                _messages.value = _messages.value + (upd.chatId to list)
+            }
+
+            // Read receipts — outbox (other person read our message)
+            TdApi.UpdateChatReadOutbox.CONSTRUCTOR -> {
+                val upd = result as TdApi.UpdateChatReadOutbox
+                _outboxReadId.value = _outboxReadId.value + (upd.chatId to upd.lastReadOutboxMessageId)
+            }
+
+            // Read receipts — inbox (we read their message)
+            TdApi.UpdateChatReadInbox.CONSTRUCTOR -> {
+                val upd      = result as TdApi.UpdateChatReadInbox
+                val existing = _chats.value[upd.chatId] ?: return
                 val updated  = TdApi.Chat().also { c ->
                     c.id          = existing.id
                     c.title       = existing.title
                     c.photo       = existing.photo
-                    c.lastMessage = msg
+                    c.lastMessage = existing.lastMessage
+                    c.unreadCount = upd.unreadCount
                 }
-                _chats.value = _chats.value + (chatId to updated)
-                // Move chat to top
-                val newOrder = listOf(chatId) + _chatIds.value.filter { it != chatId }
-                _chatIds.value = newOrder
+                _chats.value = _chats.value + (upd.chatId to updated)
             }
 
-            // Chat position changed (pinned, folder, etc.)
-            TdApi.UpdateChatPosition.CONSTRUCTOR -> {
-                val upd = result as TdApi.UpdateChatPosition
-                if (upd.position.list.constructor == TdApi.ChatListMain.CONSTRUCTOR) {
-                    scope.launch { refreshChatOrder() }
+            // Typing indicator
+            TdApi.UpdateUserChatAction.CONSTRUCTOR -> {
+                val upd = result as TdApi.UpdateUserChatAction
+                val text = when (upd.action.constructor) {
+                    TdApi.ChatActionTyping.CONSTRUCTOR          -> "typing..."
+                    TdApi.ChatActionRecordingVoiceNote.CONSTRUCTOR -> "recording voice..."
+                    TdApi.ChatActionUploadingDocument.CONSTRUCTOR -> "sending file..."
+                    TdApi.ChatActionUploadingPhoto.CONSTRUCTOR  -> "sending photo..."
+                    TdApi.ChatActionUploadingVideo.CONSTRUCTOR  -> "sending video..."
+                    TdApi.ChatActionCancel.CONSTRUCTOR          -> null
+                    else -> null
                 }
+                _typingStatus.value = if (text != null)
+                    _typingStatus.value + (upd.chatId to text)
+                else
+                    _typingStatus.value - upd.chatId
             }
 
-            // File download progress
+            // File download
             TdApi.UpdateFile.CONSTRUCTOR -> {
                 val file = (result as TdApi.UpdateFile).file
                 if (file.local.isDownloadingCompleted) {
@@ -125,29 +208,65 @@ class TelegramManager(private val context: Context) : Client.ResultHandler {
                 ), this)
             }
             TdApi.AuthorizationStateReady.CONSTRUCTOR -> {
-                loadChats()
-                fetchMe()
+                loadChats(); fetchMe()
             }
             TdApi.AuthorizationStateClosed.CONSTRUCTOR -> {
-                client = null
-                initClient()
+                client = null; initClient()
             }
         }
     }
 
+    // ── Chat Screen API ──────────────────────────────────────
+
+    fun openChat(chatId: Long) {
+        _openChatId.value = chatId
+        client?.send(TdApi.OpenChat(chatId)) {}
+        loadMessages(chatId)
+    }
+
+    fun closeChat(chatId: Long) {
+        _openChatId.value = null
+        client?.send(TdApi.CloseChat(chatId)) {}
+    }
+
+    fun loadMessages(chatId: Long, fromMessageId: Long = 0L) {
+        client?.send(TdApi.GetChatHistory(chatId, fromMessageId, 0, 50, false)) { result ->
+            if (result.constructor != TdApi.Messages.CONSTRUCTOR) return@send
+            val newMsgs  = (result as TdApi.Messages).messages.toList().reversed()
+            val existing = _messages.value[chatId] ?: emptyList()
+            val merged   = if (fromMessageId == 0L) newMsgs
+                           else newMsgs + existing
+            _messages.value = _messages.value + (chatId to merged)
+        }
+    }
+
+    fun sendMessage(chatId: Long, text: String, replyToId: Long = 0L) {
+        val content     = TdApi.InputMessageText(TdApi.FormattedText(text, emptyArray()), null, false)
+        val replyTo     = if (replyToId != 0L) TdApi.InputMessageReplyToMessage(chatId, replyToId, null) else null
+        val sendOptions = TdApi.MessageSendOptions(false, false, false, false, null, 0, false)
+        client?.send(TdApi.SendMessage(chatId, 0, replyTo, sendOptions, null, content)) {}
+    }
+
+    fun deleteMessage(chatId: Long, messageId: Long, forEveryone: Boolean) {
+        client?.send(TdApi.DeleteMessages(chatId, longArrayOf(messageId), forEveryone)) {}
+    }
+
+    fun markAsRead(chatId: Long, messageId: Long) {
+        client?.send(TdApi.ViewMessages(chatId, longArrayOf(messageId), null, true)) {}
+    }
+
+    // ── Private helpers ──────────────────────────────────────
+
     private fun fetchMe() {
         client?.send(TdApi.GetMe()) { result ->
             if (result.constructor != TdApi.User.CONSTRUCTOR) return@send
-            val user   = result as TdApi.User
-            val letter = user.firstName.firstOrNull()?.uppercaseChar()?.toString() ?: "S"
-            _myName.value = letter
-            val photo  = user.profilePhoto ?: return@send
-            val small  = photo.small
-            if (small.local.isDownloadingCompleted) {
-                _myPhotoPath.value = small.local.path
-            } else {
-                downloadFile(small.id)
-            }
+            val user = result as TdApi.User
+            myUserId = user.id
+            _myName.value = user.firstName.firstOrNull()?.uppercaseChar()?.toString() ?: "S"
+            val photo = user.profilePhoto ?: return@send
+            val small = photo.small
+            if (small.local.isDownloadingCompleted) _myPhotoPath.value = small.local.path
+            else downloadFile(small.id)
         }
     }
 
@@ -162,31 +281,20 @@ class TelegramManager(private val context: Context) : Client.ResultHandler {
 
     private fun getChatIds() {
         client?.send(TdApi.GetChats(TdApi.ChatListMain(), 100)) { result ->
-            if (result.constructor == TdApi.Chats.CONSTRUCTOR) {
+            if (result.constructor == TdApi.Chats.CONSTRUCTOR)
                 _chatIds.value = (result as TdApi.Chats).chatIds.toList()
-            }
         }
     }
 
-    private fun refreshChatOrder() {
-        client?.send(TdApi.GetChats(TdApi.ChatListMain(), 200)) { result ->
-            if (result.constructor == TdApi.Chats.CONSTRUCTOR) {
-                _chatIds.value = (result as TdApi.Chats).chatIds.toList()
-            }
-        }
-    }
+    fun getMyUserId() = myUserId
 
     fun sendPhoneNumber(phone: String) =
         client?.send(TdApi.SetAuthenticationPhoneNumber(phone, null), this)
-
     fun sendVerificationCode(code: String) =
         client?.send(TdApi.CheckAuthenticationCode(code), this)
-
     fun sendPassword(password: String) =
         client?.send(TdApi.CheckAuthenticationPassword(password), this)
-
     fun logout() = client?.send(TdApi.LogOut()) {}
-
     fun downloadFile(fileId: Int) =
         client?.send(TdApi.DownloadFile(fileId, 1, 0, 0, true)) {}
 }
