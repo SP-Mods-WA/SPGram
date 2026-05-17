@@ -19,12 +19,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.lifecycleScope
 import com.spmods.spgram.engine.TelegramManager
 import com.spmods.spgram.ui.screens.ChatListScreen
 import com.spmods.spgram.ui.theme.*
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import org.drinkless.tdlib.TdApi
 
 class MainActivity : ComponentActivity() {
@@ -37,12 +34,8 @@ class MainActivity : ComponentActivity() {
         telegramManager.initClient()
 
         setContent {
-            // Load saved theme — default dark
-            var isDark by remember { mutableStateOf(true) }
-
-            LaunchedEffect(Unit) {
-                isDark = ThemePreference.isDarkFlow(applicationContext).first()
-            }
+            // Load saved theme from SharedPreferences
+            var isDark by remember { mutableStateOf(ThemePreference.isDark(applicationContext)) }
 
             val bgColor = if (isDark) DarkBackground else LightBackground
             enableEdgeToEdge(
@@ -71,10 +64,7 @@ class MainActivity : ComponentActivity() {
                                     isDark  = isDark,
                                     onToggleTheme = {
                                         isDark = !isDark
-                                        // Save to DataStore
-                                        lifecycleScope.launch {
-                                            ThemePreference.save(applicationContext, isDark)
-                                        }
+                                        ThemePreference.save(applicationContext, isDark)
                                     }
                                 )
                             else ->
@@ -109,8 +99,10 @@ fun AuthScreen(authState: TdApi.AuthorizationState?, manager: TelegramManager) {
                     singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = { manager.sendPhoneNumber(phone) },
-                    modifier = Modifier.fillMaxWidth(), enabled = phone.isNotBlank()
+                Button(
+                    onClick = { manager.sendPhoneNumber(phone) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = phone.isNotBlank()
                 ) { Text("Send Code") }
             }
             TdApi.AuthorizationStateWaitCode.CONSTRUCTOR -> {
@@ -124,8 +116,10 @@ fun AuthScreen(authState: TdApi.AuthorizationState?, manager: TelegramManager) {
                     singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = { manager.sendVerificationCode(code) },
-                    modifier = Modifier.fillMaxWidth(), enabled = code.isNotBlank()
+                Button(
+                    onClick = { manager.sendVerificationCode(code) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = code.isNotBlank()
                 ) { Text("Verify") }
             }
             TdApi.AuthorizationStateWaitPassword.CONSTRUCTOR -> {
@@ -139,8 +133,10 @@ fun AuthScreen(authState: TdApi.AuthorizationState?, manager: TelegramManager) {
                     singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = { manager.sendPassword(pass) },
-                    modifier = Modifier.fillMaxWidth(), enabled = pass.isNotBlank()
+                Button(
+                    onClick = { manager.sendPassword(pass) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = pass.isNotBlank()
                 ) { Text("Submit") }
             }
             else -> {
