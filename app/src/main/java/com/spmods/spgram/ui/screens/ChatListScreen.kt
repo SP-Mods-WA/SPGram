@@ -25,21 +25,18 @@ import androidx.compose.ui.unit.sp
 import com.spmods.spgram.engine.TelegramManager
 import com.spmods.spgram.ui.components.ChatListItem
 import com.spmods.spgram.ui.theme.*
-import org.drinkless.tdlib.TdApi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(manager: TelegramManager) {
     val chatIds by manager.chatIds.collectAsState()
     val chats   by manager.chats.collectAsState()
-    val meState = manager.me.collectAsState()
-    val me      = meState.value
 
-    val avatarLetter: String = me?.firstName
-        ?.firstOrNull()
-        ?.toString()
-        ?.uppercase(java.util.Locale.getDefault())
-        ?: "S"
+    // me StateFlow — nullable safe
+    val myName: String = run {
+        val user = manager.me.collectAsState().value
+        user?.firstName?.firstOrNull()?.uppercaseChar()?.toString() ?: "S"
+    }
 
     Scaffold(
         containerColor = Background,
@@ -65,7 +62,7 @@ fun ChatListScreen(manager: TelegramManager) {
                             .background(Primary),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(avatarLetter, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(myName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
