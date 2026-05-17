@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -30,40 +31,22 @@ import com.spmods.spgram.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(manager: TelegramManager) {
-    val chatIds        by manager.chatIds.collectAsState()
-    val chats          by manager.chats.collectAsState()
-    val downloadedFiles by manager.downloadedFiles.collectAsState()
-
-    // me — safe, no by-delegate on nullable
-    val meUser         = manager.me.collectAsState().value
-    val meFirstLetter  = meUser?.firstName?.firstOrNull()?.uppercaseChar()?.toString() ?: "S"
-
-    // My profile photo path
-    val myPhotoPath: String? = meUser?.profilePhoto?.small?.let { file ->
-        when {
-            file.local.isDownloadingCompleted -> file.local.path
-            downloadedFiles[file.id] != null  -> downloadedFiles[file.id]
-            else -> { manager.downloadFile(file.id); null }
-        }
-    }
+    val chatIds     by manager.chatIds.collectAsState()
+    val chats       by manager.chats.collectAsState()
+    val myName      by manager.myName.collectAsState()
+    val myPhotoPath by manager.myPhotoPath.collectAsState()
 
     Scaffold(
         containerColor = Background,
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "SPGram",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp,
-                        color = OnBackground
-                    )
+                    Text("SPGram", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = OnBackground)
                 },
                 actions = {
                     IconButton(onClick = {}) {
                         Icon(Icons.Default.Search, contentDescription = "Search", tint = OnSurfaceVar)
                     }
-                    // Profile avatar — top right
                     Box(
                         modifier = Modifier
                             .padding(end = 8.dp)
@@ -80,17 +63,10 @@ fun ChatListScreen(manager: TelegramManager) {
                             )
                         } else {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Primary),
+                                modifier = Modifier.fillMaxSize().background(Primary),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    meFirstLetter,
-                                    color = androidx.compose.ui.graphics.Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                )
+                                Text(myName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
                         }
                     }
@@ -110,18 +86,14 @@ fun ChatListScreen(manager: TelegramManager) {
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier = Modifier.fillMaxSize().padding(padding)
         ) {
             item { ArchivedChatsRow() }
 
             if (chatIds.isEmpty()) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillParentMaxSize()
-                            .padding(top = 80.dp),
+                        modifier = Modifier.fillParentMaxSize().padding(top = 80.dp),
                         contentAlignment = Alignment.TopCenter
                     ) {
                         CircularProgressIndicator(color = Primary)
@@ -156,10 +128,7 @@ private fun ArchivedChatsRow() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier
-                .size(46.dp)
-                .clip(CircleShape)
-                .background(SurfaceVar),
+            modifier = Modifier.size(46.dp).clip(CircleShape).background(SurfaceVar),
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.PushPin, contentDescription = null, tint = OnSurfaceVar, modifier = Modifier.size(22.dp))
