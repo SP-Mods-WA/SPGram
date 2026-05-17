@@ -1,8 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SPGram" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="colorPrimary">#2AABEE</item>
-        <item name="colorPrimaryDark">#1E96D4</item>
-        <item name="colorAccent">#2AABEE</item>
-    </style>
+    <style name="Theme.SPGram" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>
