@@ -13,24 +13,29 @@ import org.drinkless.tdlib.TdApi
 class TelegramManager(private val context: Context) : Client.ResultHandler {
 
     companion object {
-        init {
-            System.loadLibrary("tdjni")
-        }
+        init { System.loadLibrary("tdjni") }
     }
 
     private var client: Client? = null
 
-    private val _authState = MutableStateFlow<TdApi.AuthorizationState?>(null)
+    private val _authState        = MutableStateFlow<TdApi.AuthorizationState?>(null)
     val authState: StateFlow<TdApi.AuthorizationState?> = _authState.asStateFlow()
 
-    private val _chatIds = MutableStateFlow<List<Long>>(emptyList())
+    private val _chatIds          = MutableStateFlow<List<Long>>(emptyList())
     val chatIds: StateFlow<List<Long>> = _chatIds.asStateFlow()
 
-    private val _chats = MutableStateFlow<Map<Long, TdApi.Chat>>(emptyMap())
+    private val _chats            = MutableStateFlow<Map<Long, TdApi.Chat>>(emptyMap())
     val chats: StateFlow<Map<Long, TdApi.Chat>> = _chats.asStateFlow()
 
-    private val _downloadedFiles = MutableStateFlow<Map<Int, String>>(emptyMap())
+    private val _downloadedFiles  = MutableStateFlow<Map<Int, String>>(emptyMap())
     val downloadedFiles: StateFlow<Map<Int, String>> = _downloadedFiles.asStateFlow()
+
+    // Simple extracted values — no TdApi.User exposed to UI
+    private val _myName           = MutableStateFlow("S")
+    val myName: StateFlow<String> = _myName.asStateFlow()
+
+    private val _myPhotoPath      = MutableStateFlow<String?>(null)
+    val myPhotoPath: StateFlow<String?> = _myPhotoPath.asStateFlow()
 
     private val apiId   = 35214748
     private val apiHash = "2bc7633d816864cd22fe4173cedc67c9"
@@ -42,86 +47,104 @@ class TelegramManager(private val context: Context) : Client.ResultHandler {
 
     override fun onResult(result: TdApi.Object) {
         when (result.constructor) {
-            TdApi.UpdateAuthorizationState.CONSTRUCTOR -> {
-                val update = result as TdApi.UpdateAuthorizationState
-                onAuthorizationStateUpdated(update.authorizationState)
-            }
+            TdApi.UpdateAuthorizationState.CONSTRUCTOR ->
+                onAuthorizationStateUpdated((result as TdApi.UpdateAuthorizationState).authorizationState)
+
             TdApi.UpdateNewChat.CONSTRUCTOR -> {
                 val chat = (result as TdApi.UpdateNewChat).chat
                 _chats.value = _chats.value + (chat.id to chat)
             }
+
+            TdApi.UpdateChatLastMessage.CONSTRUCTOR -> {
+                val upd = result as TdApi.UpdateChatLastMessage
+                val existing = _chats.value[upd.chatId] ?: return
+                val updated = TdApi.Chat()
+                updated.id          = existing.id
+                updated.title       = existing.title
+                updated.photo       = existing.photo
+                updated.lastMessage = upd.lastMessage
+                _chats.value = _chats.value + (upd.chatId to updated)
+            }
+
             TdApi.UpdateFile.CONSTRUCTOR -> {
                 val file = (result as TdApi.UpdateFile).file
                 if (file.local.isDownloadingCompleted) {
-                    _downloadedFiles.value = _downloadedFiles.value + (file.id to file.local.path)
+                    val path = file.local.path
+                    _downloadedFiles.value = _downloadedFiles.value + (file.id to path)
+                    // If this is my profile photo, update myPhotoPath
+                    if (_myPhotoPath.value == null) {
+                        _myPhotoPath.value = path
+                    }
                 }
             }
-            else -> {}
         }
     }
 
     private fun onAuthorizationStateUpdated(state: TdApi.AuthorizationState) {
         _authState.value = state
-
         when (state.constructor) {
             TdApi.AuthorizationStateWaitTdlibParameters.CONSTRUCTOR -> {
-                val request = TdApi.SetTdlibParameters(
+                client?.send(TdApi.SetTdlibParameters(
                     false,
                     context.filesDir.absolutePath + "/tdlib",
-                    null,
-                    null,
-                    true,
-                    true,
-                    true,
-                    true,
-                    apiId,
-                    apiHash,
-                    "en",
-                    "Android",
-                    "Unknown",
-                    "1.0"
-                )
-                client?.send(request, this)
+                    null, null,
+                    true, true, true, true,
+                    apiId, apiHash,
+                    "en", "Android", "Unknown", "1.0"
+                ), this)
             }
             TdApi.AuthorizationStateReady.CONSTRUCTOR -> {
-                Log.d("TDLib", "Engine ready! Fetching chats...")
                 loadChats()
+                fetchMe()
             }
             TdApi.AuthorizationStateClosed.CONSTRUCTOR -> {
-                Log.d("TDLib", "Engine completely closed after logout. Rebooting...")
                 client = null
                 initClient()
             }
-            else -> {}
         }
     }
 
-    fun sendPhoneNumber(phoneNumber: String) {
-        client?.send(TdApi.SetAuthenticationPhoneNumber(phoneNumber, null), this)
+    private fun fetchMe() {
+        client?.send(TdApi.GetMe()) { result ->
+            if (result.constructor == TdApi.User.CONSTRUCTOR) {
+                val user = result as TdApi.User
+                // Extract first letter safely
+                val letter = user.firstName.firstOrNull()?.uppercaseChar()?.toString() ?: "S"
+                _myName.value = letter
+
+                // Download profile photo if available
+                val photo = user.profilePhoto
+                if (photo != null) {
+                    val smallFile = photo.small
+                    if (smallFile.local.isDownloadingCompleted) {
+                        _myPhotoPath.value = smallFile.local.path
+                    } else {
+                        downloadFile(smallFile.id)
+                    }
+                }
+            }
+        }
     }
 
-    fun sendVerificationCode(code: String) {
+    fun sendPhoneNumber(phone: String) =
+        client?.send(TdApi.SetAuthenticationPhoneNumber(phone, null), this)
+
+    fun sendVerificationCode(code: String) =
         client?.send(TdApi.CheckAuthenticationCode(code), this)
-    }
 
-    fun sendPassword(password: String) {
+    fun sendPassword(password: String) =
         client?.send(TdApi.CheckAuthenticationPassword(password), this)
-    }
 
-    fun logout() {
-        client?.send(TdApi.LogOut()) {}
-    }
+    fun logout() = client?.send(TdApi.LogOut()) {}
 
-    fun downloadFile(fileId: Int) {
+    fun downloadFile(fileId: Int) =
         client?.send(TdApi.DownloadFile(fileId, 1, 0, 0, true)) {}
-    }
 
     private fun loadChats() {
         client?.send(TdApi.LoadChats(TdApi.ChatListMain(), 100)) { result ->
             when (result.constructor) {
                 TdApi.Ok.CONSTRUCTOR    -> getChatIds()
-                TdApi.Error.CONSTRUCTOR -> Log.e("TDLib", "Failed to load chats")
-                else -> {}
+                TdApi.Error.CONSTRUCTOR -> Log.e("SPGram", "LoadChats failed")
             }
         }
     }
