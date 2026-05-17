@@ -30,9 +30,10 @@ import org.drinkless.tdlib.TdApi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(manager: TelegramManager) {
-    val chatIds: List<Long>              by manager.chatIds.collectAsState()
-    val chats: Map<Long, TdApi.Chat>     by manager.chats.collectAsState()
-    val me: TdApi.User?                  by manager.me.collectAsState()
+    val chatIds by manager.chatIds.collectAsState()
+    val chats   by manager.chats.collectAsState()
+    val meState = manager.me.collectAsState()
+    val me      = meState.value
 
     val avatarLetter: String = me?.firstName
         ?.firstOrNull()
