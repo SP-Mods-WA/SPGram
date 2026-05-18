@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.SPGram" parent="android:Theme.Material.NoActionBar" />
+
+    <style name="Theme.SPGram.Startup" parent="Theme.SPGram">
+        <item name="android:windowBackground">@drawable/startup_background</item>
+    </style>
+
+    <style name="Theme.SPGram.Startup.Light" parent="Theme.SPGram">
+        <item name="android:windowBackground">@drawable/startup_background_light</item>
+    </style>
+
+    <style name="Theme.SPGram.Startup.Dark" parent="Theme.SPGram">
+        <item name="android:windowBackground">@drawable/startup_background_dark</item>
+    </style>
+</resources>
