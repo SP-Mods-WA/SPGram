@@ -244,7 +244,12 @@ class TelegramManager(private val context: Context) : Client.ResultHandler {
         val content     = TdApi.InputMessageText(TdApi.FormattedText(text, emptyArray()), null, false)
         val replyTo     = if (replyToId != 0L) TdApi.InputMessageReplyToMessage(replyToId, null, 0, null) else null
         val sendOptions = TdApi.MessageSendOptions()
-        client?.send(TdApi.SendMessage(chatId, 0, replyTo, sendOptions, null, content)) {}
+        val req         = TdApi.SendMessage()
+        req.chatId              = chatId
+        req.replyTo             = replyTo
+        req.options             = sendOptions
+        req.inputMessageContent = content
+        client?.send(req) {}
     }
 
     fun deleteMessage(chatId: Long, messageId: Long, forEveryone: Boolean) {
