@@ -17,7 +17,7 @@ fun AppThemeContainer(
     appPreferences: AppPreferences,
     content: @Composable () -> Unit
 ) {
-    val nightMode by appPreferences.nightMode.collectAsState()
+    val nightMode: NightMode by appPreferences.nightMode.collectAsState()  // ← Type explicit කළා
     val isDynamicColorsEnabled by appPreferences.isDynamicColorsEnabled.collectAsState()
     val isAmoledThemeEnabled by appPreferences.isAmoledThemeEnabled.collectAsState()
     val isCustomThemeEnabled by appPreferences.isCustomThemeEnabled.collectAsState()
@@ -77,6 +77,7 @@ fun AppThemeContainer(
         }
     }
 
+    // Fixed: when expression exhaustive කළා + else branch එක දැම්මා
     val darkTheme = when (nightMode) {
         NightMode.SYSTEM -> systemDark
         NightMode.LIGHT -> false
@@ -103,6 +104,8 @@ fun AppThemeContainer(
         NightMode.BRIGHTNESS -> {
             screenBrightness <= brightnessThreshold
         }
+
+        else -> systemDark  // ← මේක අනිවාර්යයෙන්ම ඕනේ
     }
 
     SPGramTheme(
@@ -122,6 +125,7 @@ fun AppThemeContainer(
                 if (darkTheme) themeDarkTertiaryContainerColor else themeTertiaryContainerColor
             val paletteSurfaceVariant = if (darkTheme) themeDarkSurfaceVariantColor else themeSurfaceVariantColor
             val paletteOutline = if (darkTheme) themeDarkOutlineColor else themeOutlineColor
+
             CustomThemePalette(
                 primary = Color(palettePrimary),
                 secondary = Color(paletteSecondary),
