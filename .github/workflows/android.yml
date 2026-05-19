@@ -13,17 +13,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
+        submodules: recursive
         fetch-depth: 0
-
-    - name: Checkout MonoGram submodules (rlottie + libvpx)
-      run: |
-        mkdir -p presentation/src/main/cpp/third_party
-        git clone --depth=1 https://github.com/monogram-android/monogram.git monogram-src
-        git -C monogram-src submodule update --init --recursive presentation/src/main/cpp/third_party/rlottie
-        git -C monogram-src submodule update --init --recursive presentation/src/main/cpp/third_party/libvpx
-        cp -r monogram-src/presentation/src/main/cpp/third_party/rlottie presentation/src/main/cpp/third_party/rlottie
-        cp -r monogram-src/presentation/src/main/cpp/third_party/libvpx presentation/src/main/cpp/third_party/libvpx
-        rm -rf monogram-src
+        token: ${{ secrets.PAT_TOKEN }}
 
     - name: Set up JDK 21
       uses: actions/setup-java@v4
@@ -32,21 +24,18 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Setup Android SDK
+    - name: Setup Android SDK & NDK
       uses: android-actions/setup-android@v3
 
-    - name: Install NDK
+    - name: Make scripts executable
       run: |
-        echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;28.2.13676358"
-        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> $GITHUB_ENV
-
-    - name: Build libvpx for Android
-      run: |
+        chmod +x gradlew
         chmod +x presentation/src/main/cpp/build.sh
-        cd presentation/src/main/cpp
-        ./build.sh
-      env:
-        ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+
+    - name: Build libvpx
+      run: |
+        export ANDROID_NDK_HOME=$ANDROID_NDK_ROOT
+        cd presentation/src/main/cpp && ./build.sh
 
     - name: Decode keystore
       run: |
