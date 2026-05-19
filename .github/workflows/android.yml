@@ -17,7 +17,10 @@ jobs:
 
     - name: Checkout MonoGram submodules (rlottie + libvpx)
       run: |
+        mkdir -p presentation/src/main/cpp/third_party
         git clone --depth=1 https://github.com/monogram-android/monogram.git monogram-src
+        git -C monogram-src submodule update --init --recursive presentation/src/main/cpp/third_party/rlottie
+        git -C monogram-src submodule update --init --recursive presentation/src/main/cpp/third_party/libvpx
         cp -r monogram-src/presentation/src/main/cpp/third_party/rlottie presentation/src/main/cpp/third_party/rlottie
         cp -r monogram-src/presentation/src/main/cpp/third_party/libvpx presentation/src/main/cpp/third_party/libvpx
         rm -rf monogram-src
