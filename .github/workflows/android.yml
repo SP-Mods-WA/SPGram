@@ -29,19 +29,25 @@ jobs:
     - name: Decode keystore
       run: |
         mkdir -p app/keystore
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/keystore/spgram.jks
+        echo "$KEYSTORE_BASE64" | base64 --decode > app/keystore/spgram.jks
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
     - name: Create local.properties
       run: |
-        cat > local.properties << PROPS
-API_ID=${{ secrets.TELEGRAM_API_ID }}
-API_HASH=${{ secrets.TELEGRAM_API_HASH }}
-RELEASE_STORE_FILE=keystore/spgram.jks
-RELEASE_STORE_PASSWORD=${{ secrets.STORE_PASSWORD }}
-RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}
-RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
-PROPS
+        echo "API_ID=$TELEGRAM_API_ID" > local.properties
+        echo "API_HASH=$TELEGRAM_API_HASH" >> local.properties
+        echo "RELEASE_STORE_FILE=keystore/spgram.jks" >> local.properties
+        echo "RELEASE_STORE_PASSWORD=$STORE_PASSWORD" >> local.properties
+        echo "RELEASE_KEY_ALIAS=$KEY_ALIAS" >> local.properties
+        echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> local.properties
         cat local.properties
+      env:
+        TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+        TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
