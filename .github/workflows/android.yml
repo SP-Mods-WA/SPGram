@@ -13,9 +13,16 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: recursive
         fetch-depth: 0
         token: ${{ secrets.PAT_TOKEN }}
+
+    - name: Setup submodules manually
+      run: |
+        mkdir -p presentation/src/main/cpp/third_party
+        git clone --depth=1 https://github.com/webmproject/libvpx.git \
+          presentation/src/main/cpp/third_party/libvpx
+        git clone --depth=1 https://github.com/monogram-android/rlottie.git \
+          presentation/src/main/cpp/third_party/rlottie
 
     - name: Set up JDK 21
       uses: actions/setup-java@v4
