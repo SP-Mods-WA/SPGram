@@ -1,0 +1,22 @@
+package com.spmods.spgram.data.db.dao
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import com.spmods.spgram.data.db.model.StickerPathEntity
+
+@Dao
+interface StickerPathDao {
+    @Query("SELECT path FROM sticker_paths WHERE fileId = :fileId")
+    suspend fun getPath(fileId: Long): String?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPath(entity: StickerPathEntity)
+
+    @Query("DELETE FROM sticker_paths WHERE fileId = :fileId")
+    suspend fun deletePath(fileId: Long)
+
+    @Query("DELETE FROM sticker_paths")
+    suspend fun clearAll()
+}

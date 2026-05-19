@@ -1,0 +1,348 @@
+package com.spmods.spgram.data.infra
+
+import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.drinkless.tdlib.TdApi
+import com.spmods.spgram.core.DispatcherProvider
+import com.spmods.spgram.data.chats.ChatCache
+import com.spmods.spgram.data.core.coRunCatching
+import com.spmods.spgram.data.db.dao.*
+import com.spmods.spgram.data.db.model.ChatEntity
+import com.spmods.spgram.data.db.model.UserEntity
+import com.spmods.spgram.data.gateway.TelegramGateway
+import com.spmods.spgram.data.mapper.MessageMapper
+import com.spmods.spgram.data.mapper.user.toEntity
+import com.spmods.spgram.data.mapper.user.toTdApi
+import com.spmods.spgram.domain.repository.StickerRepository
+
+private const val TAG = "OfflineWarmup"
+
+class OfflineWarmup(
+    private val scope: CoroutineScope,
+    private val dispatchers: DispatcherProvider,
+    private val gateway: TelegramGateway,
+    private val chatDao: ChatDao,
+    private val messageDao: MessageDao,
+    private val userDao: UserDao,
+    private val userFullInfoDao: UserFullInfoDao,
+    private val chatFullInfoDao: ChatFullInfoDao,
+    private val messageMapper: MessageMapper,
+    private val chatCache: ChatCache,
+    private val stickerRepository: StickerRepository
+) {
+    @Volatile
+    private var warmupStarted = false
+
+    init {
+        scope.launch(dispatchers.io) {
+            gateway.isAuthenticated.collect { authenticated ->
+                if (!authenticated || warmupStarted) return@collect
+                warmupStarted = true
+                delay(1800)
+                coRunCatching { warmup() }
+                    .onFailure { Log.e(TAG, "Offline warmup failed", it) }
+            }
+        }
+    }
+
+    private suspend fun warmup() {
+        val topChats = chatDao.getTopChats(limit = 100)
+        if (topChats.isEmpty()) return
+
+        warmupStickers()
+        warmupUsers(topChats)
+        warmupChatFullInfo(topChats)
+        warmupMessages(topChats)
+    }
+
+    private suspend fun warmupStickers() {
+        coRunCatching { stickerRepository.loadInstalledStickerSets() }
+        coRunCatching { stickerRepository.loadCustomEmojiStickerSets() }
+    }
+
+    private suspend fun warmupUsers(chats: List<ChatEntity>) {
+        val userIds = LinkedHashSet<Long>()
+        val privateUserIds = LinkedHashSet<Long>()
+        chats.forEach { chat ->
+            if (chat.privateUserId != 0L) {
+                privateUserIds.add(chat.privateUserId)
+                userIds.add(chat.privateUserId)
+            }
+            chat.messageSenderId?.takeIf { it > 0 }?.let { userIds.add(it) }
+            messageDao.getLatestMessages(chat.id, 20)
+                .asSequence()
+                .map { it.senderId }
+                .filter { it > 0L }
+                .forEach { userIds.add(it) }
+        }
+        if (userIds.isEmpty()) return
+
+        val limited = userIds.take(USER_WARMUP_LIMIT)
+        val fullInfoTargets = limited
+            .asSequence()
+            .filter { it in privateUserIds }
+            .toSet()
+        val existingUsers = userDao.getUsersByIds(limited).associateBy { it.id }
+        val existingFullInfos = if (fullInfoTargets.isNotEmpty()) {
+            userFullInfoDao.getUserFullInfos(fullInfoTargets.toList()).associateBy { it.userId }
+        } else {
+            emptyMap()
+        }
+        val now = System.currentTimeMillis()
+        existingFullInfos.values
+            .asSequence()
+            .filter { now - it.createdAt <= SEVEN_DAYS_MS }
+            .forEach { cached -> chatCache.putUserFullInfo(cached.userId, cached.toTdApi()) }
+
+        for (userId in limited) {
+            val cachedUser = existingUsers[userId]
+            var hasUser = cachedUser != null
+            if (cachedUser == null || now - cachedUser.createdAt > ONE_DAY_MS) {
+                val user = coRunCatching { gateway.execute(TdApi.GetUser(userId)) as? TdApi.User }.getOrNull()
+                if (user != null) {
+                    val personalAvatarPath = existingFullInfos[userId]?.personalPhotoPath?.ifBlank { null }
+                    userDao.insertUser(user.toUserEntity(personalAvatarPath))
+                    chatCache.putUser(user)
+                    hasUser = true
+                } else if (cachedUser == null) {
+                    hasUser = false
+                }
+            }
+
+            if (!hasUser) {
+                delay(USER_WARMUP_DELAY_MS)
+                continue
+            }
+
+            if (userId !in fullInfoTargets) {
+                delay(USER_WARMUP_DELAY_MS)
+                continue
+            }
+
+            if (chatCache.getUserFullInfo(userId) != null) {
+                delay(USER_WARMUP_DELAY_MS)
+                continue
+            }
+
+            if (!chatCache.pendingUserFullInfo.add(userId)) {
+                delay(USER_WARMUP_DELAY_MS)
+                continue
+            }
+
+            try {
+                val cachedFullInfo = existingFullInfos[userId]
+                if (cachedFullInfo == null || now - cachedFullInfo.createdAt > SEVEN_DAYS_MS) {
+                    val fullInfo = coRunCatching {
+                        gateway.execute(TdApi.GetUserFullInfo(userId)) as? TdApi.UserFullInfo
+                    }.getOrNull()
+                    if (fullInfo != null) {
+                        userFullInfoDao.insertUserFullInfo(fullInfo.toEntity(userId))
+                        val personalAvatarPath = fullInfo.extractPersonalAvatarPath()
+                        if (!personalAvatarPath.isNullOrBlank()) {
+                            userDao.getUser(userId)?.let { existing ->
+                                if (existing.personalAvatarPath != personalAvatarPath) {
+                                    userDao.insertUser(existing.copy(personalAvatarPath = personalAvatarPath))
+                                }
+                            }
+                        }
+                        chatCache.putUserFullInfo(userId, fullInfo)
+                    }
+                }
+            } finally {
+                chatCache.pendingUserFullInfo.remove(userId)
+            }
+            delay(USER_WARMUP_DELAY_MS)
+        }
+    }
+
+    private suspend fun warmupChatFullInfo(chats: List<ChatEntity>) {
+        val targetChats = chats.take(50)
+        val existing = chatFullInfoDao.getChatFullInfos(targetChats.map { it.id }).associateBy { it.chatId }
+        val now = System.currentTimeMillis()
+
+        for (chat in targetChats) {
+            val cached = existing[chat.id]
+            if (cached != null && now - cached.createdAt <= SEVEN_DAYS_MS) {
+                continue
+            }
+
+            when {
+                chat.supergroupId != 0L -> {
+                    val supergroupInfo = gateway.execute(TdApi.GetSupergroupFullInfo(chat.supergroupId)) as? TdApi.SupergroupFullInfo
+                    if (supergroupInfo != null) {
+                        chatFullInfoDao.insertChatFullInfo(supergroupInfo.toEntity(chat.id))
+                        val supergroup = gateway.execute(TdApi.GetSupergroup(chat.supergroupId)) as? TdApi.Supergroup
+                        if (supergroup != null) {
+                            chatCache.putSupergroup(supergroup)
+                            chatCache.putSupergroupFullInfo(chat.supergroupId, supergroupInfo)
+                        }
+                    }
+                }
+
+                chat.basicGroupId != 0L -> {
+                    val basicGroupInfo = gateway.execute(TdApi.GetBasicGroupFullInfo(chat.basicGroupId)) as? TdApi.BasicGroupFullInfo
+                    if (basicGroupInfo != null) {
+                        chatFullInfoDao.insertChatFullInfo(basicGroupInfo.toEntity(chat.id))
+                        val basicGroup = gateway.execute(TdApi.GetBasicGroup(chat.basicGroupId)) as? TdApi.BasicGroup
+                        if (basicGroup != null) {
+                            chatCache.putBasicGroup(basicGroup)
+                            chatCache.putBasicGroupFullInfo(chat.basicGroupId, basicGroupInfo)
+                        }
+                    }
+                }
+            }
+            delay(30)
+        }
+    }
+
+    private suspend fun warmupMessages(chats: List<ChatEntity>) {
+        val targetChats = chats.take(30)
+        for (chat in targetChats) {
+            val alreadyCachedCount = messageDao.getLatestMessages(chat.id, 25).size
+            if (alreadyCachedCount >= 25) {
+                continue
+            }
+
+            val history = gateway.execute(
+                TdApi.GetChatHistory(
+                    chat.id,
+                    0L,
+                    0,
+                    60,
+                    false
+                )
+            ) as? TdApi.Messages ?: continue
+
+            if (history.messages.isEmpty()) {
+                continue
+            }
+
+            history.messages.forEach { message -> chatCache.putMessage(message) }
+            val entities = history.messages.map { message ->
+                messageMapper.mapToEntity(message) { senderId ->
+                    chatCache.getUser(senderId)?.let { cachedUser ->
+                        listOfNotNull(
+                            cachedUser.firstName.takeIf { it.isNotBlank() },
+                            cachedUser.lastName.takeIf { !it.isNullOrBlank() }
+                        ).joinToString(" ")
+                    }
+                }
+            }
+            messageDao.insertMessages(entities)
+            delay(40)
+        }
+    }
+
+    private fun TdApi.User.toUserEntity(personalAvatarPath: String?): UserEntity {
+        val usernamesData = buildString {
+            append(usernames?.activeUsernames?.joinToString("|").orEmpty())
+            append('\n')
+            append(usernames?.disabledUsernames?.joinToString("|").orEmpty())
+            append('\n')
+            append(usernames?.editableUsername.orEmpty())
+            append('\n')
+            append(usernames?.collectibleUsernames?.joinToString("|").orEmpty())
+        }
+
+        val statusType = when (status) {
+            is TdApi.UserStatusOnline -> "ONLINE"
+            is TdApi.UserStatusRecently -> "RECENTLY"
+            is TdApi.UserStatusLastWeek -> "LAST_WEEK"
+            is TdApi.UserStatusLastMonth -> "LAST_MONTH"
+            else -> "OFFLINE"
+        }
+
+        val statusEmojiId = when (val type = emojiStatus?.type) {
+            is TdApi.EmojiStatusTypeCustomEmoji -> type.customEmojiId
+            is TdApi.EmojiStatusTypeUpgradedGift -> type.modelCustomEmojiId
+            else -> 0L
+        }
+
+        val botType = type as? TdApi.UserTypeBot
+
+        return UserEntity(
+            id = id,
+            firstName = firstName,
+            lastName = lastName.ifEmpty { null },
+            phoneNumber = phoneNumber.ifEmpty { null },
+            avatarPath = profilePhoto?.small?.local?.path?.ifEmpty { null },
+            personalAvatarPath = personalAvatarPath,
+            isPremium = isPremium,
+            isVerified = verificationStatus?.isVerified ?: false,
+            isScam = verificationStatus?.isScam ?: false,
+            isFake = verificationStatus?.isFake ?: false,
+            botVerificationIconCustomEmojiId = verificationStatus?.botVerificationIconCustomEmojiId ?: 0L,
+            isSupport = isSupport,
+            isContact = isContact,
+            isMutualContact = isMutualContact,
+            isCloseFriend = isCloseFriend,
+            botTypeCanBeEdited = botType?.canBeEdited ?: false,
+            botTypeCanJoinGroups = botType?.canJoinGroups ?: false,
+            botTypeCanReadAllGroupMessages = botType?.canReadAllGroupMessages ?: false,
+            botTypeHasMainWebApp = botType?.hasMainWebApp ?: false,
+            botTypeHasTopics = botType?.hasTopics ?: false,
+            botTypeAllowsUsersToCreateTopics = botType?.allowsUsersToCreateTopics ?: false,
+            botTypeCanManageBots = botType?.canManageBots ?: false,
+            botTypeIsInline = botType?.isInline ?: false,
+            botTypeInlineQueryPlaceholder = botType?.inlineQueryPlaceholder?.ifEmpty { null },
+            botTypeNeedLocation = botType?.needLocation ?: false,
+            botTypeCanConnectToBusiness = botType?.canConnectToBusiness ?: false,
+            botTypeCanBeAddedToAttachmentMenu = botType?.canBeAddedToAttachmentMenu ?: false,
+            botTypeActiveUserCount = botType?.activeUserCount ?: 0,
+            userType = type.toTypeString(),
+            restrictionReason = restrictionInfo?.restrictionReason?.ifEmpty { null },
+            hasSensitiveContent = restrictionInfo?.hasSensitiveContent ?: false,
+            activeStoryStateType = activeStoryState.toTypeString(),
+            activeStoryId = (activeStoryState as? TdApi.ActiveStoryStateLive)?.storyId ?: 0,
+            restrictsNewChats = restrictsNewChats,
+            paidMessageStarCount = paidMessageStarCount,
+            haveAccess = haveAccess,
+            username = usernames?.activeUsernames?.firstOrNull(),
+            usernamesData = usernamesData,
+            statusType = statusType,
+            accentColorId = accentColorId,
+            backgroundCustomEmojiId = backgroundCustomEmojiId,
+            profileAccentColorId = profileAccentColorId,
+            profileBackgroundCustomEmojiId = profileBackgroundCustomEmojiId,
+            statusEmojiId = statusEmojiId,
+            languageCode = languageCode.ifEmpty { null },
+            addedToAttachmentMenu = addedToAttachmentMenu,
+            lastSeen = (status as? TdApi.UserStatusOffline)?.wasOnline?.toLong() ?: 0L,
+            createdAt = System.currentTimeMillis()
+        )
+    }
+
+    private fun TdApi.UserFullInfo.extractPersonalAvatarPath(): String? {
+        val bestPhotoSize = personalPhoto?.sizes?.maxByOrNull { it.width.toLong() * it.height.toLong() }
+            ?: personalPhoto?.sizes?.lastOrNull()
+        return personalPhoto?.animation?.file?.local?.path?.ifEmpty { null }
+            ?: bestPhotoSize?.photo?.local?.path?.ifEmpty { null }
+    }
+
+    private fun TdApi.ActiveStoryState?.toTypeString(): String? {
+        return when (this) {
+            is TdApi.ActiveStoryStateLive -> "LIVE"
+            is TdApi.ActiveStoryStateUnread -> "UNREAD"
+            is TdApi.ActiveStoryStateRead -> "READ"
+            else -> null
+        }
+    }
+
+    private fun TdApi.UserType?.toTypeString(): String {
+        return when (this) {
+            is TdApi.UserTypeRegular -> "REGULAR"
+            is TdApi.UserTypeBot -> "BOT"
+            is TdApi.UserTypeDeleted -> "DELETED"
+            else -> "UNKNOWN"
+        }
+    }
+
+    private companion object {
+        private const val USER_WARMUP_LIMIT = 15
+        private const val USER_WARMUP_DELAY_MS = 150L
+        private const val ONE_DAY_MS = 24L * 60 * 60 * 1000
+        private const val SEVEN_DAYS_MS = 7L * ONE_DAY_MS
+    }
+}
