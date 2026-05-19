@@ -91,7 +91,7 @@ android {
                 } else {
                     signingConfigs.getByName("debug")
                 }
-            resValue("string", "app_name", "MonoGram")
+            resValue("string", "app_name", "SPGram")
         }
         debug {
             buildFeatures {
@@ -99,7 +99,7 @@ android {
             }
             applicationIdSuffix = ".debug"
             isMinifyEnabled = false
-            resValue("string", "app_name", "MonoGram Debug")
+            resValue("string", "app_name", "SPGram Debug")
         }
     }
     compileOptions {
@@ -117,7 +117,7 @@ androidComponents {
             .map { it.second }
             .joinToString("-")
             .ifEmpty { "default" }
-        val apkNamePrefix = if (flavorName == "telemt") "monogram-telemt" else "monogram"
+        val apkNamePrefix = if (flavorName == "telemt") "spgram-telemt" else "spgram"
 
         variant.outputs.forEach { output ->
             val variantOutput = output as? VariantOutputImpl ?: return@forEach
