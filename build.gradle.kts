@@ -11,9 +11,11 @@ plugins {
     alias(libs.plugins.androidx.baselineprofile) apply false
 }
 
-val localProperties = Properties().apply {
-    val file = rootProject.file("local.properties")
-    if (file.exists()) file.inputStream().buffered().use(::load)
+val localProperties by lazy {
+    Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) file.inputStream().buffered().use(::load)
+    }
 }
 extra.set("localProperties", localProperties)
 
