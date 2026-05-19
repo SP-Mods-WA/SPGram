@@ -1,0 +1,270 @@
+package com.spmods.spgram.presentation.features.profile.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.rounded.Verified
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.spmods.spgram.domain.models.ChatModel
+import com.spmods.spgram.domain.models.UserModel
+import com.spmods.spgram.presentation.R
+import com.spmods.spgram.presentation.core.ui.AvatarHeader
+import com.spmods.spgram.presentation.features.stickers.ui.view.StickerImage
+
+@Composable
+fun ProfileHeaderTransformed(
+    avatarPath: String?,
+    avatarFallbackPath: String?,
+    title: String,
+    subtitle: String,
+    avatarSize: Dp,
+    userModel: UserModel?,
+    avatarCornerPercent: Int,
+    isOnline: Boolean,
+    isVerified: Boolean,
+    isSponsor: Boolean,
+    isBot: Boolean,
+    isScam: Boolean,
+    isFake: Boolean,
+    statusEmojiPath: String?,
+    progress: Float,
+    contentPadding: PaddingValues,
+    onAvatarClick: () -> Unit,
+    chatModel: ChatModel? = null,
+    onActionClick: () -> Unit = {}
+) {
+    val containerSize = LocalWindowInfo.current.containerSize
+    val screenHeight = with(LocalDensity.current) { containerSize.height.toDp() }
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(contentPadding)
+    ) {
+        val headerHeight = maxWidth.coerceAtMost(screenHeight * 0.6f)
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(headerHeight)
+                .alpha(progress)
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .clip(RoundedCornerShape(avatarCornerPercent))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onAvatarClick
+                    )
+            ) {
+                AvatarHeader(
+                    path = avatarPath,
+                    fallbackPath = avatarFallbackPath,
+                    identityKey = userModel?.id ?: chatModel?.id ?: title,
+                    name = title,
+                    size = avatarSize.coerceAtMost(headerHeight),
+                    avatarCornerPercent = avatarCornerPercent
+                )
+            }
+
+            val scrimColor = Color.Black.copy(alpha = 0.7f)
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .alpha(progress / 1.5f)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to scrimColor,
+                                0.15f to Color.Transparent,
+                                0.7f to Color.Transparent,
+                                1.0f to scrimColor
+                            )
+                        ),
+                        shape = RoundedCornerShape(avatarCornerPercent)
+                    )
+            )
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 20.dp, vertical = 32.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.headlineLarge.copy(
+                                shadow = Shadow(
+                                    color = Color.Black.copy(alpha = 0.5f),
+                                    offset = Offset(2f, 2f),
+                                    blurRadius = 8f
+                                )
+                            ),
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        if (isVerified) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Rounded.Verified,
+                                contentDescription = stringResource(R.string.cd_verified),
+                                modifier = Modifier.size(28.dp),
+                                tint = Color(0xFF31A6FD)
+                            )
+                        }
+                        if (isSponsor) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = stringResource(R.string.cd_sponsor),
+                                modifier = Modifier.size(28.dp),
+                                tint = Color(0xFFE53935)
+                            )
+                        }
+
+                        val displayedStatusEmojiPath = statusEmojiPath ?: userModel?.statusEmojiPath
+                        if (!displayedStatusEmojiPath.isNullOrEmpty()) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            StickerImage(
+                                path = displayedStatusEmojiPath,
+                                modifier = Modifier.size(26.dp),
+                                animate = false
+                            )
+                        } else if (userModel?.isPremium == true) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                tint = Color(0xFF31A6FD)
+                            )
+                        }
+
+                        if (isBot) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            HeaderStatusBadge(
+                                text = stringResource(R.string.label_bot_badge),
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+
+                        if (isScam) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            HeaderStatusBadge(
+                                text = stringResource(R.string.label_scam_badge),
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+
+                        if (isFake) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            HeaderStatusBadge(
+                                text = stringResource(R.string.label_fake_badge),
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+
+
+                }
+
+                Text(
+                    text = subtitle,
+                    color = if (isOnline) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.9f),
+                    fontSize = 16.sp,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        shadow = Shadow(
+                            color = Color.Black.copy(alpha = 0.5f),
+                            offset = Offset(1f, 1f),
+                            blurRadius = 4f
+                        )
+                    )
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(24.dp)
+                .align(Alignment.BottomCenter)
+                .background(
+                    color = MaterialTheme.colorScheme.background,
+                    shape = RoundedCornerShape(
+                        topStart = (30 * progress).dp,
+                        topEnd = (30 * progress).dp
+                    )
+                )
+        )
+    }
+}
+
+@Composable
+private fun HeaderStatusBadge(
+    text: String,
+    containerColor: Color,
+    contentColor: Color
+) {
+    Surface(
+        color = containerColor,
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
+    }
+}
