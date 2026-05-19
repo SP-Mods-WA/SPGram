@@ -15,10 +15,12 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Clone native dependencies
+    - name: Checkout MonoGram submodules (rlottie + libvpx)
       run: |
-        git clone https://github.com/Samsung/rlottie.git presentation/src/main/cpp/third_party/rlottie
-        git clone https://chromium.googlesource.com/webm/libvpx presentation/src/main/cpp/third_party/libvpx
+        git clone --depth=1 https://github.com/monogram-android/monogram.git monogram-src
+        cp -r monogram-src/presentation/src/main/cpp/third_party/rlottie presentation/src/main/cpp/third_party/rlottie
+        cp -r monogram-src/presentation/src/main/cpp/third_party/libvpx presentation/src/main/cpp/third_party/libvpx
+        rm -rf monogram-src
 
     - name: Set up JDK 21
       uses: actions/setup-java@v4
