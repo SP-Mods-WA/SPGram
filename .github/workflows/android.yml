@@ -1,4 +1,4 @@
-name: SPGRAM Release Build
+wname: SPGRAM Release Build
 
 on:
   push:
@@ -81,7 +81,7 @@ jobs:
           app/releases/*.apk
         if-no-files-found: warn
 
-    - name: Create GitHub Release
+- name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
@@ -90,6 +90,5 @@ jobs:
         files: |
           app/build/outputs/apk/official/release/*.apk
           app/releases/*.apk
-        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
