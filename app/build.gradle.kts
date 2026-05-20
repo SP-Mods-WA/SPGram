@@ -232,8 +232,6 @@ dependencies {
 
     implementation(libs.play.services.oss.licenses)
 
-    implementation(libs.maplibre.compose)
-
     implementation(project(":domain"))
     implementation(project(":presentation"))
     implementation(project(":data"))
