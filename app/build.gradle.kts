@@ -1,12 +1,14 @@
 import com.android.build.api.variant.FilterConfiguration
 import com.android.build.api.variant.impl.VariantOutputImpl
 import com.google.android.gms.oss.licenses.plugin.DependencyTask
+import com.google.gms.googleservices.GoogleServicesPlugin
 import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.oss.licenses)
+    alias(libs.plugins.google.services)
     alias(libs.plugins.androidx.baselineprofile)
 }
 
@@ -232,6 +234,13 @@ dependencies {
 
     implementation(libs.play.services.oss.licenses)
 
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+
+    implementation(libs.unifiedpush.connector)
+
+    implementation(libs.maplibre.compose)
+
     implementation(project(":domain"))
     implementation(project(":presentation"))
     implementation(project(":data"))
@@ -272,4 +281,10 @@ tasks.withType(DependencyTask::class.java).configureEach {
             }
         }
     }
+}
+
+googleServices {
+
+    missingGoogleServicesStrategy =
+        GoogleServicesPlugin.MissingGoogleServicesStrategy.WARN
 }
