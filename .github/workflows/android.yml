@@ -1,4 +1,4 @@
-wname: SPGRAM Release Build
+name: SPGRAM Release Build
 
 on:
   push:
@@ -72,23 +72,23 @@ jobs:
     - name: Find APK
       run: find . -name "*.apk" -type f
 
-- name: Upload Release APK
-  uses: actions/upload-artifact@v4
-  with:
-    name: spgram-release
-    path: |
-      app/build/outputs/apk/official/release/*.apk
-      app/releases/*.apk
-    if-no-files-found: warn
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: spgram-release
+        path: |
+          app/build/outputs/apk/official/release/*.apk
+          app/releases/*.apk
+        if-no-files-found: warn
 
-- name: Create GitHub Release
-  uses: softprops/action-gh-release@v2
-  if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-  with:
-    tag_name: v${{ github.run_number }}
-    name: SPGRAM v${{ github.run_number }}
-    files: |
-      app/build/outputs/apk/official/release/*.apk
-      app/releases/*.apk
-  env:
-    GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      with:
+        tag_name: v${{ github.run_number }}
+        name: SPGRAM v${{ github.run_number }}
+        files: |
+          app/build/outputs/apk/official/release/*.apk
+          app/releases/*.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
