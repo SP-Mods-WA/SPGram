@@ -68,8 +68,6 @@ jobs:
 
     - name: Build SPGRAM Release APK
       run: ./gradlew assembleOfficialRelease --stacktrace --no-daemon
-      env:
-        GRADLE_OPTS: "-Xmx4g -Xms512m -XX:MaxMetaspaceSize=512m"
 
     - name: Find APK
       run: find . -name "*.apk" -type f
