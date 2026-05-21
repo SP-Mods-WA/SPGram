@@ -27,7 +27,7 @@ jobs:
         git clone --depth=1 https://github.com/webmproject/libvpx.git \
           presentation/src/main/cpp/third_party/libvpx
 
-        git clone --depth=1 https://github.com/monogram-android/rlottie.git \
+        git clone --depth=1 https://github.com/Samsung/rlottie.git \
           presentation/src/main/cpp/third_party/rlottie
 
     - name: Set up JDK 21
@@ -39,6 +39,11 @@ jobs:
 
     - name: Setup Android SDK & NDK
       uses: android-actions/setup-android@v3
+
+    - name: Install NDK
+      run: |
+        echo "y" | sdkmanager "ndk;27.2.12479018"
+        echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> $GITHUB_ENV
 
     - name: Make scripts executable
       run: |
@@ -62,7 +67,6 @@ jobs:
       run: |
         echo "API_ID=$TELEGRAM_API_ID" > local.properties
         echo "API_HASH=$TELEGRAM_API_HASH" >> local.properties
-
         echo "RELEASE_STORE_FILE=app/keystore/spgram.jks" >> local.properties
         echo "RELEASE_STORE_PASSWORD=$STORE_PASSWORD" >> local.properties
         echo "RELEASE_KEY_ALIAS=$KEY_ALIAS" >> local.properties
