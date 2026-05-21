@@ -153,10 +153,21 @@ fun SPGramTheme(
         val bgColor = resolvedColorScheme.background
         SideEffect {
             val isLightBackground = bgColor.luminance() > 0.179f
-            activity?.window?.let { WindowCompat.getInsetsController(it, view) }
-                ?.isAppearanceLightStatusBars = isLightBackground
-            activity?.window?.let { WindowCompat.getInsetsController(it, view) }
-                ?.isAppearanceLightNavigationBars = isLightBackground
+            val window = activity?.window ?: return@SideEffect
+            // Update MainActivity so onWindowFocusChanged keeps icons correct
+            (activity as? com.spmods.spgram.app.MainActivity)?.updateTheme(!isLightBackground)
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = isLightBackground
+                isAppearanceLightNavigationBars = isLightBackground
+            }
+            @Suppress("DEPRECATION")
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                window.isStatusBarContrastEnforced = false
+                window.isNavigationBarContrastEnforced = false
+            }
         }
     }
 
