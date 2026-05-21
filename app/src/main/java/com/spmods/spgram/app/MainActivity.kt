@@ -53,6 +53,8 @@ class MainActivity : FragmentActivity() {
 
         // Edge-to-edge: let Theme.kt control status/nav bar icon colors
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
         root = retainedComponent { componentContext ->
             DefaultRootComponent(
