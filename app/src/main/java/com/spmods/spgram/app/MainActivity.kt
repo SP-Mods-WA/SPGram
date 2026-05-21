@@ -34,6 +34,7 @@ class MainActivity : FragmentActivity() {
 
     @Volatile
     private var keepSplashOnScreen: Boolean = true
+    private var isDarkTheme: Boolean = false
 
     @OptIn(ExperimentalDecomposeApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,6 +106,30 @@ class MainActivity : FragmentActivity() {
         val chatId = intent.getLongExtra("chat_id", 0L)
         if (chatId != 0L) {
             root.navigateToChat(chatId)
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            val isLight = !isDarkTheme
+            WindowCompat.getInsetsController(window, window.decorView).apply {
+                isAppearanceLightStatusBars = isLight
+                isAppearanceLightNavigationBars = isLight
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                window.isStatusBarContrastEnforced = false
+                window.isNavigationBarContrastEnforced = false
+            }
+        }
+    }
+
+    fun updateTheme(darkTheme: Boolean) {
+        isDarkTheme = darkTheme
+        val isLight = !darkTheme
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = isLight
+            isAppearanceLightNavigationBars = isLight
         }
     }
 
