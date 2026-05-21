@@ -8,6 +8,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.spmods.spgram.app.MainActivity
 import com.spmods.spgram.presentation.core.util.AppPreferences
 import com.spmods.spgram.presentation.core.util.NightMode
 import java.util.*
@@ -103,6 +104,12 @@ fun AppThemeContainer(
         NightMode.BRIGHTNESS -> {
             screenBrightness <= brightnessThreshold
         }
+    }
+
+    // Keep status bar icon colors in sync whenever the theme changes
+    val activity = LocalContext.current as? MainActivity
+    SideEffect {
+        activity?.updateTheme(darkTheme)
     }
 
     SPGramTheme(
