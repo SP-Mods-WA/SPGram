@@ -28,6 +28,12 @@ if(RLOTTIE_INTERFACE_LINK_LIBRARIES)
     set_target_properties(rlottie PROPERTIES INTERFACE_LINK_LIBRARIES "${RLOTTIE_INTERFACE_LINK_LIBRARIES}")
 endif()
 
+# Suppress rlottie warnings that NDK clang treats as errors
+target_compile_options(rlottie PRIVATE
+    -Wno-sign-compare
+    -Wno-unused-parameter
+    -Wno-error)
+
 target_compile_options(native-lib PRIVATE
     -O3
     -fvisibility=hidden
@@ -37,11 +43,6 @@ target_compile_options(native-lib PRIVATE
 target_link_options(native-lib PRIVATE
     "-Wl,-z,max-page-size=16384"
     -Wl,--gc-sections)
-
-#if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
-#    add_compile_options(-flto)
-#    add_link_options(-flto)
-#endif()
 
 find_library(
         log-lib
