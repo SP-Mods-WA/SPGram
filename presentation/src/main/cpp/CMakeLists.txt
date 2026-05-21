@@ -20,6 +20,11 @@ add_library(
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(LOTTIE_MODULE OFF CACHE BOOL "" FORCE)
 set(LOTTIE_TEST OFF CACHE BOOL "" FORCE)
+
+# Disable NEON/pixman ASM in rlottie to avoid missing symbol errors on armeabi-v7a
+set(LOTTIE_CCACHE OFF CACHE BOOL "" FORCE)
+add_compile_definitions(LOTTIE_DISABLE_ARM_NEON)
+
 add_subdirectory(third_party/rlottie)
 
 get_target_property(RLOTTIE_INTERFACE_LINK_LIBRARIES rlottie INTERFACE_LINK_LIBRARIES)
@@ -28,7 +33,14 @@ if(RLOTTIE_INTERFACE_LINK_LIBRARIES)
     set_target_properties(rlottie PROPERTIES INTERFACE_LINK_LIBRARIES "${RLOTTIE_INTERFACE_LINK_LIBRARIES}")
 endif()
 
-# Suppress rlottie warnings that NDK clang treats as errors
+# Remove vdrawhelper_neon from rlottie sources to prevent pixman ASM link errors
+get_target_property(RLOTTIE_SOURCES rlottie SOURCES)
+if(RLOTTIE_SOURCES)
+    list(FILTER RLOTTIE_SOURCES EXCLUDE REGEX "vdrawhelper_neon\\.cpp")
+    set_target_properties(rlottie PROPERTIES SOURCES "${RLOTTIE_SOURCES}")
+endif()
+
+# Suppress rlottie warnings treated as errors by NDK clang
 target_compile_options(rlottie PRIVATE
     -Wno-sign-compare
     -Wno-unused-parameter
@@ -44,30 +56,17 @@ target_link_options(native-lib PRIVATE
     "-Wl,-z,max-page-size=16384"
     -Wl,--gc-sections)
 
-find_library(
-        log-lib
-        log)
-
-find_library(
-        android-lib
-        android)
-
-find_library(
-        egl-lib
-        EGL)
-
-find_library(
-        glesv2-lib
-        GLESv2)
+find_library(log-lib log)
+find_library(android-lib android)
+find_library(egl-lib EGL)
+find_library(glesv2-lib GLESv2)
 
 target_link_libraries(
         native-lib
-
         libvpx
         rlottie
         mediandk
         jnigraphics
-
         ${log-lib}
         ${android-lib}
         ${egl-lib}
