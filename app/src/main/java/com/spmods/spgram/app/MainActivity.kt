@@ -39,6 +39,8 @@ class MainActivity : FragmentActivity() {
     @OptIn(ExperimentalDecomposeApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(resolveStartupTheme())
+        // Set isDarkTheme early so status bar icons are correct from the start
+        isDarkTheme = resolveIsDarkTheme()
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition { keepSplashOnScreen }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -54,6 +56,17 @@ class MainActivity : FragmentActivity() {
 
         // Edge-to-edge: let Theme.kt control status/nav bar icon colors
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // Apply correct status bar icon colors immediately (light/dark)
+        val isLight = !isDarkTheme
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = isLight
+            isAppearanceLightNavigationBars = isLight
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
 
         root = retainedComponent { componentContext ->
             DefaultRootComponent(
@@ -140,6 +153,38 @@ class MainActivity : FragmentActivity() {
             startForegroundService(intent)
         } else {
             startService(intent)
+        }
+    }
+
+    private fun resolveIsDarkTheme(): Boolean {
+        return when (appPreferences.nightMode.value) {
+            NightMode.SYSTEM -> {
+                val uiMode = resources.configuration.uiMode and
+                        android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            }
+            NightMode.LIGHT -> false
+            NightMode.DARK -> true
+            NightMode.SCHEDULED -> {
+                val calendar = Calendar.getInstance()
+                val now = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+                val start = appPreferences.nightModeStartTime.value
+                    .split(":").takeIf { it.size == 2 }
+                    ?.let { it[0].toIntOrNull()?.times(60)?.plus(it[1].toIntOrNull() ?: 0) }
+                    ?: 22 * 60
+                val end = appPreferences.nightModeEndTime.value
+                    .split(":").takeIf { it.size == 2 }
+                    ?.let { it[0].toIntOrNull()?.times(60)?.plus(it[1].toIntOrNull() ?: 0) }
+                    ?: 7 * 60
+                if (start < end) now in start until end
+                else now >= start || now < end
+            }
+            NightMode.BRIGHTNESS -> {
+                val brightness = runCatching {
+                    Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 255)
+                }.getOrDefault(255)
+                brightness / 255f <= appPreferences.nightModeBrightnessThreshold.value
+            }
         }
     }
 
