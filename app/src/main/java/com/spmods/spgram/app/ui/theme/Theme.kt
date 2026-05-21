@@ -15,7 +15,6 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -43,12 +42,23 @@ private val LightColorScheme = lightColorScheme(
     primary = TelegramBlue40,
     secondary = TelegramBlueGrey40,
     tertiary = TelegramCyan40
+
+    /* Other default colors to override
+    background = Color(0xFFFFFBFE),
+    surface = Color(0xFFFFFBFE),
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+    onBackground = Color(0xFF1C1B1F),
+    onSurface = Color(0xFF1C1B1F),
+    */
 )
 
 @Composable
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 fun SPGramTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     amoledTheme: Boolean = false,
     customThemePalette: CustomThemePalette? = null,
@@ -63,6 +73,7 @@ fun SPGramTheme(
         val onPrimaryContainer = readableTextOn(palette.primaryContainer)
         val onSecondaryContainer = readableTextOn(palette.secondaryContainer)
         val onTertiaryContainer = readableTextOn(palette.tertiaryContainer)
+        // Keep subtitles/summary readable on dark cards even if surfaceVariant is user-set.
         val onSurfaceVariant = readableTextOnAll(listOf(palette.surfaceVariant, palette.surface, palette.background))
 
         if (darkTheme) {
@@ -123,41 +134,34 @@ fun SPGramTheme(
                 dynamicLightColorScheme(context)
             }
         }
+
         darkTheme -> {
             if (amoledTheme) DarkColorScheme.copy(background = Color.Black, surface = Color.Black) else DarkColorScheme
         }
         else -> LightColorScheme
     }
+    // Force surfaceContainerLow = background so all Scaffold screens
+    // show the correct background color in the status bar area
+    val resolvedColorScheme = colorScheme.copy(
+        surfaceContainerLow = colorScheme.background,
+        surfaceContainerLowest = colorScheme.background,
+    )
 
     val view = LocalView.current
     val activity = LocalActivity.current
     if (!view.isInEditMode) {
-        val isLight = colorScheme.background.luminance() > 0.179f
+        val bgColor = resolvedColorScheme.background
         SideEffect {
-            val window = activity?.window ?: return@SideEffect
-
-            // Transparent status & nav bars
-            @Suppress("DEPRECATION")
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
-            @Suppress("DEPRECATION")
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
-
-            // Force transparent on Android 15+ via WindowInsetsController
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                window.isStatusBarContrastEnforced = false
-                window.isNavigationBarContrastEnforced = false
-            }
-
-            // Icon colors
-            WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = isLight
-                isAppearanceLightNavigationBars = isLight
-            }
+            val isLightBackground = bgColor.luminance() > 0.179f
+            activity?.window?.let { WindowCompat.getInsetsController(it, view) }
+                ?.isAppearanceLightStatusBars = isLightBackground
+            activity?.window?.let { WindowCompat.getInsetsController(it, view) }
+                ?.isAppearanceLightNavigationBars = isLightBackground
         }
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = resolvedColorScheme,
         typography = Typography,
         motionScheme = MotionScheme.expressive(),
         content = content
