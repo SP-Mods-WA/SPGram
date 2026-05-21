@@ -2,6 +2,8 @@ package com.spmods.spgram.app.ui.theme
 
 import android.os.Build
 import androidx.activity.compose.LocalActivity
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
@@ -42,23 +44,12 @@ private val LightColorScheme = lightColorScheme(
     primary = TelegramBlue40,
     secondary = TelegramBlueGrey40,
     tertiary = TelegramCyan40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
 )
 
 @Composable
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 fun SPGramTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     amoledTheme: Boolean = false,
     customThemePalette: CustomThemePalette? = null,
@@ -73,7 +64,6 @@ fun SPGramTheme(
         val onPrimaryContainer = readableTextOn(palette.primaryContainer)
         val onSecondaryContainer = readableTextOn(palette.secondaryContainer)
         val onTertiaryContainer = readableTextOn(palette.tertiaryContainer)
-        // Keep subtitles/summary readable on dark cards even if surfaceVariant is user-set.
         val onSurfaceVariant = readableTextOnAll(listOf(palette.surfaceVariant, palette.surface, palette.background))
 
         if (darkTheme) {
@@ -134,22 +124,42 @@ fun SPGramTheme(
                 dynamicLightColorScheme(context)
             }
         }
-
         darkTheme -> {
             if (amoledTheme) DarkColorScheme.copy(background = Color.Black, surface = Color.Black) else DarkColorScheme
         }
         else -> LightColorScheme
     }
+
     val view = LocalView.current
     val activity = LocalActivity.current
     if (!view.isInEditMode) {
-        val bgColor = colorScheme.background
+        val isLight = colorScheme.background.luminance() > 0.179f
         SideEffect {
-            val isLightBackground = bgColor.luminance() > 0.179f
-            activity?.window?.let { WindowCompat.getInsetsController(it, view) }
-                ?.isAppearanceLightStatusBars = isLightBackground
-            activity?.window?.let { WindowCompat.getInsetsController(it, view) }
-                ?.isAppearanceLightNavigationBars = isLightBackground
+            val window = activity?.window ?: return@SideEffect
+
+            // Transparent status & nav bars — works on all API levels including 15
+            activity.enableEdgeToEdge(
+                statusBarStyle = if (isLight)
+                    SystemBarStyle.light(
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT
+                    )
+                else
+                    SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+                navigationBarStyle = if (isLight)
+                    SystemBarStyle.light(
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT
+                    )
+                else
+                    SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+            )
+
+            // Icon colors
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = isLight
+                isAppearanceLightNavigationBars = isLight
+            }
         }
     }
 
