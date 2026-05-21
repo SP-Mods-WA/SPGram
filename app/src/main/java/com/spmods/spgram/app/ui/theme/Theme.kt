@@ -2,8 +2,6 @@ package com.spmods.spgram.app.ui.theme
 
 import android.os.Build
 import androidx.activity.compose.LocalActivity
-import androidx.activity.enableEdgeToEdge
-import androidx.activity.SystemBarStyle
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
@@ -17,6 +15,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -137,23 +136,17 @@ fun SPGramTheme(
         SideEffect {
             val window = activity?.window ?: return@SideEffect
 
-            // Transparent status & nav bars — works on all API levels including 15
-            activity.enableEdgeToEdge(
-                statusBarStyle = if (isLight)
-                    SystemBarStyle.light(
-                        android.graphics.Color.TRANSPARENT,
-                        android.graphics.Color.TRANSPARENT
-                    )
-                else
-                    SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
-                navigationBarStyle = if (isLight)
-                    SystemBarStyle.light(
-                        android.graphics.Color.TRANSPARENT,
-                        android.graphics.Color.TRANSPARENT
-                    )
-                else
-                    SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-            )
+            // Transparent status & nav bars
+            @Suppress("DEPRECATION")
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
+            // Force transparent on Android 15+ via WindowInsetsController
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isStatusBarContrastEnforced = false
+                window.isNavigationBarContrastEnforced = false
+            }
 
             // Icon colors
             WindowCompat.getInsetsController(window, view).apply {
