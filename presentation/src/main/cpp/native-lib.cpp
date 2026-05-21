@@ -517,7 +517,7 @@ bool processVideoNative(const char* inputPath, const char* outputPath,
 
 extern "C" {
 JNIEXPORT jlong JNICALL
-Java_org_monogram_presentation_core_media_NativeVideoRenderer_create(
+Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_create(
         JNIEnv* env, jobject instance, jobject surface, jboolean useAlpha, jboolean removeBlackBg) {
     auto* renderer = new NativeVideoRenderer(env, instance, surface, useAlpha, removeBlackBg);
     renderer->start();
@@ -525,28 +525,28 @@ Java_org_monogram_presentation_core_media_NativeVideoRenderer_create(
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_core_media_NativeVideoRenderer_destroy(
+Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_destroy(
         JNIEnv* env, jobject /* this */, jlong handle) {
     auto* renderer = reinterpret_cast<NativeVideoRenderer*>(handle);
     delete renderer;
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_core_media_NativeVideoRenderer_updateSize(
+Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_updateSize(
         JNIEnv* env, jobject /* this */, jlong handle, jint width, jint height) {
     auto* renderer = reinterpret_cast<NativeVideoRenderer*>(handle);
     renderer->updateSize(width, height);
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_core_media_NativeVideoRenderer_notifyFrameAvailable(
+Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_notifyFrameAvailable(
         JNIEnv* env, jobject /* this */, jlong handle) {
     auto* renderer = reinterpret_cast<NativeVideoRenderer*>(handle);
     renderer->onFrameAvailable();
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_core_media_NativeVideoRenderer_setFilter(
+Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_setFilter(
         JNIEnv* env, jobject /* this */, jlong handle, jfloatArray matrix) {
     auto* renderer = reinterpret_cast<NativeVideoRenderer*>(handle);
     if (matrix == nullptr) {
@@ -559,97 +559,97 @@ Java_org_monogram_presentation_core_media_NativeVideoRenderer_setFilter(
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_core_media_NativeVideoRenderer_setOverlayTexture(
+Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_setOverlayTexture(
         JNIEnv* env, jobject /* this */, jlong handle, jint textureId) {
     auto* renderer = reinterpret_cast<NativeVideoRenderer*>(handle);
     renderer->setOverlayTexture(textureId);
 }
 
 JNIEXPORT jlong JNICALL
-Java_org_monogram_presentation_features_chats_currentChat_components_NativeVideoRenderer_create(
+Java_com_spmods_spgram_presentation_features_chats_currentChat_components_NativeVideoRenderer_create(
         JNIEnv *env, jobject instance, jobject surface, jboolean useAlpha, jboolean removeBlackBg) {
-    return Java_org_monogram_presentation_core_media_NativeVideoRenderer_create(
+    return Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_create(
             env, instance, surface, useAlpha, removeBlackBg
     );
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_features_chats_currentChat_components_NativeVideoRenderer_destroy(
+Java_com_spmods_spgram_presentation_features_chats_currentChat_components_NativeVideoRenderer_destroy(
         JNIEnv *env, jobject instance, jlong handle) {
-    Java_org_monogram_presentation_core_media_NativeVideoRenderer_destroy(env, instance, handle);
+    Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_destroy(env, instance, handle);
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_features_chats_currentChat_components_NativeVideoRenderer_updateSize(
+Java_com_spmods_spgram_presentation_features_chats_currentChat_components_NativeVideoRenderer_updateSize(
         JNIEnv *env, jobject instance, jlong handle, jint width, jint height) {
-    Java_org_monogram_presentation_core_media_NativeVideoRenderer_updateSize(
+    Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_updateSize(
             env, instance, handle, width, height
     );
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_features_chats_currentChat_components_NativeVideoRenderer_notifyFrameAvailable(
+Java_com_spmods_spgram_presentation_features_chats_currentChat_components_NativeVideoRenderer_notifyFrameAvailable(
         JNIEnv *env, jobject instance, jlong handle) {
-    Java_org_monogram_presentation_core_media_NativeVideoRenderer_notifyFrameAvailable(
+    Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_notifyFrameAvailable(
             env, instance, handle
     );
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_features_chats_currentChat_components_NativeVideoRenderer_setFilter(
+Java_com_spmods_spgram_presentation_features_chats_currentChat_components_NativeVideoRenderer_setFilter(
         JNIEnv *env, jobject instance, jlong handle, jfloatArray matrix) {
-    Java_org_monogram_presentation_core_media_NativeVideoRenderer_setFilter(
+    Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_setFilter(
             env, instance, handle, matrix
     );
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_features_chats_currentChat_components_NativeVideoRenderer_setOverlayTexture(
+Java_com_spmods_spgram_presentation_features_chats_currentChat_components_NativeVideoRenderer_setOverlayTexture(
         JNIEnv *env, jobject instance, jlong handle, jint textureId) {
-    Java_org_monogram_presentation_core_media_NativeVideoRenderer_setOverlayTexture(
+    Java_com_spmods_spgram_presentation_core_media_NativeVideoRenderer_setOverlayTexture(
             env, instance, handle, textureId
     );
 }
 
 JNIEXPORT jlong JNICALL
-        Java_org_monogram_presentation_features_stickers_core_VpxWrapper_create(JNIEnv* env, jobject thiz) {
+        Java_com_spmods_spgram_presentation_features_stickers_core_VpxWrapper_create(JNIEnv* env, jobject thiz) {
 return (jlong) new VpxDecoder();
 }
 
 JNIEXPORT jboolean JNICALL
-        Java_org_monogram_presentation_features_stickers_core_VpxWrapper_open(JNIEnv* env, jobject thiz, jlong ptr, jint fd, jlong offset, jlong length) {
+        Java_com_spmods_spgram_presentation_features_stickers_core_VpxWrapper_open(JNIEnv* env, jobject thiz, jlong ptr, jint fd, jlong offset, jlong length) {
 auto* decoder = (VpxDecoder*) ptr;
 return decoder->open(fd, offset, length);
 }
 
 JNIEXPORT jlong JNICALL
-        Java_org_monogram_presentation_features_stickers_core_VpxWrapper_decodeNextFrame(JNIEnv* env, jobject thiz, jlong ptr, jobject bitmap) {
+        Java_com_spmods_spgram_presentation_features_stickers_core_VpxWrapper_decodeNextFrame(JNIEnv* env, jobject thiz, jlong ptr, jobject bitmap) {
 auto* decoder = (VpxDecoder*) ptr;
 return decoder->decodeFrame(env, bitmap);
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_features_stickers_core_VpxWrapper_destroy(JNIEnv* env, jobject thiz, jlong ptr) {
+Java_com_spmods_spgram_presentation_features_stickers_core_VpxWrapper_destroy(JNIEnv* env, jobject thiz, jlong ptr) {
 auto* decoder = (VpxDecoder*) ptr;
 delete decoder;
 }
 
 JNIEXPORT jint JNICALL
-Java_org_monogram_presentation_features_stickers_core_VpxWrapper_getWidth(JNIEnv* env, jobject thiz, jlong ptr) {
+Java_com_spmods_spgram_presentation_features_stickers_core_VpxWrapper_getWidth(JNIEnv* env, jobject thiz, jlong ptr) {
     auto* decoder = (VpxDecoder*) ptr;
     if (decoder == nullptr) return 0;
     return decoder->getWidth();
 }
 
 JNIEXPORT jint JNICALL
-Java_org_monogram_presentation_features_stickers_core_VpxWrapper_getHeight(JNIEnv* env, jobject thiz, jlong ptr) {
+Java_com_spmods_spgram_presentation_features_stickers_core_VpxWrapper_getHeight(JNIEnv* env, jobject thiz, jlong ptr) {
     auto* decoder = (VpxDecoder*) ptr;
     if (decoder == nullptr) return 0;
     return decoder->getHeight();
 }
 
 JNIEXPORT jboolean JNICALL
-Java_org_monogram_presentation_features_chats_conversation_editor_video_VideoEditorUtils_processVideoNative(
+Java_com_spmods_spgram_presentation_features_chats_conversation_editor_video_VideoEditorUtils_processVideoNative(
         JNIEnv* env, jclass clazz,
         jstring inputPath, jstring outputPath,
         jlong startMs, jlong endMs,
@@ -676,12 +676,12 @@ Java_org_monogram_presentation_features_chats_conversation_editor_video_VideoEdi
 }
 
 JNIEXPORT jboolean JNICALL
-Java_org_monogram_presentation_features_chats_currentChat_editor_video_VideoEditorUtils_processVideoNative(
+Java_com_spmods_spgram_presentation_features_chats_currentChat_editor_video_VideoEditorUtils_processVideoNative(
         JNIEnv *env, jclass clazz,
         jstring inputPath, jstring outputPath,
         jlong startMs, jlong endMs,
         jint targetHeight, jint bitrate, jboolean muteAudio, jfloatArray filterMatrix) {
-    return Java_org_monogram_presentation_features_chats_conversation_editor_video_VideoEditorUtils_processVideoNative(
+    return Java_com_spmods_spgram_presentation_features_chats_conversation_editor_video_VideoEditorUtils_processVideoNative(
             env, clazz, inputPath, outputPath, startMs, endMs, targetHeight, bitrate, muteAudio, filterMatrix
     );
 }
