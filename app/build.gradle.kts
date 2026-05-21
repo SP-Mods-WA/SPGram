@@ -87,7 +87,7 @@ android {
 
         abi {
 
-            isEnable = true
+            isEnable = false
 
             reset()
 
