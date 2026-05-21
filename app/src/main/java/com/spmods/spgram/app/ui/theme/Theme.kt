@@ -143,8 +143,13 @@ fun SPGramTheme(
     val view = LocalView.current
     val activity = LocalActivity.current
     if (!view.isInEditMode) {
+        val bgColor = colorScheme.background
         SideEffect {
-            activity?.window?.let { WindowCompat.getInsetsController(it, view) }?.isAppearanceLightStatusBars = !darkTheme
+            val isLightBackground = bgColor.luminance() > 0.179f
+            activity?.window?.let { WindowCompat.getInsetsController(it, view) }
+                ?.isAppearanceLightStatusBars = isLightBackground
+            activity?.window?.let { WindowCompat.getInsetsController(it, view) }
+                ?.isAppearanceLightNavigationBars = isLightBackground
         }
     }
 
