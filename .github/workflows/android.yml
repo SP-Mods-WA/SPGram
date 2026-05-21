@@ -27,7 +27,7 @@ jobs:
         git clone --depth=1 https://github.com/webmproject/libvpx.git \
           presentation/src/main/cpp/third_party/libvpx
 
-        git clone --depth=1 https://github.com/Samsung/rlottie.git \
+        git clone --depth=1 https://github.com/TelegramMessenger/rlottie.git \
           presentation/src/main/cpp/third_party/rlottie
 
     - name: Set up JDK 21
