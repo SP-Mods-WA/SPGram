@@ -7,12 +7,12 @@
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_create(JNIEnv *, jobject) {
+Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_create(JNIEnv *, jobject) {
     return reinterpret_cast<jlong>(new RLottieDecoder());
 }
 
 JNIEXPORT jboolean JNICALL
-Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_openFromData(
+Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_openFromData(
     JNIEnv *env,
     jobject,
     jlong ptr,
@@ -41,7 +41,7 @@ Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_openFromDat
 }
 
 JNIEXPORT jboolean JNICALL
-Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_renderFrame(
+Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_renderFrame(
     JNIEnv *env,
     jobject,
     jlong ptr,
@@ -63,37 +63,37 @@ Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_renderFrame
 }
 
 JNIEXPORT jint JNICALL
-Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_getWidth(JNIEnv *, jobject, jlong ptr) {
+Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_getWidth(JNIEnv *, jobject, jlong ptr) {
     auto *decoder = reinterpret_cast<RLottieDecoder *>(ptr);
     return decoder == nullptr ? 0 : decoder->getWidth();
 }
 
 JNIEXPORT jint JNICALL
-Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_getHeight(JNIEnv *, jobject, jlong ptr) {
+Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_getHeight(JNIEnv *, jobject, jlong ptr) {
     auto *decoder = reinterpret_cast<RLottieDecoder *>(ptr);
     return decoder == nullptr ? 0 : decoder->getHeight();
 }
 
 JNIEXPORT jint JNICALL
-Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_getTotalFrames(JNIEnv *, jobject, jlong ptr) {
+Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_getTotalFrames(JNIEnv *, jobject, jlong ptr) {
     auto *decoder = reinterpret_cast<RLottieDecoder *>(ptr);
     return decoder == nullptr ? 0 : decoder->getTotalFrames();
 }
 
 JNIEXPORT jdouble JNICALL
-Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_getFrameRate(JNIEnv *, jobject, jlong ptr) {
+Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_getFrameRate(JNIEnv *, jobject, jlong ptr) {
     auto *decoder = reinterpret_cast<RLottieDecoder *>(ptr);
     return decoder == nullptr ? 0.0 : decoder->getFrameRate();
 }
 
 JNIEXPORT jlong JNICALL
-Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_getDurationMs(JNIEnv *, jobject, jlong ptr) {
+Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_getDurationMs(JNIEnv *, jobject, jlong ptr) {
     auto *decoder = reinterpret_cast<RLottieDecoder *>(ptr);
     return decoder == nullptr ? 0 : decoder->getDurationMs();
 }
 
 JNIEXPORT void JNICALL
-Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_destroy(JNIEnv *, jobject, jlong ptr) {
+Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_destroy(JNIEnv *, jobject, jlong ptr) {
     auto *decoder = reinterpret_cast<RLottieDecoder *>(ptr);
     delete decoder;
 }
@@ -104,21 +104,21 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
         return JNI_ERR;
     }
 
-    jclass wrapperClass = env->FindClass("org/monogram/presentation/features/stickers/core/RLottieWrapper");
+    jclass wrapperClass = env->FindClass("com/spmods/spgram/presentation/features/stickers/core/RLottieWrapper");
     if (wrapperClass == nullptr) {
         return JNI_ERR;
     }
 
     static const JNINativeMethod methods[] = {
-        {const_cast<char *>("create"), const_cast<char *>("()J"), reinterpret_cast<void *>(Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_create)},
-        {const_cast<char *>("openFromData"), const_cast<char *>("(JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z"), reinterpret_cast<void *>(Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_openFromData)},
-        {const_cast<char *>("renderFrame"), const_cast<char *>("(JLandroid/graphics/Bitmap;IIIII)Z"), reinterpret_cast<void *>(Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_renderFrame)},
-        {const_cast<char *>("getWidth"), const_cast<char *>("(J)I"), reinterpret_cast<void *>(Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_getWidth)},
-        {const_cast<char *>("getHeight"), const_cast<char *>("(J)I"), reinterpret_cast<void *>(Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_getHeight)},
-        {const_cast<char *>("getTotalFrames"), const_cast<char *>("(J)I"), reinterpret_cast<void *>(Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_getTotalFrames)},
-        {const_cast<char *>("getFrameRate"), const_cast<char *>("(J)D"), reinterpret_cast<void *>(Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_getFrameRate)},
-        {const_cast<char *>("getDurationMs"), const_cast<char *>("(J)J"), reinterpret_cast<void *>(Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_getDurationMs)},
-        {const_cast<char *>("destroy"), const_cast<char *>("(J)V"), reinterpret_cast<void *>(Java_org_monogram_presentation_features_stickers_core_RLottieWrapper_destroy)}
+        {const_cast<char *>("create"), const_cast<char *>("()J"), reinterpret_cast<void *>(Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_create)},
+        {const_cast<char *>("openFromData"), const_cast<char *>("(JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z"), reinterpret_cast<void *>(Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_openFromData)},
+        {const_cast<char *>("renderFrame"), const_cast<char *>("(JLandroid/graphics/Bitmap;IIIII)Z"), reinterpret_cast<void *>(Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_renderFrame)},
+        {const_cast<char *>("getWidth"), const_cast<char *>("(J)I"), reinterpret_cast<void *>(Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_getWidth)},
+        {const_cast<char *>("getHeight"), const_cast<char *>("(J)I"), reinterpret_cast<void *>(Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_getHeight)},
+        {const_cast<char *>("getTotalFrames"), const_cast<char *>("(J)I"), reinterpret_cast<void *>(Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_getTotalFrames)},
+        {const_cast<char *>("getFrameRate"), const_cast<char *>("(J)D"), reinterpret_cast<void *>(Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_getFrameRate)},
+        {const_cast<char *>("getDurationMs"), const_cast<char *>("(J)J"), reinterpret_cast<void *>(Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_getDurationMs)},
+        {const_cast<char *>("destroy"), const_cast<char *>("(J)V"), reinterpret_cast<void *>(Java_com_spmods_spgram_presentation_features_stickers_core_RLottieWrapper_destroy)}
     };
 
     constexpr jint methodCount = static_cast<jint>(sizeof(methods) / sizeof(methods[0]));
