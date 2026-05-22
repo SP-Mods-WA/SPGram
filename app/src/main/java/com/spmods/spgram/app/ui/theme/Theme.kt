@@ -153,9 +153,22 @@ fun SPGramTheme(
         SideEffect {
             val window = activity?.window ?: return@SideEffect
             val isLight = !darkTheme
-            WindowCompat.getInsetsController(window, view).apply {
+            val decorView = window.decorView
+            WindowCompat.getInsetsController(window, decorView).apply {
                 isAppearanceLightStatusBars = isLight
                 isAppearanceLightNavigationBars = isLight
+            }
+            // Legacy flag for API < 30
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
+                @Suppress("DEPRECATION")
+                var flags = decorView.systemUiVisibility
+                flags = if (isLight) {
+                    flags or android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                } else {
+                    flags and android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+                }
+                @Suppress("DEPRECATION")
+                decorView.systemUiVisibility = flags
             }
             @Suppress("DEPRECATION")
             window.statusBarColor = android.graphics.Color.TRANSPARENT
