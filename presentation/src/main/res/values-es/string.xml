@@ -21,7 +21,7 @@
     <!-- About Screen -->
     <string name="about_title">Acerca de</string>
     <string name="cd_back">Atrás</string>
-    <string name="app_name_spgram">SPGram</string>
+    <string name="app_name_spgram">SPGRAM</string>
     <string name="version_format">Versión %1$s</string>
     <string name="terms_of_service_title">Términos de Servicio</string>
     <string name="terms_of_service_subtitle">Lee nuestros términos y condiciones</string>
