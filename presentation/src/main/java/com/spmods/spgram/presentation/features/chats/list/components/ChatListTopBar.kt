@@ -166,7 +166,7 @@ fun ChatListTopBar(
                                 text = stringResource(R.string.app_name_spgram),
                                 style = MaterialTheme.typography.headlineSmallEmphasized,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = Color(0xFF25D366)
                             )
 
                             if (!user?.statusEmojiPath.isNullOrBlank()) {
