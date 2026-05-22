@@ -150,15 +150,12 @@ fun SPGramTheme(
     val view = LocalView.current
     val activity = LocalActivity.current
     if (!view.isInEditMode) {
-        val bgColor = resolvedColorScheme.background
         SideEffect {
-            val isLightBackground = bgColor.luminance() > 0.179f
             val window = activity?.window ?: return@SideEffect
-            // Update MainActivity so onWindowFocusChanged keeps icons correct
-            (activity as? com.spmods.spgram.app.MainActivity)?.updateTheme(!isLightBackground)
+            val isLight = !darkTheme
             WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = isLightBackground
-                isAppearanceLightNavigationBars = isLightBackground
+                isAppearanceLightStatusBars = isLight
+                isAppearanceLightNavigationBars = isLight
             }
             @Suppress("DEPRECATION")
             window.statusBarColor = android.graphics.Color.TRANSPARENT
