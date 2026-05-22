@@ -21,7 +21,7 @@
     <!-- About Screen -->
     <string name="about_title">Про застосунок</string>
     <string name="cd_back">Назад</string>
-    <string name="app_name_spgram">SPGram</string>
+    <string name="app_name_spgram">SPGRAM</string>
     <string name="version_format">Версія %1$s</string>
     <string name="terms_of_service_title">Умови використання</string>
     <string name="terms_of_service_subtitle">Ознайомтеся з умовами використання</string>
