@@ -5,6 +5,11 @@
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
     </style>
 
+    <style name="Theme.SPGram.Dark" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+    </style>
+
     <style name="Theme.SPGram.Startup" parent="Theme.SPGram">
         <item name="android:windowBackground">@drawable/startup_background</item>
     </style>
