@@ -41,4 +41,11 @@
     <string name="crash_error_details">Error Details</string>
     <string name="crash_description">Something went wrong. Please share or copy the logs below to report this issue to the developers.</string>
 
+
+
+    <string name="tab_chats">Chats</string>
+    <string name="tab_groups">Groups</string>
+    <string name="tab_updates">Updates</string>
+    <string name="tab_settings">Settings</string>
+    
 </resources>
