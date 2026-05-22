@@ -140,9 +140,11 @@ class MainActivity : FragmentActivity() {
     fun updateTheme(darkTheme: Boolean) {
         isDarkTheme = darkTheme
         val isLight = !darkTheme
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = isLight
-            isAppearanceLightNavigationBars = isLight
+        runOnUiThread {
+            WindowCompat.getInsetsController(window, window.decorView).apply {
+                isAppearanceLightStatusBars = isLight
+                isAppearanceLightNavigationBars = isLight
+            }
         }
     }
 
