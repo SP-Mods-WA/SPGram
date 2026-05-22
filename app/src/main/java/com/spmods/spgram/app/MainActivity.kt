@@ -122,30 +122,8 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
-            val isLight = !isDarkTheme
-            WindowCompat.getInsetsController(window, window.decorView).apply {
-                isAppearanceLightStatusBars = isLight
-                isAppearanceLightNavigationBars = isLight
-            }
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                window.isStatusBarContrastEnforced = false
-                window.isNavigationBarContrastEnforced = false
-            }
-        }
-    }
-
     fun updateTheme(darkTheme: Boolean) {
         isDarkTheme = darkTheme
-        val isLight = !darkTheme
-        runOnUiThread {
-            WindowCompat.getInsetsController(window, window.decorView).apply {
-                isAppearanceLightStatusBars = isLight
-                isAppearanceLightNavigationBars = isLight
-            }
-        }
     }
 
     private fun startNotificationService() {
