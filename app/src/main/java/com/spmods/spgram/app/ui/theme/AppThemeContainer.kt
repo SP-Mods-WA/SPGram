@@ -106,12 +106,6 @@ fun AppThemeContainer(
         }
     }
 
-    // Keep status bar icon colors in sync whenever the theme changes
-    val activity = LocalContext.current as? MainActivity
-    SideEffect {
-        activity?.updateTheme(darkTheme)
-    }
-
     SPGramTheme(
         darkTheme = darkTheme,
         dynamicColor = isDynamicColorsEnabled && !isCustomThemeEnabled,
