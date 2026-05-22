@@ -6,15 +6,12 @@
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
     </style>
 
-    <style name="Theme.SPGram.Startup" parent="Theme.SPGram">
-        <item name="android:windowBackground">@drawable/startup_background</item>
+    <style name="Theme.SPGram.Dark" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
     </style>
 
-    <style name="Theme.SPGram.Startup.Light" parent="Theme.SPGram">
-        <item name="android:windowBackground">@drawable/startup_background_light</item>
-    </style>
-
-    <style name="Theme.SPGram.Startup.Dark" parent="Theme.SPGram">
+    <style name="Theme.SPGram.Startup.Dark" parent="Theme.SPGram.Dark">
         <item name="android:windowBackground">@drawable/startup_background_dark</item>
     </style>
 </resources>
