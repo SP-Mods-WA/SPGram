@@ -1,13 +1,17 @@
 package com.spmods.spgram.app.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -25,7 +29,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -44,8 +47,10 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import kotlinx.coroutines.launch
+import com.spmods.spgram.presentation.features.groups.GroupsContent
+import com.spmods.spgram.presentation.features.updates.UpdatesContent
 import com.spmods.spgram.presentation.root.RootComponent
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 @OptIn(ExperimentalDecomposeApi::class)
@@ -63,6 +68,42 @@ fun MobileLayout(root: RootComponent) {
         isDragToBackEnabled && isSwipeBackSupported(stack.active.instance) && !isSwipeBackBlocked
     val dragProgress = if (widthPx > 0f) (dragOffsetX / widthPx).coerceIn(0f, 1f) else 0f
 
+    // Active tab state — Groups/Updates are rendered as overlays over ChatsChild
+    var selectedTab by remember { mutableStateOf(MainTab.Chats) }
+
+    // Determine if we're on a root tab screen
+    val activeChild = stack.active.instance
+    val isOnChatsRoot by remember(activeChild) {
+        derivedStateOf { activeChild is RootComponent.Child.ChatsChild }
+    }
+    val isOnSettingsRoot by remember(activeChild) {
+        derivedStateOf {
+            activeChild is RootComponent.Child.SettingsChild ||
+            activeChild is RootComponent.Child.EditProfileChild ||
+            activeChild is RootComponent.Child.SessionsChild ||
+            activeChild is RootComponent.Child.DataStorageChild ||
+            activeChild is RootComponent.Child.StorageUsageChild ||
+            activeChild is RootComponent.Child.NetworkUsageChild ||
+            activeChild is RootComponent.Child.AdBlockChild ||
+            activeChild is RootComponent.Child.PowerSavingChild ||
+            activeChild is RootComponent.Child.NotificationsChild ||
+            activeChild is RootComponent.Child.ProxyChild ||
+            activeChild is RootComponent.Child.PrivacyChild ||
+            activeChild is RootComponent.Child.AboutChild ||
+            activeChild is RootComponent.Child.StickersChild ||
+            activeChild is RootComponent.Child.DebugChild
+        }
+    }
+    val showBottomBar = isOnChatsRoot || isOnSettingsRoot
+
+    // Keep selectedTab in sync with navigation
+    LaunchedEffect(isOnChatsRoot, isOnSettingsRoot) {
+        when {
+            isOnSettingsRoot -> selectedTab = MainTab.Settings
+            isOnChatsRoot && selectedTab == MainTab.Settings -> selectedTab = MainTab.Chats
+        }
+    }
+
     LaunchedEffect(canUseDragToBack) {
         if (!canUseDragToBack && dragOffsetX > 0f) {
             dragOffsetX = 0f
@@ -70,36 +111,10 @@ fun MobileLayout(root: RootComponent) {
         }
     }
 
-    // Determine active tab from current child
-    val activeChild = stack.active.instance
-    val selectedTab by remember(activeChild) {
-        derivedStateOf {
-            when (activeChild) {
-                is RootComponent.Child.ChatsChild -> MainTab.Chats
-                is RootComponent.Child.SettingsChild,
-                is RootComponent.Child.EditProfileChild,
-                is RootComponent.Child.SessionsChild,
-                is RootComponent.Child.DataStorageChild,
-                is RootComponent.Child.StorageUsageChild,
-                is RootComponent.Child.NetworkUsageChild,
-                is RootComponent.Child.AdBlockChild,
-                is RootComponent.Child.PowerSavingChild,
-                is RootComponent.Child.NotificationsChild,
-                is RootComponent.Child.ProxyChild,
-                is RootComponent.Child.PrivacyChild,
-                is RootComponent.Child.AboutChild,
-                is RootComponent.Child.StickersChild,
-                is RootComponent.Child.DebugChild -> MainTab.Settings
-                else -> null // not a root tab
-            }
-        }
-    }
-
-    // Show bottom bar only on root-level tab screens
-    val showBottomBar = selectedTab != null
-
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f)) {
+
+            // ── Previous screen (swipe-back peek) ──────────────────────────
             if (dragOffsetX > 0f && previous != null) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Box(
@@ -108,56 +123,37 @@ fun MobileLayout(root: RootComponent) {
                             .graphicsLayer {
                                 translationX = ((dragProgress - 1f) * widthPx * 0.08f)
                             },
-                    ) {
-                        RenderChild(previous)
-                    }
+                    ) { RenderChild(previous) }
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(
-                                Color.Black.copy(
-                                    alpha = 0.3f * (1f - dragProgress),
-                                ),
-                            ),
+                            .background(Color.Black.copy(alpha = 0.3f * (1f - dragProgress))),
                     )
                 }
             }
 
+            // ── Main navigation stack ───────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .onSizeChanged {
-                        widthPx = it.width.toFloat()
-                    }
+                    .onSizeChanged { widthPx = it.width.toFloat() }
                     .then(
                         if (canUseDragToBack) {
                             Modifier.pointerInput(canUseDragToBack) {
                                 awaitEachGesture {
                                     if (size.width == 0) return@awaitEachGesture
-
-                                    val down = awaitFirstDown(
-                                        requireUnconsumed = false,
-                                        pass = PointerEventPass.Main,
-                                    )
+                                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Main)
                                     val pointerId = down.id
                                     val touchSlop = viewConfiguration.touchSlop
                                     val velocityTracker = VelocityTracker()
                                     velocityTracker.addPosition(down.uptimeMillis, down.position)
-
-                                    var totalDx = 0f
-                                    var totalDy = 0f
-                                    var isDragging = false
-                                    var shouldAnimateBack = false
+                                    var totalDx = 0f; var totalDy = 0f
+                                    var isDragging = false; var shouldAnimateBack = false
 
                                     while (true) {
                                         val event = awaitPointerEvent(PointerEventPass.Main)
-                                        if (event.changes.any { it.isConsumed } && !isDragging) {
-                                            dragOffsetX = 0f
-                                            break
-                                        }
-
-                                        val change =
-                                            event.changes.fastFirstOrNull { it.id == pointerId } ?: break
+                                        if (event.changes.any { it.isConsumed } && !isDragging) { dragOffsetX = 0f; break }
+                                        val change = event.changes.fastFirstOrNull { it.id == pointerId } ?: break
                                         velocityTracker.addPosition(change.uptimeMillis, change.position)
 
                                         if (change.changedToUpIgnoreConsumed()) {
@@ -166,74 +162,36 @@ fun MobileLayout(root: RootComponent) {
                                                 val progress = (dragOffsetX / width).coerceIn(0f, 1f)
                                                 val velocityX = velocityTracker.calculateVelocity().x
                                                 val shouldCommit = progress >= 0.22f || velocityX >= 1400f
-
                                                 if (shouldCommit) {
                                                     coroutineScope.launch {
                                                         isCompletingSwipeBack = true
-                                                        animate(
-                                                            initialValue = dragOffsetX,
-                                                            targetValue = width,
-                                                            animationSpec = tween(durationMillis = 180),
-                                                        ) { value, _ ->
-                                                            dragOffsetX = value
-                                                        }
-                                                        root.onBack()
-                                                        dragOffsetX = 0f
-                                                        isCompletingSwipeBack = false
+                                                        animate(dragOffsetX, width, animationSpec = tween(180)) { v, _ -> dragOffsetX = v }
+                                                        root.onBack(); dragOffsetX = 0f; isCompletingSwipeBack = false
                                                     }
-                                                } else {
-                                                    shouldAnimateBack = true
-                                                }
+                                                } else { shouldAnimateBack = true }
                                             }
-
                                             break
                                         }
 
                                         val delta = change.position - change.previousPosition
-
                                         if (!isDragging) {
-                                            totalDx += delta.x
-                                            totalDy += delta.y
-
-                                            val passedHorizontalSlop =
-                                                totalDx > touchSlop && abs(totalDx) > abs(totalDy)
-                                            val movedLeft = totalDx < -touchSlop
-
-                                            if (movedLeft) {
-                                                dragOffsetX = 0f
-                                                break
-                                            }
-
-                                            if (!passedHorizontalSlop) {
-                                                continue
-                                            }
-
+                                            totalDx += delta.x; totalDy += delta.y
+                                            if (totalDx < -touchSlop) { dragOffsetX = 0f; break }
+                                            if (!(totalDx > touchSlop && abs(totalDx) > abs(totalDy))) continue
                                             isDragging = true
                                         }
-
-                                        if (delta != Offset.Zero) {
-                                            change.consume()
-                                        }
-                                        dragOffsetX =
-                                            (dragOffsetX + delta.x).coerceIn(0f, size.width.toFloat())
+                                        if (delta != Offset.Zero) change.consume()
+                                        dragOffsetX = (dragOffsetX + delta.x).coerceIn(0f, size.width.toFloat())
                                     }
 
                                     if (shouldAnimateBack && dragOffsetX > 0f && !isCompletingSwipeBack) {
                                         coroutineScope.launch {
-                                            animate(
-                                                initialValue = dragOffsetX,
-                                                targetValue = 0f,
-                                                animationSpec = spring(),
-                                            ) { value, _ ->
-                                                dragOffsetX = value
-                                            }
+                                            animate(dragOffsetX, 0f, animationSpec = spring()) { v, _ -> dragOffsetX = v }
                                         }
                                     }
                                 }
                             }
-                        } else {
-                            Modifier
-                        }
+                        } else Modifier
                     )
                     .graphicsLayer {
                         translationX = dragOffsetX
@@ -253,30 +211,61 @@ fun MobileLayout(root: RootComponent) {
                             child = child.instance,
                             isOverlay = false,
                             onSwipeBackBlockedChanged = { blocked ->
-                                if (stack.active.instance === child.instance) {
-                                    isSwipeBackBlocked = blocked
-                                }
+                                if (stack.active.instance === child.instance) isSwipeBackBlocked = blocked
                             },
                         )
                     }
                 }
             }
+
+            // ── Groups / Updates overlay (slide in over Chats) ─────────────
+            if (isOnChatsRoot) {
+                val chatsChild = stack.active.instance as? RootComponent.Child.ChatsChild
+
+                AnimatedVisibility(
+                    visible = selectedTab == MainTab.Groups,
+                    enter = slideInHorizontally { it } + fadeIn(tween(180)),
+                    exit = slideOutHorizontally { it } + fadeOut(tween(150)),
+                ) {
+                    chatsChild?.let { GroupsContent(component = it.component) }
+                }
+
+                AnimatedVisibility(
+                    visible = selectedTab == MainTab.Updates,
+                    enter = slideInHorizontally { it } + fadeIn(tween(180)),
+                    exit = slideOutHorizontally { it } + fadeOut(tween(150)),
+                ) {
+                    chatsChild?.let { UpdatesContent(component = it.component) }
+                }
+            }
         }
 
-        // Bottom Navigation Bar — visible on Chats and Settings root screens
+        // ── Bottom Navigation Bar ──────────────────────────────────────────
         AnimatedVisibility(
             visible = showBottomBar,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(200)),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(200)),
+            enter = slideInVertically { it } + fadeIn(tween(200)),
+            exit = slideOutVertically { it } + fadeOut(tween(200)),
         ) {
             MainBottomBar(
-                selectedTab = selectedTab ?: MainTab.Chats,
+                selectedTab = selectedTab,
                 onTabSelected = { tab ->
                     when (tab) {
-                        MainTab.Chats -> root.onChatsClick()
-                        MainTab.Groups -> root.onChatsClick() // Groups uses chat list with group filter
-                        MainTab.Updates -> root.onChatsClick() // Updates uses chat list with channel filter
-                        MainTab.Settings -> root.onSettingsClick()
+                        MainTab.Chats -> {
+                            selectedTab = MainTab.Chats
+                            if (!isOnChatsRoot) root.onChatsClick()
+                        }
+                        MainTab.Groups -> {
+                            if (!isOnChatsRoot) root.onChatsClick()
+                            selectedTab = MainTab.Groups
+                        }
+                        MainTab.Updates -> {
+                            if (!isOnChatsRoot) root.onChatsClick()
+                            selectedTab = MainTab.Updates
+                        }
+                        MainTab.Settings -> {
+                            selectedTab = MainTab.Settings
+                            root.onSettingsClick()
+                        }
                     }
                 },
             )
@@ -309,8 +298,7 @@ private fun isSwipeBackSupported(child: RootComponent.Child): Boolean =
         is RootComponent.Child.ChatPermissionsChild,
         is RootComponent.Child.StickersChild,
         is RootComponent.Child.AboutChild,
-        is RootComponent.Child.NewChatChild -> true
+        is RootComponent.Child.NewChatChild,
         is RootComponent.Child.DebugChild -> true
-
         else -> false
     }
