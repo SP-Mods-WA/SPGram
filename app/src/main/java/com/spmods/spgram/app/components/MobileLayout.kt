@@ -47,6 +47,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.spmods.spgram.presentation.features.chats.personal.PersonalChatsContent
 import com.spmods.spgram.presentation.features.groups.GroupsContent
 import com.spmods.spgram.presentation.features.updates.UpdatesContent
 import com.spmods.spgram.presentation.root.RootComponent
@@ -218,10 +219,14 @@ fun MobileLayout(root: RootComponent) {
                 }
             }
 
-            // ── Groups / Updates overlay (slide in over Chats) ─────────────
+            // ── Tab overlays (Personal Chats / Groups / Updates) ─────────
             if (isOnChatsRoot) {
                 val chatsChild = stack.active.instance as? RootComponent.Child.ChatsChild
                 Box(modifier = Modifier.fillMaxSize()) {
+                    // Chats tab: show personal chats only (overlay on top of full ChatListContent)
+                    if (selectedTab == MainTab.Chats) {
+                        chatsChild?.let { PersonalChatsContent(component = it.component) }
+                    }
                     if (selectedTab == MainTab.Groups) {
                         chatsChild?.let { GroupsContent(component = it.component) }
                     }
