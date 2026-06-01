@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -134,13 +135,14 @@ fun PhotoMessageBubble(
         modifier = modifier.width(IntrinsicSize.Max),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
+        Box {
         Surface(
             shape = bubbleShape,
             color = if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
             contentColor = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
         ) {
             Column(modifier = Modifier
-                .widthIn(max = 280.dp)
+                .widthIn(max = 340.dp)
             ) {
                 if (isGroup && !isOutgoing && !isSameSenderAbove) {
                     Box(
@@ -223,7 +225,7 @@ fun PhotoMessageBubble(
                         if (!hasPath) {
                             MediaLoadingBackground(
                                 previewData = content.minithumbnail,
-                                contentScale = ContentScale.Fit
+                                contentScale = ContentScale.Crop
                             )
                         }
 
@@ -241,7 +243,7 @@ fun PhotoMessageBubble(
                                     .build(),
                                 contentDescription = content.caption,
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit
+                                contentScale = ContentScale.Crop
                             )
                         }
 
@@ -369,12 +371,17 @@ fun PhotoMessageBubble(
             }
         }
 
-        if (showReactions) {
+        if (showReactions && msg.reactions.isNotEmpty()) {
             MessageReactionsView(
                 reactions = msg.reactions,
                 onReactionClick = onReactionClick,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 4.dp)
+                    .offset(y = 14.dp)
             )
-        }
+            } // end Box
+    }
+        } // end Box
     }
 }
