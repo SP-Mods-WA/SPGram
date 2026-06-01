@@ -380,8 +380,7 @@ fun PhotoMessageBubble(
                     .padding(start = 4.dp)
                     .offset(y = 14.dp)
             )
-            } // end Box
-    }
+        }
         } // end Box
     }
 }
