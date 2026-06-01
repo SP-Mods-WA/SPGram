@@ -191,7 +191,16 @@ fun ChatContentList(
     bottomContentPadding: Dp = 8.dp
 ) {
     val isComments = state.isComments
-    val appearance = state.toAppearanceConfig()
+    val appearance = remember(
+        state.fontSize, state.letterSpacing, state.bubbleRadius, state.stickerSize,
+        state.showLinkPreviews, state.autoplayGifs, state.autoplayVideos,
+        state.autoDownloadMobile, state.autoDownloadWifi, state.autoDownloadRoaming, state.autoDownloadFiles
+    ) { state.toAppearanceConfig() }
+    val isSelectionMode by remember(state.selectedMessageIds) { derivedStateOf { state.selectedMessageIds.isNotEmpty() } }
+    val behavior = remember(
+        state.isGroup, state.isChannel, state.viewAsTopics, state.currentTopicId,
+        state.canWrite, state.isAdmin, state.canSendAnything, isSelectionMode, isAnyViewerOpen
+    ) { state.toBehaviorConfig(isSelectionMode = isSelectionMode, isAnyViewerOpen = isAnyViewerOpen) }
     val context = LocalContext.current
     val density = LocalDensity.current
     val isScrolling by remember(scrollState) { derivedStateOf { scrollState.isScrollInProgress } }
@@ -522,10 +531,7 @@ fun ChatContentList(
                         component = component,
                         olderMsg = olderMsg,
                         newerMsg = newerMsg,
-                        behavior = state.toBehaviorConfig(
-                            isSelectionMode = state.selectedMessageIds.isNotEmpty(),
-                            isAnyViewerOpen = isAnyViewerOpen
-                        ),
+                        behavior = behavior,
                         uiFlags = MessageRowUiFlags(
                             isSelected = isItemSelected(item, state.selectedMessageIds),
                             showUnreadSeparator = index == unreadBoundaryIndex && !hasUnreadSeparatorDismissed,
@@ -599,10 +605,7 @@ fun ChatContentList(
                         component = component,
                         olderMsg = olderMsg,
                         newerMsg = newerMsg,
-                        behavior = state.toBehaviorConfig(
-                            isSelectionMode = state.selectedMessageIds.isNotEmpty(),
-                            isAnyViewerOpen = isAnyViewerOpen
-                        ),
+                        behavior = behavior,
                         uiFlags = MessageRowUiFlags(
                             isSelected = isItemSelected(item, state.selectedMessageIds),
                             showUnreadSeparator = index == unreadBoundaryIndex && !hasUnreadSeparatorDismissed,
@@ -832,23 +835,15 @@ private fun MessageRowItem(
         highlightBackground.animateTo(Color.Transparent, animationSpec = tween(2200))
     }
 
-    val backgroundColor by animateColorAsState(
-        targetValue = when {
-            uiFlags.isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-            else -> highlightBackground.value
-        },
-        animationSpec = tween(durationMillis = 220),
-        label = "bg"
-    )
-    val borderColor by animateColorAsState(
-        targetValue = if (highlightBorderAlpha.value > 0f) {
-            highlightAccent.copy(alpha = 0.95f * highlightBorderAlpha.value)
-        } else {
-            Color.Transparent
-        },
-        animationSpec = tween(durationMillis = 220),
-        label = "highlightBorder"
-    )
+    val backgroundColor = when {
+        uiFlags.isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+        else -> highlightBackground.value
+    }
+    val borderColor = if (highlightBorderAlpha.value > 0f) {
+        highlightAccent.copy(alpha = 0.95f * highlightBorderAlpha.value)
+    } else {
+        Color.Transparent
+    }
     val horizontalPadding by animateDpAsState(
         if (behavior.isSelectionMode) 16.dp else 8.dp,
         label = "padding"
