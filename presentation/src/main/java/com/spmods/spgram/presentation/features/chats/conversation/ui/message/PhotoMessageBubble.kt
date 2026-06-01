@@ -135,7 +135,6 @@ fun PhotoMessageBubble(
         modifier = modifier.width(IntrinsicSize.Max),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
-        Box {
         Surface(
             shape = bubbleShape,
             color = if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -368,19 +367,14 @@ fun PhotoMessageBubble(
                         }
                     }
                 }
+                if (showReactions && msg.reactions.isNotEmpty()) {
+                    MessageReactionsView(
+                        reactions = msg.reactions,
+                        onReactionClick = onReactionClick,
+                        modifier = Modifier.padding(start = 8.dp, bottom = 8.dp, top = 2.dp)
+                    )
+                }
             }
         }
-
-        if (showReactions && msg.reactions.isNotEmpty()) {
-            MessageReactionsView(
-                reactions = msg.reactions,
-                onReactionClick = onReactionClick,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 4.dp)
-                    .offset(y = 14.dp)
-            )
-        }
-        } // end Box
     }
 }
