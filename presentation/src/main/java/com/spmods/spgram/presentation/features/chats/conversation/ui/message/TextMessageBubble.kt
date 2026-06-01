@@ -198,9 +198,6 @@ fun TextMessageBubble(
                         )
                     }
                 }
-            }
-        }
-
                 if (showReactions && msg.reactions.isNotEmpty()) {
                     MessageReactionsView(
                         reactions = msg.reactions,
