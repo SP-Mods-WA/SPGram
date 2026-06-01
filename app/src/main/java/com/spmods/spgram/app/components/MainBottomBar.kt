@@ -25,14 +25,18 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -42,171 +46,69 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 // ---------------------------------------------------------------------------
-// Tab enum
+// Tab enum — 3 tabs only
 // ---------------------------------------------------------------------------
 
-enum class MainTab { Chats, Groups, Updates, Settings }
+enum class MainTab { Chats, Stories, Calls }
 
 // ---------------------------------------------------------------------------
-// Icons — inline vectors, zero R references
+// Icons — inline vectors
 // ---------------------------------------------------------------------------
 
 private val IconChats: ImageVector by lazy {
     ImageVector.Builder("Chats", 24.dp, 24.dp, 24f, 24f).apply {
-        path(fill = SolidColor(androidx.compose.ui.graphics.Color.Black)) {
-            // speech bubble outline
-            moveTo(20f, 2f)
-            horizontalLineTo(4f)
-            curveTo(2.9f, 2f, 2f, 2.9f, 2f, 4f)
-            verticalLineTo(22f)
-            lineTo(6f, 18f)
-            horizontalLineTo(20f)
-            curveTo(21.1f, 18f, 22f, 17.1f, 22f, 16f)
-            verticalLineTo(4f)
-            curveTo(22f, 2.9f, 21.1f, 2f, 20f, 2f)
-            close()
-            moveTo(20f, 16f)
-            horizontalLineTo(6f)
-            lineTo(4f, 18f)
-            verticalLineTo(4f)
-            horizontalLineTo(20f)
-            verticalLineTo(16f)
-            close()
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(20f, 2f); horizontalLineTo(4f)
+            curveTo(2.9f, 2f, 2f, 2.9f, 2f, 4f); verticalLineTo(22f)
+            lineTo(6f, 18f); horizontalLineTo(20f)
+            curveTo(21.1f, 18f, 22f, 17.1f, 22f, 16f); verticalLineTo(4f)
+            curveTo(22f, 2.9f, 21.1f, 2f, 20f, 2f); close()
+            moveTo(20f, 16f); horizontalLineTo(6f); lineTo(4f, 18f)
+            verticalLineTo(4f); horizontalLineTo(20f); verticalLineTo(16f); close()
         }
     }.build()
 }
 
-private val IconGroups: ImageVector by lazy {
-    ImageVector.Builder("Groups", 24.dp, 24.dp, 24f, 24f).apply {
-        path(fill = SolidColor(androidx.compose.ui.graphics.Color.Black)) {
-            // person 1
-            moveTo(16f, 11f)
-            curveTo(17.66f, 11f, 18.99f, 9.66f, 18.99f, 8f)
-            curveTo(18.99f, 6.34f, 17.66f, 5f, 16f, 5f)
-            curveTo(14.34f, 5f, 13f, 6.34f, 13f, 8f)
-            curveTo(13f, 9.66f, 14.34f, 11f, 16f, 11f)
+private val IconStories: ImageVector by lazy {
+    ImageVector.Builder("Stories", 24.dp, 24.dp, 24f, 24f).apply {
+        path(fill = SolidColor(Color.Black)) {
+            // Circle ring (story ring)
+            moveTo(12f, 2f)
+            curveTo(6.48f, 2f, 2f, 6.48f, 2f, 12f)
+            curveTo(2f, 17.52f, 6.48f, 22f, 12f, 22f)
+            curveTo(17.52f, 22f, 22f, 17.52f, 22f, 12f)
+            curveTo(22f, 6.48f, 17.52f, 2f, 12f, 2f)
             close()
-            // person 2
-            moveTo(8f, 11f)
-            curveTo(9.66f, 11f, 10.99f, 9.66f, 10.99f, 8f)
-            curveTo(10.99f, 6.34f, 9.66f, 5f, 8f, 5f)
-            curveTo(6.34f, 5f, 5f, 6.34f, 5f, 8f)
-            curveTo(5f, 9.66f, 6.34f, 11f, 8f, 11f)
+            moveTo(12f, 20f)
+            curveTo(7.59f, 20f, 4f, 16.41f, 4f, 12f)
+            curveTo(4f, 7.59f, 7.59f, 4f, 12f, 4f)
+            curveTo(16.41f, 4f, 20f, 7.59f, 20f, 12f)
+            curveTo(20f, 16.41f, 16.41f, 20f, 12f, 20f)
             close()
-            // group body left
-            moveTo(8f, 13f)
-            curveTo(5.67f, 13f, 1f, 14.17f, 1f, 16.5f)
-            verticalLineTo(19f)
-            horizontalLineTo(15f)
-            verticalLineTo(16.5f)
-            curveTo(15f, 14.17f, 10.33f, 13f, 8f, 13f)
-            close()
-            // group body right
-            moveTo(16f, 13f)
-            curveTo(15.71f, 13f, 15.38f, 13.02f, 15.03f, 13.05f)
-            curveTo(16.19f, 13.89f, 17f, 15.02f, 17f, 16.5f)
-            verticalLineTo(19f)
-            horizontalLineTo(23f)
-            verticalLineTo(16.5f)
-            curveTo(23f, 14.17f, 18.33f, 13f, 16f, 13f)
-            close()
+            // Play triangle inside
+            moveTo(10f, 8.5f); lineTo(16f, 12f); lineTo(10f, 15.5f); close()
         }
     }.build()
 }
 
-private val IconUpdates: ImageVector by lazy {
-    ImageVector.Builder("Updates", 24.dp, 24.dp, 24f, 24f).apply {
-        path(fill = SolidColor(androidx.compose.ui.graphics.Color.Black)) {
-            // megaphone
-            moveTo(18f, 11f)
-            verticalLineTo(13f)
-            horizontalLineTo(22f)
-            verticalLineTo(11f)
-            horizontalLineTo(18f)
-            close()
-            moveTo(16f, 17.61f)
-            curveTo(16.96f, 18.32f, 18.21f, 19.26f, 19.2f, 20f)
-            curveTo(19.6f, 19.47f, 20f, 18.93f, 20.4f, 18.4f)
-            curveTo(19.41f, 17.66f, 18.16f, 16.72f, 17.2f, 16f)
-            curveTo(16.8f, 16.54f, 16.4f, 17.08f, 16f, 17.61f)
-            close()
-            moveTo(20.4f, 5.6f)
-            curveTo(20f, 5.07f, 19.6f, 4.53f, 19.2f, 4f)
-            curveTo(18.21f, 4.74f, 16.96f, 5.68f, 16f, 6.4f)
-            curveTo(16.4f, 6.93f, 16.8f, 7.47f, 17.2f, 8f)
-            curveTo(18.16f, 7.29f, 19.41f, 6.35f, 20.4f, 5.6f)
-            close()
-            moveTo(4f, 9f)
-            curveTo(2.9f, 9f, 2f, 9.9f, 2f, 11f)
-            verticalLineTo(13f)
-            curveTo(2f, 14.1f, 2.9f, 15f, 4f, 15f)
-            horizontalLineTo(5f)
-            verticalLineTo(19f)
-            horizontalLineTo(7f)
-            verticalLineTo(15f)
-            horizontalLineTo(8f)
-            lineTo(13f, 18f)
-            verticalLineTo(6f)
-            lineTo(8f, 9f)
-            horizontalLineTo(4f)
-            close()
-            moveTo(15.5f, 12f)
-            curveTo(15.5f, 10.67f, 14.92f, 9.47f, 14f, 8.65f)
-            verticalLineTo(15.34f)
-            curveTo(14.92f, 14.53f, 15.5f, 13.33f, 15.5f, 12f)
-            close()
-        }
-    }.build()
-}
-
-private val IconSettings: ImageVector by lazy {
-    ImageVector.Builder("Settings", 24.dp, 24.dp, 24f, 24f).apply {
-        path(fill = SolidColor(androidx.compose.ui.graphics.Color.Black)) {
-            moveTo(19.14f, 12.94f)
-            curveTo(19.18f, 12.64f, 19.2f, 12.33f, 19.2f, 12f)
-            curveTo(19.2f, 11.68f, 19.18f, 11.36f, 19.13f, 11.06f)
-            lineTo(21.16f, 9.48f)
-            curveTo(21.34f, 9.34f, 21.39f, 9.07f, 21.28f, 8.87f)
-            lineTo(19.36f, 5.55f)
-            curveTo(19.24f, 5.33f, 18.99f, 5.26f, 18.77f, 5.33f)
-            lineTo(16.38f, 6.29f)
-            curveTo(15.88f, 5.91f, 15.35f, 5.59f, 14.76f, 5.35f)
-            lineTo(14.4f, 2.81f)
-            curveTo(14.36f, 2.57f, 14.16f, 2.4f, 13.92f, 2.4f)
-            horizontalLineTo(10.08f)
-            curveTo(9.84f, 2.4f, 9.65f, 2.57f, 9.61f, 2.81f)
-            lineTo(9.25f, 5.35f)
-            curveTo(8.66f, 5.59f, 8.12f, 5.92f, 7.63f, 6.29f)
-            lineTo(5.24f, 5.33f)
-            curveTo(5.02f, 5.25f, 4.77f, 5.33f, 4.65f, 5.55f)
-            lineTo(2.74f, 8.87f)
-            curveTo(2.62f, 9.08f, 2.66f, 9.34f, 2.86f, 9.48f)
-            lineTo(4.89f, 11.06f)
-            curveTo(4.84f, 11.36f, 4.8f, 11.69f, 4.8f, 12f)
-            curveTo(4.8f, 12.31f, 4.82f, 12.64f, 4.87f, 12.94f)
-            lineTo(2.84f, 14.52f)
-            curveTo(2.66f, 14.66f, 2.61f, 14.93f, 2.72f, 15.13f)
-            lineTo(4.64f, 18.45f)
-            curveTo(4.76f, 18.67f, 5.01f, 18.74f, 5.23f, 18.67f)
-            lineTo(7.62f, 17.71f)
-            curveTo(8.12f, 18.09f, 8.65f, 18.41f, 9.24f, 18.65f)
-            lineTo(9.6f, 21.19f)
-            curveTo(9.65f, 21.43f, 9.84f, 21.6f, 10.08f, 21.6f)
-            horizontalLineTo(13.92f)
-            curveTo(14.16f, 21.6f, 14.36f, 21.43f, 14.39f, 21.19f)
-            lineTo(14.75f, 18.65f)
-            curveTo(15.34f, 18.41f, 15.88f, 18.09f, 16.37f, 17.71f)
-            lineTo(18.76f, 18.67f)
-            curveTo(18.98f, 18.75f, 19.23f, 18.67f, 19.35f, 18.45f)
-            lineTo(21.27f, 15.13f)
-            curveTo(21.39f, 14.91f, 21.34f, 14.66f, 21.15f, 14.52f)
-            lineTo(19.14f, 12.94f)
-            close()
-            moveTo(12f, 15.6f)
-            curveTo(10.02f, 15.6f, 8.4f, 13.98f, 8.4f, 12f)
-            curveTo(8.4f, 10.02f, 10.02f, 8.4f, 12f, 8.4f)
-            curveTo(13.98f, 8.4f, 15.6f, 10.02f, 15.6f, 12f)
-            curveTo(15.6f, 13.98f, 13.98f, 15.6f, 12f, 15.6f)
+private val IconCalls: ImageVector by lazy {
+    ImageVector.Builder("Calls", 24.dp, 24.dp, 24f, 24f).apply {
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(6.62f, 10.79f)
+            curveTo(8.06f, 13.62f, 10.38f, 15.93f, 13.21f, 17.38f)
+            lineTo(15.41f, 15.18f)
+            curveTo(15.68f, 14.91f, 16.08f, 14.82f, 16.43f, 14.94f)
+            curveTo(17.55f, 15.31f, 18.76f, 15.51f, 20f, 15.51f)
+            curveTo(20.55f, 15.51f, 21f, 15.96f, 21f, 16.51f)
+            verticalLineTo(20f)
+            curveTo(21f, 20.55f, 20.55f, 21f, 20f, 21f)
+            curveTo(10.61f, 21f, 3f, 13.39f, 3f, 4f)
+            curveTo(3f, 3.45f, 3.45f, 3f, 4f, 3f)
+            horizontalLineTo(7.5f)
+            curveTo(8.05f, 3f, 8.5f, 3.45f, 8.5f, 4f)
+            curveTo(8.5f, 5.25f, 8.7f, 6.45f, 9.07f, 7.57f)
+            curveTo(9.19f, 7.92f, 9.1f, 8.31f, 8.82f, 8.59f)
+            lineTo(6.62f, 10.79f)
             close()
         }
     }.build()
@@ -225,56 +127,83 @@ private data class TabItem(
 )
 
 // ---------------------------------------------------------------------------
-// Public composable
+// Liquid Glass bottom bar
 // ---------------------------------------------------------------------------
 
 @Composable
 fun MainBottomBar(
     selectedTab: MainTab,
     chatsUnread: Int = 0,
-    groupsUnread: Int = 0,
-    hasUpdates: Boolean = false,
+    hasStories: Boolean = false,
+    hasMissedCalls: Boolean = false,
     onTabSelected: (MainTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val tabs = listOf(
-        TabItem(MainTab.Chats,    "Chats",    IconChats,    badgeCount = chatsUnread),
-        TabItem(MainTab.Groups,   "Groups",   IconGroups,   badgeCount = groupsUnread),
-        TabItem(MainTab.Updates,  "Updates",  IconUpdates,  hasDot = hasUpdates),
-        TabItem(MainTab.Settings, "Settings", IconSettings),
+        TabItem(MainTab.Chats,   "Chats",   IconChats,   badgeCount = chatsUnread),
+        TabItem(MainTab.Stories, "Stories", IconStories, hasDot = hasStories),
+        TabItem(MainTab.Calls,   "Calls",   IconCalls,   hasDot = hasMissedCalls),
     )
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 3.dp,
-        shadowElevation = 8.dp,
-    ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp)
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                tabs.forEach { item ->
-                    BottomBarItem(
-                        item = item,
-                        selected = selectedTab == item.tab,
-                        onClick = { onTabSelected(item.tab) },
-                        modifier = Modifier.weight(1f),
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    // Liquid Glass container
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .drawBehind {
+                // Frosted glass base
+                drawRect(surfaceColor.copy(alpha = 0.72f))
+                // Top shimmer line
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.18f),
+                            Color.White.copy(alpha = 0.32f),
+                            Color.White.copy(alpha = 0.18f),
+                            Color.Transparent,
+                        )
+                    ),
+                    topLeft = Offset.Zero,
+                    size = size.copy(height = 1.dp.toPx())
+                )
+                // Subtle gradient overlay (glass depth)
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.10f),
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.04f),
+                        )
                     )
-                }
+                )
             }
-            Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            tabs.forEach { item ->
+                BottomBarItem(
+                    item = item,
+                    selected = selectedTab == item.tab,
+                    onClick = { onTabSelected(item.tab) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
+        Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
 }
 
 // ---------------------------------------------------------------------------
-// Private item composable
+// Tab item
 // ---------------------------------------------------------------------------
 
 @Composable
@@ -286,9 +215,8 @@ private fun BottomBarItem(
 ) {
     val iconColor by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary
-                      else         MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(220),
-        label = "IconColor",
+                      else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(220), label = "IconColor",
     )
     val scale by animateFloatAsState(
         targetValue = if (selected) 1.12f else 1f,
@@ -300,9 +228,20 @@ private fun BottomBarItem(
         animationSpec = spring(dampingRatio = 0.6f, stiffness = 350f),
         label = "PillWidth",
     )
+    // Liquid glass pill glow when selected
+    val glowAlpha by animateFloatAsState(
+        targetValue = if (selected) 0.18f else 0f,
+        animationSpec = tween(300), label = "GlowAlpha",
+    )
 
     Column(
         modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (selected)
+                    MaterialTheme.colorScheme.primary.copy(alpha = glowAlpha)
+                else Color.Transparent
+            )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -312,7 +251,7 @@ private fun BottomBarItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // Pill indicator at top
+        // Top pill indicator
         Box(
             modifier = Modifier
                 .size(width = pillWidth, height = 3.dp)
@@ -327,7 +266,7 @@ private fun BottomBarItem(
                 when {
                     item.badgeCount > 0 -> Badge(
                         containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor  = MaterialTheme.colorScheme.onPrimary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                     ) {
                         Text(
                             text = if (item.badgeCount > 99) "99+" else item.badgeCount.toString(),
