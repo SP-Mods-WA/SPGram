@@ -1,9 +1,11 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -82,6 +84,14 @@ fun TextMessageBubble(
     val timeColor = contentColor.copy(alpha = 0.7f)
 
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
+    val renderData = rememberMessageTextRenderData(
+        text = content.text,
+        entities = content.entities,
+        isOutgoing = isOutgoing,
+        revealedSpoilers = revealedSpoilers,
+        fontSize = fontSize
+    )
+    val isBigEmoji = renderData.isBigEmoji && renderData.bigEmojiItems.isNotEmpty()
 
     Column(
         modifier = modifier
@@ -89,15 +99,17 @@ fun TextMessageBubble(
             .widthIn(min = 60.dp),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
+        Box {
         Surface(
             shape = bubbleShape,
-            color = backgroundColor,
+            color = if (isBigEmoji) androidx.compose.ui.graphics.Color.Transparent else backgroundColor,
             contentColor = contentColor,
-            tonalElevation = 1.dp
+            tonalElevation = if (isBigEmoji) 0.dp else 1.dp,
+            shadowElevation = 0.dp
         ) {
             Column(
                 modifier = Modifier
-                    .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 6.dp)
+                    .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = if (isBigEmoji) 0.dp else 6.dp)
             ) {
                 if (isGroup && !isOutgoing && !isSameSenderAbove) {
                     MessageSenderName(msg, toProfile = toProfile)
@@ -114,17 +126,9 @@ fun TextMessageBubble(
                     )
                 }
 
-                val renderData = rememberMessageTextRenderData(
-                    text = content.text,
-                    entities = content.entities,
-                    isOutgoing = isOutgoing,
-                    revealedSpoilers = revealedSpoilers,
-                    fontSize = fontSize
-                )
-
                 val finalFontSize = if (renderData.isBigEmoji) fontSize * 5f else fontSize
 
-                if (renderData.isBigEmoji && renderData.bigEmojiItems.isNotEmpty()) {
+                if (isBigEmoji) {
                     BigEmojiContent(
                         items = renderData.bigEmojiItems,
                         sizeDp = finalFontSize,
@@ -198,12 +202,16 @@ fun TextMessageBubble(
             }
         }
 
-        if (showReactions) {
+        if (showReactions && msg.reactions.isNotEmpty()) {
             MessageReactionsView(
                 reactions = msg.reactions,
                 onReactionClick = onReactionClick,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 4.dp)
+                    .offset(y = 14.dp)
             )
         }
+        } // end Box
     }
 }
