@@ -1,5 +1,8 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -25,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -78,17 +82,26 @@ private fun MessageReactionItem(
 
     val isChosen = reaction.isChosen
 
-    val backgroundColor = if (isChosen) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-    }
+    // Animated colors
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isChosen) MaterialTheme.colorScheme.primaryContainer
+                      else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+        animationSpec = spring(),
+        label = "reactionBg"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (isChosen) MaterialTheme.colorScheme.onPrimaryContainer
+                      else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = spring(),
+        label = "reactionContent"
+    )
 
-    val contentColor = if (isChosen) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    // Bounce scale animation on choose
+    val scale by animateFloatAsState(
+        targetValue = if (isChosen) 1.12f else 1f,
+        animationSpec = spring(dampingRatio = 0.4f, stiffness = 400f),
+        label = "reactionScale"
+    )
 
     val customEmojiPath = remember(customEmojiId, reaction.customEmojiPath, customEmojiPathsById) {
         reaction.customEmojiPath ?: customEmojiId?.let(customEmojiPathsById::get)
@@ -97,9 +110,7 @@ private fun MessageReactionItem(
     var showDropdown by remember { mutableStateOf(false) }
     val linkHandler = LocalLinkHandler.current
 
-    Box(
-        modifier = Modifier
-    ) {
+    Box(modifier = Modifier.scale(scale)) {
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
@@ -122,16 +133,17 @@ private fun MessageReactionItem(
                 )
             }
 
+            // Sender avatars (up to 3, shown when count <= 3)
             if (reaction.recentSenders.isNotEmpty() && reaction.count <= 3) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy((-8).dp),
+                    horizontalArrangement = Arrangement.spacedBy((-6).dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     reaction.recentSenders.take(3).forEach { sender ->
                         Avatar(
                             path = sender.avatar,
                             name = sender.name,
-                            size = 22.dp,
+                            size = 18.dp,
                             modifier = Modifier
                                 .background(backgroundColor, CircleShape)
                                 .padding(1.dp)
@@ -140,6 +152,7 @@ private fun MessageReactionItem(
                 }
             }
 
+            // Count shown when > 3 senders or no sender info
             if (reaction.count > 3 || reaction.recentSenders.isEmpty()) {
                 Text(
                     text = reaction.count.toString(),
@@ -153,18 +166,14 @@ private fun MessageReactionItem(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(50))
                 .combinedClickable(
                     onClick = {
                         val reactionValue = emoji ?: customEmojiId?.toString()
-                        if (reactionValue != null) {
-                            onReactionClick(reactionValue)
-                        }
+                        if (reactionValue != null) onReactionClick(reactionValue)
                     },
                     onLongClick = {
-                        if (reaction.recentSenders.isNotEmpty()) {
-                            showDropdown = true
-                        }
+                        if (reaction.recentSenders.isNotEmpty()) showDropdown = true
                     }
                 )
         )
@@ -181,15 +190,8 @@ private fun MessageReactionItem(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Avatar(
-                                path = sender.avatar,
-                                name = sender.name,
-                                size = 28.dp
-                            )
-                            Text(
-                                text = sender.name,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                            Avatar(path = sender.avatar, name = sender.name, size = 28.dp)
+                            Text(text = sender.name, style = MaterialTheme.typography.bodyMedium)
                         }
                     },
                     onClick = {
