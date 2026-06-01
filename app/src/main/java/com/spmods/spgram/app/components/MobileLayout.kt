@@ -208,8 +208,9 @@ fun MobileLayout(root: RootComponent) {
                     ),
                 ) { child ->
                     key(child.key) {
-                        val hideChatsBackground = child.instance is RootComponent.Child.ChatsChild && isOnChatsRoot
-                        Box(modifier = if (hideChatsBackground) Modifier.fillMaxSize().graphicsLayer { alpha = 0f } else Modifier.fillMaxSize()) {
+                        if (child.instance is RootComponent.Child.ChatsChild) {
+                            Box(modifier = Modifier.fillMaxSize())
+                        } else {
                             RenderChild(
                                 child = child.instance,
                                 isOverlay = false,
