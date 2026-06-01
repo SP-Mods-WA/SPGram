@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -209,13 +210,14 @@ fun ChannelTextMessageBubble(
             )
         }
 
-        if (showReactions) {
+        if (showReactions && msg.reactions.isNotEmpty()) {
             MessageReactionsView(
                 reactions = msg.reactions,
                 onReactionClick = onReactionClick,
                 modifier = Modifier
-                    .padding(top = 2.dp)
+                    .padding(start = 4.dp)
                     .align(Alignment.Start)
+                    .offset(y = (-14).dp)
             )
         }
     }
