@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -127,6 +128,7 @@ fun VoiceMessageBubble(
             .onGloballyPositioned { bubblePosition = it.positionInWindow() },
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
+        Box {
         Surface(
             shape = bubbleShape,
             color = backgroundColor,
@@ -177,11 +179,17 @@ fun VoiceMessageBubble(
             }
         }
 
-        MessageReactionsView(
-            reactions = msg.reactions,
-            onReactionClick = onReactionClick,
-            modifier = Modifier.padding(horizontal = 4.dp)
-        )
+        if (msg.reactions.isNotEmpty()) {
+            MessageReactionsView(
+                reactions = msg.reactions,
+                onReactionClick = onReactionClick,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 4.dp)
+                    .offset(y = 14.dp)
+            )
+        }
+        } // end Box
     }
 }
 
