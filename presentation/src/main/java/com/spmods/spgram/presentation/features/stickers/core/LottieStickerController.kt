@@ -277,15 +277,13 @@ class LottieStickerController(
     }
     
     companion object {
-        private val renderDispatcher = Dispatchers.Default.limitedParallelism(8)
+        private val renderDispatcher = Dispatchers.Default.limitedParallelism(2)
         private const val OVERFLOW_PADDING_RATIO = 0.20f
         private const val MAX_OVERFLOW_PADDING_PX = 96
     }
 
     private fun createImageBitmapSnapshot(bitmap: Bitmap): ImageBitmap? {
         return try {
-            bitmap.copy(Bitmap.Config.ARGB_8888, false)?.asImageBitmap() ?: bitmap.asImageBitmap()
-        } catch (_: OutOfMemoryError) {
             bitmap.asImageBitmap()
         } catch (_: Throwable) {
             null
