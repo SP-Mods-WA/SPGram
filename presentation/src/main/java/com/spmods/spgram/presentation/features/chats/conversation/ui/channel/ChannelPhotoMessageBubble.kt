@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -215,7 +216,7 @@ fun ChannelPhotoMessageBubble(
                             if (!hasPath) {
                                 MediaLoadingBackground(
                                     previewData = content.minithumbnail,
-                                    contentScale = ContentScale.Fit
+                                    contentScale = ContentScale.Crop
                                 )
                             }
 
@@ -233,7 +234,7 @@ fun ChannelPhotoMessageBubble(
                                         .build(),
                                     contentDescription = content.caption,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
+                                    contentScale = ContentScale.Crop
                                 )
                             }
 
@@ -355,13 +356,14 @@ fun ChannelPhotoMessageBubble(
         }
 
         // Reactions
-        if (showReactions) {
+        if (showReactions && msg.reactions.isNotEmpty()) {
             MessageReactionsView(
                 reactions = msg.reactions,
                 onReactionClick = onReactionClick,
                 modifier = Modifier
-                    .padding(top = 2.dp)
+                    .padding(start = 4.dp)
                     .align(Alignment.Start)
+                    .offset(y = (-14).dp)
             )
         }
     }
