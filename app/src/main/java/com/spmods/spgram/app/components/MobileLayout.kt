@@ -221,21 +221,13 @@ fun MobileLayout(root: RootComponent) {
             // ── Groups / Updates overlay (slide in over Chats) ─────────────
             if (isOnChatsRoot) {
                 val chatsChild = stack.active.instance as? RootComponent.Child.ChatsChild
-
-                AnimatedVisibility(
-                    visible = selectedTab == MainTab.Groups,
-                    enter = slideInHorizontally { it } + fadeIn(tween(180)),
-                    exit = slideOutHorizontally { it } + fadeOut(tween(150)),
-                ) {
-                    chatsChild?.let { GroupsContent(component = it.component) }
-                }
-
-                AnimatedVisibility(
-                    visible = selectedTab == MainTab.Updates,
-                    enter = slideInHorizontally { it } + fadeIn(tween(180)),
-                    exit = slideOutHorizontally { it } + fadeOut(tween(150)),
-                ) {
-                    chatsChild?.let { UpdatesContent(component = it.component) }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (selectedTab == MainTab.Groups) {
+                        chatsChild?.let { GroupsContent(component = it.component) }
+                    }
+                    if (selectedTab == MainTab.Updates) {
+                        chatsChild?.let { UpdatesContent(component = it.component) }
+                    }
                 }
             }
         }
@@ -299,6 +291,7 @@ private fun isSwipeBackSupported(child: RootComponent.Child): Boolean =
         is RootComponent.Child.StickersChild,
         is RootComponent.Child.AboutChild,
         is RootComponent.Child.NewChatChild,
-        is RootComponent.Child.DebugChild -> true
+        is RootComponent.Child.DebugChild,
+        is RootComponent.Child.PasscodeChild -> true
         else -> false
     }
