@@ -2,7 +2,6 @@ package com.spmods.spgram.app.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -23,7 +22,6 @@ import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,82 +34,19 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Image
 
 // ---------------------------------------------------------------------------
-// Tab enum — 3 tabs only
+// Tab enum
 // ---------------------------------------------------------------------------
 
 enum class MainTab { Chats, Stories, Calls }
-
-// ---------------------------------------------------------------------------
-// Icons — inline vectors
-// ---------------------------------------------------------------------------
-
-private val IconChats: ImageVector by lazy {
-    ImageVector.Builder("Chats", 24.dp, 24.dp, 24f, 24f).apply {
-        path(fill = SolidColor(Color.Black)) {
-            moveTo(20f, 2f); horizontalLineTo(4f)
-            curveTo(2.9f, 2f, 2f, 2.9f, 2f, 4f); verticalLineTo(22f)
-            lineTo(6f, 18f); horizontalLineTo(20f)
-            curveTo(21.1f, 18f, 22f, 17.1f, 22f, 16f); verticalLineTo(4f)
-            curveTo(22f, 2.9f, 21.1f, 2f, 20f, 2f); close()
-            moveTo(20f, 16f); horizontalLineTo(6f); lineTo(4f, 18f)
-            verticalLineTo(4f); horizontalLineTo(20f); verticalLineTo(16f); close()
-        }
-    }.build()
-}
-
-private val IconStories: ImageVector by lazy {
-    ImageVector.Builder("Stories", 24.dp, 24.dp, 24f, 24f).apply {
-        path(fill = SolidColor(Color.Black)) {
-            // Circle ring (story ring)
-            moveTo(12f, 2f)
-            curveTo(6.48f, 2f, 2f, 6.48f, 2f, 12f)
-            curveTo(2f, 17.52f, 6.48f, 22f, 12f, 22f)
-            curveTo(17.52f, 22f, 22f, 17.52f, 22f, 12f)
-            curveTo(22f, 6.48f, 17.52f, 2f, 12f, 2f)
-            close()
-            moveTo(12f, 20f)
-            curveTo(7.59f, 20f, 4f, 16.41f, 4f, 12f)
-            curveTo(4f, 7.59f, 7.59f, 4f, 12f, 4f)
-            curveTo(16.41f, 4f, 20f, 7.59f, 20f, 12f)
-            curveTo(20f, 16.41f, 16.41f, 20f, 12f, 20f)
-            close()
-            // Play triangle inside
-            moveTo(10f, 8.5f); lineTo(16f, 12f); lineTo(10f, 15.5f); close()
-        }
-    }.build()
-}
-
-private val IconCalls: ImageVector by lazy {
-    ImageVector.Builder("Calls", 24.dp, 24.dp, 24f, 24f).apply {
-        path(fill = SolidColor(Color.Black)) {
-            moveTo(6.62f, 10.79f)
-            curveTo(8.06f, 13.62f, 10.38f, 15.93f, 13.21f, 17.38f)
-            lineTo(15.41f, 15.18f)
-            curveTo(15.68f, 14.91f, 16.08f, 14.82f, 16.43f, 14.94f)
-            curveTo(17.55f, 15.31f, 18.76f, 15.51f, 20f, 15.51f)
-            curveTo(20.55f, 15.51f, 21f, 15.96f, 21f, 16.51f)
-            verticalLineTo(20f)
-            curveTo(21f, 20.55f, 20.55f, 21f, 20f, 21f)
-            curveTo(10.61f, 21f, 3f, 13.39f, 3f, 4f)
-            curveTo(3f, 3.45f, 3.45f, 3f, 4f, 3f)
-            horizontalLineTo(7.5f)
-            curveTo(8.05f, 3f, 8.5f, 3.45f, 8.5f, 4f)
-            curveTo(8.5f, 5.25f, 8.7f, 6.45f, 9.07f, 7.57f)
-            curveTo(9.19f, 7.92f, 9.1f, 8.31f, 8.82f, 8.59f)
-            lineTo(6.62f, 10.79f)
-            close()
-        }
-    }.build()
-}
 
 // ---------------------------------------------------------------------------
 // Data
@@ -120,7 +55,8 @@ private val IconCalls: ImageVector by lazy {
 private data class TabItem(
     val tab: MainTab,
     val label: String,
-    val icon: ImageVector,
+    val fillIcon: Int,
+    val unfillIcon: Int,
     val badgeCount: Int = 0,
     val hasDot: Boolean = false,
 )
@@ -139,22 +75,18 @@ fun MainBottomBar(
     modifier: Modifier = Modifier,
 ) {
     val tabs = listOf(
-        TabItem(MainTab.Chats,   "Chats",   IconChats,   badgeCount = chatsUnread),
-        TabItem(MainTab.Stories, "Stories", IconStories, hasDot = hasStories),
-        TabItem(MainTab.Calls,   "Calls",   IconCalls,   hasDot = hasMissedCalls),
+        TabItem(MainTab.Chats,   "Chats",   R.drawable.sp_chat_fill,   R.drawable.sp_chat_unfill,   badgeCount = chatsUnread),
+        TabItem(MainTab.Stories, "Stories", R.drawable.sp_story_fill,  R.drawable.sp_story_unfill,  hasDot = hasStories),
+        TabItem(MainTab.Calls,   "Calls",   R.drawable.sp_call_fill,   R.drawable.sp_call_unfill,   hasDot = hasMissedCalls),
     )
 
     val surfaceColor = MaterialTheme.colorScheme.surface
-    val primaryColor = MaterialTheme.colorScheme.primary
 
-    // Liquid Glass container
     Column(
         modifier = modifier
             .fillMaxWidth()
             .drawBehind {
-                // Frosted glass base
                 drawRect(surfaceColor.copy(alpha = 0.72f))
-                // Top shimmer line
                 drawRect(
                     brush = Brush.horizontalGradient(
                         listOf(
@@ -168,7 +100,6 @@ fun MainBottomBar(
                     topLeft = Offset.Zero,
                     size = size.copy(height = 1.dp.toPx())
                 )
-                // Subtle gradient overlay (glass depth)
                 drawRect(
                     brush = Brush.verticalGradient(
                         listOf(
@@ -217,30 +148,14 @@ private fun BottomBarItem(
                       else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(220), label = "IconColor",
     )
-    val scale by animateFloatAsState(
-        targetValue = if (selected) 1.12f else 1f,
-        animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f),
-        label = "Scale",
-    )
     val pillWidth by animateDpAsState(
         targetValue = if (selected) 56.dp else 0.dp,
         animationSpec = spring(dampingRatio = 0.6f, stiffness = 350f),
         label = "PillWidth",
     )
-    // Liquid glass pill glow when selected
-    val glowAlpha by animateFloatAsState(
-        targetValue = if (selected) 0.18f else 0f,
-        animationSpec = tween(300), label = "GlowAlpha",
-    )
 
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                if (selected)
-                    MaterialTheme.colorScheme.primary.copy(alpha = glowAlpha)
-                else Color.Transparent
-            )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -278,13 +193,13 @@ private fun BottomBarItem(
                 }
             },
         ) {
-            Icon(
-                imageVector = item.icon,
+            Image(
+                painter = painterResource(
+                    id = if (selected) item.fillIcon else item.unfillIcon
+                ),
                 contentDescription = item.label,
-                tint = iconColor,
-                modifier = Modifier
-                    .size(24.dp)
-                    .graphicsLayer { scaleX = scale; scaleY = scale },
+                modifier = Modifier.size(24.dp),
+                colorFilter = ColorFilter.tint(iconColor),
             )
         }
 
