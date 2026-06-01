@@ -45,7 +45,6 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import com.spmods.spgram.presentation.features.chats.personal.PersonalChatsContent
 import com.spmods.spgram.presentation.root.RootComponent
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -203,36 +202,23 @@ fun MobileLayout(root: RootComponent) {
                     ),
                 ) { child ->
                     key(child.key) {
-                        if (child.instance is RootComponent.Child.ChatsChild) {
-                            Box(modifier = Modifier.fillMaxSize())
-                        } else {
-                            RenderChild(
-                                child = child.instance,
-                                isOverlay = false,
-                                onSwipeBackBlockedChanged = { blocked ->
-                                    if (stack.active.instance === child.instance) isSwipeBackBlocked = blocked
-                                },
-                            )
-                        }
+                        RenderChild(
+                            child = child.instance,
+                            isOverlay = false,
+                            onSwipeBackBlockedChanged = { blocked ->
+                                if (stack.active.instance === child.instance) isSwipeBackBlocked = blocked
+                            },
+                        )
                     }
                 }
             }
 
             // ── Tab content overlays ───────────────────────────────────────
             if (isOnChatsRoot) {
-                val chatsChild = stack.active.instance as? RootComponent.Child.ChatsChild
                 when (selectedTab) {
-                    MainTab.Chats -> {
-                        chatsChild?.let {
-                            PersonalChatsContent(component = it.component)
-                        }
-                    }
-                    MainTab.Stories -> {
-                        StoriesPlaceholderContent()
-                    }
-                    MainTab.Calls -> {
-                        CallsPlaceholderContent()
-                    }
+                    MainTab.Chats -> { /* ChatListContent already rendered in Children stack */ }
+                    MainTab.Stories -> StoriesPlaceholderContent()
+                    MainTab.Calls -> CallsPlaceholderContent()
                 }
             }
         }
