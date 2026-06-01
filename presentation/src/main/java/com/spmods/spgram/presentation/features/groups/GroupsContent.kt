@@ -21,16 +21,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.spmods.spgram.domain.models.ChatType
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.getEmojiFontFamily
 import com.spmods.spgram.presentation.features.chats.list.ChatListComponent
 import com.spmods.spgram.presentation.features.chats.list.components.ChatListItem
 import com.spmods.spgram.presentation.features.chats.list.components.EmptyStateView
 
 /**
- * Groups tab — shows all groups & supergroups filtered from ChatListComponent state.
+ * Groups tab — shows only groups (BASIC_GROUP and SUPERGROUP where isChannel=false).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,12 +45,15 @@ fun GroupsContent(component: ChatListComponent) {
     val messageLines by component.appPreferences.chatListMessageLines.collectAsState()
     val showPhotos by component.appPreferences.showChatListPhotos.collectAsState()
 
-    // Deduplicate across all folders, keep only groups/supergroups
+    // Groups only: BASIC_GROUP or SUPERGROUP that is NOT a channel
     val groups = remember(foldersState.chatsByFolder) {
         foldersState.chatsByFolder.values
             .flatten()
             .distinctBy { it.id }
-            .filter { it.isGroup || it.isSupergroup }
+            .filter { chat ->
+                (chat.type == ChatType.BASIC_GROUP) ||
+                (chat.type == ChatType.SUPERGROUP && !chat.isChannel)
+            }
             .sortedByDescending { it.order }
     }
 
