@@ -128,7 +128,6 @@ fun VoiceMessageBubble(
             .onGloballyPositioned { bubblePosition = it.positionInWindow() },
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
-        Box {
         Surface(
             shape = bubbleShape,
             color = backgroundColor,
@@ -179,17 +178,15 @@ fun VoiceMessageBubble(
             }
         }
 
-        if (msg.reactions.isNotEmpty()) {
-            MessageReactionsView(
-                reactions = msg.reactions,
-                onReactionClick = onReactionClick,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 4.dp)
-                    .offset(y = 14.dp)
-            )
+                if (msg.reactions.isNotEmpty()) {
+                    MessageReactionsView(
+                        reactions = msg.reactions,
+                        onReactionClick = onReactionClick,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
+                    )
+                }
+            }
         }
-        } // end Box
     }
 }
 
