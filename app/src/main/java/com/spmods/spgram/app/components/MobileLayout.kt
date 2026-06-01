@@ -89,7 +89,7 @@ fun MobileLayout(root: RootComponent) {
             activeChild is RootComponent.Child.DebugChild
         }
     }
-    val showBottomBar = isOnChatsRoot || isOnSettingsRoot
+    val showBottomBar = isOnChatsRoot
 
     LaunchedEffect(isOnChatsRoot, isOnSettingsRoot) {
         when {
