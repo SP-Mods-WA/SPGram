@@ -45,9 +45,9 @@ fun MessageReactionsView(
     if (reactions.isEmpty()) return
 
     FlowRow(
-        modifier = modifier.padding(top = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        modifier = modifier.padding(top = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         reactions.forEachIndexed { index, reaction ->
             val reactionKey = reaction.emoji ?: reaction.customEmojiId ?: "unknown_$index"
@@ -102,21 +102,22 @@ private fun MessageReactionItem(
     ) {
         Row(
             modifier = Modifier
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(50))
                 .background(backgroundColor)
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             if (customEmojiId != null) {
                 StickerImage(
                     path = customEmojiPath,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp),
+                    isInline = true
                 )
             } else if (emoji != null) {
                 Text(
                     text = emoji,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontFamily = emojiFontFamily
                 )
             }
@@ -142,8 +143,8 @@ private fun MessageReactionItem(
             if (reaction.count > 3 || reaction.recentSenders.isEmpty()) {
                 Text(
                     text = reaction.count.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
+                    fontWeight = FontWeight.SemiBold,
                     color = contentColor
                 )
             }
