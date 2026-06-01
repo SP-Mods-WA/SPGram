@@ -477,9 +477,8 @@ class DefaultRootComponent(
 
     override fun navigateToChat(chatId: Long, messageId: Long?) {
         navigation.navigate { stack ->
-            val chatsConfig = stack.filterIsInstance<Config.Chats>().lastOrNull() ?: Config.Chats()
-            val filtered = stack.filterNot { it is Config.ChatDetail && it.chatId == chatId }.filterNot { it is Config.Chats }
-            listOf(chatsConfig) + filtered + Config.ChatDetail(chatId, messageId)
+            val newStack = stack.filterNot { it is Config.ChatDetail && it.chatId == chatId }
+            newStack + Config.ChatDetail(chatId, messageId)
         }
     }
 
