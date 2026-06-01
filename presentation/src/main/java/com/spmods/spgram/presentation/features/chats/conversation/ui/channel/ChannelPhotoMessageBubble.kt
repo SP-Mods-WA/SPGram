@@ -341,21 +341,6 @@ fun ChannelPhotoMessageBubble(
                         }
                     }
                 }
-            }
-        }
-
-        if (showComments && msg.canGetMessageThread) {
-
-            ChannelCommentsButton(
-                replyCount = msg.replyCount,
-                bubbleRadius = bubbleRadius,
-                isSameSenderBelow = isSameSenderBelow,
-                onClick = { onCommentsClick(msg.id) },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        // Reactions inside bubble
                 if (showReactions && msg.reactions.isNotEmpty()) {
                     MessageReactionsView(
                         reactions = msg.reactions,
@@ -364,6 +349,16 @@ fun ChannelPhotoMessageBubble(
                     )
                 }
             }
+        }
+
+        if (showComments && msg.canGetMessageThread) {
+            ChannelCommentsButton(
+                replyCount = msg.replyCount,
+                bubbleRadius = bubbleRadius,
+                isSameSenderBelow = isSameSenderBelow,
+                onClick = { onCommentsClick(msg.id) },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
