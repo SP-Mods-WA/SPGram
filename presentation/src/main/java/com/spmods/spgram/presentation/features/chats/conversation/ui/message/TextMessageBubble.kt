@@ -99,7 +99,6 @@ fun TextMessageBubble(
             .widthIn(min = 60.dp),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
-        Box {
         Surface(
             shape = bubbleShape,
             color = if (isBigEmoji) androidx.compose.ui.graphics.Color.Transparent else backgroundColor,
@@ -202,16 +201,14 @@ fun TextMessageBubble(
             }
         }
 
-        if (showReactions && msg.reactions.isNotEmpty()) {
-            MessageReactionsView(
-                reactions = msg.reactions,
-                onReactionClick = onReactionClick,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 4.dp)
-                    .offset(y = 14.dp)
-            )
+                if (showReactions && msg.reactions.isNotEmpty()) {
+                    MessageReactionsView(
+                        reactions = msg.reactions,
+                        onReactionClick = onReactionClick,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
+                    )
+                }
+            }
         }
-        } // end Box
     }
 }
