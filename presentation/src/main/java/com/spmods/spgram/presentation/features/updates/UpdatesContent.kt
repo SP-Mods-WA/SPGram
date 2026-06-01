@@ -23,14 +23,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.spmods.spgram.domain.models.ChatType
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.getEmojiFontFamily
 import com.spmods.spgram.presentation.features.chats.list.ChatListComponent
 import com.spmods.spgram.presentation.features.chats.list.components.ChatListItem
 import com.spmods.spgram.presentation.features.chats.list.components.EmptyStateView
 
 /**
- * Updates tab — shows channels (isChannel == true) from ChatListComponent state.
- * Stories support will be added in a future iteration.
+ * Updates tab — shows only channels (SUPERGROUP where isChannel=true).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,12 +45,14 @@ fun UpdatesContent(component: ChatListComponent) {
     val messageLines by component.appPreferences.chatListMessageLines.collectAsState()
     val showPhotos by component.appPreferences.showChatListPhotos.collectAsState()
 
-    // Deduplicate across all folders, keep only channels
+    // Channels only: SUPERGROUP where isChannel=true
     val channels = remember(foldersState.chatsByFolder) {
         foldersState.chatsByFolder.values
             .flatten()
             .distinctBy { it.id }
-            .filter { it.isChannel }
+            .filter { chat ->
+                chat.type == ChatType.SUPERGROUP && chat.isChannel
+            }
             .sortedByDescending { it.order }
     }
 
