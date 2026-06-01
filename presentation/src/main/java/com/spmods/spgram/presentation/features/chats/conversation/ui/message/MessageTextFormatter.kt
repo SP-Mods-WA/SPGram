@@ -80,7 +80,8 @@ fun rememberMessageInlineContent(
             ) {
                 StickerImage(
                     path = resolvedEmojiPaths.getOrNull(index),
-                    modifier = Modifier.size(emojiSizeDp.dp)
+                    modifier = Modifier.size(emojiSizeDp.dp),
+                    isInline = true
                 )
             }
         }
