@@ -75,7 +75,7 @@ fun MobileLayout(root: RootComponent) {
     // Determine if we're on a root tab screen
     val activeChild = stack.active.instance
     val isOnChatsRoot by remember(activeChild) {
-        derivedStateOf { activeChild is RootComponent.Child.ChatsChild && stack.items.size == 1 }
+        derivedStateOf { activeChild is RootComponent.Child.ChatsChild }
     }
     val isOnSettingsRoot by remember(activeChild) {
         derivedStateOf {
@@ -208,13 +208,16 @@ fun MobileLayout(root: RootComponent) {
                     ),
                 ) { child ->
                     key(child.key) {
-                        RenderChild(
-                            child = child.instance,
-                            isOverlay = false,
-                            onSwipeBackBlockedChanged = { blocked ->
-                                if (stack.active.instance === child.instance) isSwipeBackBlocked = blocked
-                            },
-                        )
+                        val hideChatsBackground = child.instance is RootComponent.Child.ChatsChild && isOnChatsRoot
+                        Box(modifier = if (hideChatsBackground) Modifier.fillMaxSize().graphicsLayer { alpha = 0f } else Modifier.fillMaxSize()) {
+                            RenderChild(
+                                child = child.instance,
+                                isOverlay = false,
+                                onSwipeBackBlockedChanged = { blocked ->
+                                    if (stack.active.instance === child.instance) isSwipeBackBlocked = blocked
+                                },
+                            )
+                        }
                     }
                 }
             }
