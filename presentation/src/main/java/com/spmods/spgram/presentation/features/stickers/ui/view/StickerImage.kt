@@ -17,6 +17,7 @@ fun StickerImage(
     modifier: Modifier = Modifier,
     path: String?,
     animate: Boolean = true,
+    isInline: Boolean = false,
 ) {
     if (path == null) return
 
@@ -24,7 +25,8 @@ fun StickerImage(
         StickerImageContent(
             modifier = modifier,
             path = path,
-            animate = animate
+            animate = animate,
+            isInline = isInline
         )
     }
 }
@@ -34,6 +36,7 @@ private fun StickerImageContent(
     modifier: Modifier = Modifier,
     path: String,
     animate: Boolean = true,
+    isInline: Boolean = false,
 ) {
 
     val isAnimated = path.endsWith(".webm", ignoreCase = true) || 
@@ -58,14 +61,14 @@ private fun StickerImageContent(
                     memoryCacheKey(it)
                     diskCacheKey(it)
                 }
+                if (!isInline) crossfade(true)
             }
-            .crossfade(true)
             .build(),
         contentDescription = null,
         modifier = modifier,
         contentScale = ContentScale.Fit,
         loading = {
-            Box(modifier = Modifier.shimmerEffect())
+            if (!isInline) Box(modifier = Modifier.shimmerEffect())
         }
     )
 }
