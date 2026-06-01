@@ -210,15 +210,14 @@ fun ChannelTextMessageBubble(
             )
         }
 
-        if (showReactions && msg.reactions.isNotEmpty()) {
-            MessageReactionsView(
-                reactions = msg.reactions,
-                onReactionClick = onReactionClick,
-                modifier = Modifier
-                    .padding(start = 4.dp)
-                    .align(Alignment.Start)
-                    .offset(y = (-14).dp)
-            )
+                if (showReactions && msg.reactions.isNotEmpty()) {
+                    MessageReactionsView(
+                        reactions = msg.reactions,
+                        onReactionClick = onReactionClick,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
+                    )
+                }
+            }
         }
     }
 }
