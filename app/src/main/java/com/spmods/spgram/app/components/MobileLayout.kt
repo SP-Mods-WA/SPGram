@@ -7,9 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
@@ -48,8 +46,6 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.spmods.spgram.presentation.features.chats.personal.PersonalChatsContent
-import com.spmods.spgram.presentation.features.groups.GroupsContent
-import com.spmods.spgram.presentation.features.updates.UpdatesContent
 import com.spmods.spgram.presentation.root.RootComponent
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -69,10 +65,9 @@ fun MobileLayout(root: RootComponent) {
         isDragToBackEnabled && isSwipeBackSupported(stack.active.instance) && !isSwipeBackBlocked
     val dragProgress = if (widthPx > 0f) (dragOffsetX / widthPx).coerceIn(0f, 1f) else 0f
 
-    // Active tab state — Groups/Updates are rendered as overlays over ChatsChild
+    // Active tab — 3 tabs: Chats, Stories, Calls
     var selectedTab by remember { mutableStateOf(MainTab.Chats) }
 
-    // Determine if we're on a root tab screen
     val activeChild = stack.active.instance
     val isOnChatsRoot by remember(activeChild) {
         derivedStateOf { activeChild is RootComponent.Child.ChatsChild }
@@ -97,11 +92,11 @@ fun MobileLayout(root: RootComponent) {
     }
     val showBottomBar = isOnChatsRoot || isOnSettingsRoot
 
-    // Keep selectedTab in sync with navigation
     LaunchedEffect(isOnChatsRoot, isOnSettingsRoot) {
         when {
-            isOnSettingsRoot -> selectedTab = MainTab.Settings
-            isOnChatsRoot && selectedTab == MainTab.Settings -> selectedTab = MainTab.Chats
+            isOnChatsRoot && selectedTab != MainTab.Chats &&
+            selectedTab != MainTab.Stories && selectedTab != MainTab.Calls ->
+                selectedTab = MainTab.Chats
         }
     }
 
@@ -115,7 +110,7 @@ fun MobileLayout(root: RootComponent) {
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f)) {
 
-            // ── Previous screen (swipe-back peek) ──────────────────────────
+            // ── Previous screen (swipe-back peek) ─────────────────────────
             if (dragOffsetX > 0f && previous != null) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Box(
@@ -133,7 +128,7 @@ fun MobileLayout(root: RootComponent) {
                 }
             }
 
-            // ── Main navigation stack ───────────────────────────────────────
+            // ── Main navigation stack ──────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -223,25 +218,26 @@ fun MobileLayout(root: RootComponent) {
                 }
             }
 
-            // ── Tab overlays (Personal Chats / Groups / Updates) ─────────
+            // ── Tab content overlays ───────────────────────────────────────
             if (isOnChatsRoot) {
                 val chatsChild = stack.active.instance as? RootComponent.Child.ChatsChild
-                Box(modifier = Modifier.fillMaxSize()) {
-                    // Chats tab: show personal chats only (overlay on top of full ChatListContent)
-                    if (selectedTab == MainTab.Chats) {
-                        chatsChild?.let { PersonalChatsContent(component = it.component) }
+                when (selectedTab) {
+                    MainTab.Chats -> {
+                        chatsChild?.let {
+                            PersonalChatsContent(component = it.component)
+                        }
                     }
-                    if (selectedTab == MainTab.Groups) {
-                        chatsChild?.let { GroupsContent(component = it.component) }
+                    MainTab.Stories -> {
+                        StoriesPlaceholderContent()
                     }
-                    if (selectedTab == MainTab.Updates) {
-                        chatsChild?.let { UpdatesContent(component = it.component) }
+                    MainTab.Calls -> {
+                        CallsPlaceholderContent()
                     }
                 }
             }
         }
 
-        // ── Bottom Navigation Bar ──────────────────────────────────────────
+        // ── Bottom Navigation Bar (Liquid Glass) ──────────────────────────
         AnimatedVisibility(
             visible = showBottomBar,
             enter = slideInVertically { it } + fadeIn(tween(200)),
@@ -252,20 +248,16 @@ fun MobileLayout(root: RootComponent) {
                 onTabSelected = { tab ->
                     when (tab) {
                         MainTab.Chats -> {
+                            if (!isOnChatsRoot) root.onChatsClick()
                             selectedTab = MainTab.Chats
-                            if (!isOnChatsRoot) root.onChatsClick()
                         }
-                        MainTab.Groups -> {
+                        MainTab.Stories -> {
                             if (!isOnChatsRoot) root.onChatsClick()
-                            selectedTab = MainTab.Groups
+                            selectedTab = MainTab.Stories
                         }
-                        MainTab.Updates -> {
+                        MainTab.Calls -> {
                             if (!isOnChatsRoot) root.onChatsClick()
-                            selectedTab = MainTab.Updates
-                        }
-                        MainTab.Settings -> {
-                            selectedTab = MainTab.Settings
-                            root.onSettingsClick()
+                            selectedTab = MainTab.Calls
                         }
                     }
                 },
