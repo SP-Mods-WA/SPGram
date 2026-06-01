@@ -3,9 +3,10 @@ package com.spmods.spgram.presentation.features.stickers.ui.view
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -17,6 +18,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
@@ -34,14 +36,20 @@ import java.io.File
 @Composable
 fun StickerPlayer(
     path: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInline: Boolean = false,
 ) {
-    BoxWithConstraints(modifier = modifier) {
-        val widthPx = constraints.maxWidth
-        val heightPx = constraints.maxHeight
+    var measuredWidth by remember { mutableIntStateOf(0) }
+    var measuredHeight by remember { mutableIntStateOf(0) }
+    Box(modifier = modifier.onSizeChanged { size ->
+        measuredWidth = size.width
+        measuredHeight = size.height
+    }) {
+        val widthPx = measuredWidth
+        val heightPx = measuredHeight
         
-        val renderWidth = if (widthPx != Constraints.Infinity && widthPx > 0) minOf(widthPx, 512) else 512
-        val renderHeight = if (heightPx != Constraints.Infinity && heightPx > 0) minOf(heightPx, 512) else 512
+        val renderWidth = if (widthPx > 0) minOf(widthPx, 512) else 512
+        val renderHeight = if (heightPx > 0) minOf(heightPx, 512) else 512
 
         val scope = rememberCoroutineScope()
         val thumbnailKey = remember(path) {
@@ -142,11 +150,13 @@ fun StickerPlayer(
                             }
                     )
                 } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .shimmerEffect()
-                    )
+                    if (!isInline) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .shimmerEffect()
+                        )
+                    }
                 }
             }
         }
