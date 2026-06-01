@@ -284,6 +284,8 @@ class LottieStickerController(
 
     private fun createImageBitmapSnapshot(bitmap: Bitmap): ImageBitmap? {
         return try {
+            bitmap.copy(Bitmap.Config.ARGB_8888, false)?.asImageBitmap()
+        } catch (_: OutOfMemoryError) {
             bitmap.asImageBitmap()
         } catch (_: Throwable) {
             null
