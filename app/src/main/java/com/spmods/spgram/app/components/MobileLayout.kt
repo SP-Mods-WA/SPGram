@@ -75,7 +75,7 @@ fun MobileLayout(root: RootComponent) {
     // Determine if we're on a root tab screen
     val activeChild = stack.active.instance
     val isOnChatsRoot by remember(activeChild) {
-        derivedStateOf { activeChild is RootComponent.Child.ChatsChild }
+        derivedStateOf { activeChild is RootComponent.Child.ChatsChild && stack.items.size == 1 }
     }
     val isOnSettingsRoot by remember(activeChild) {
         derivedStateOf {
