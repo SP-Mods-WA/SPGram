@@ -175,9 +175,6 @@ fun VoiceMessageBubble(
                 ) {
                     MessageMetadata(msg, isOutgoing, timeColor)
                 }
-            }
-        }
-
                 if (msg.reactions.isNotEmpty()) {
                     MessageReactionsView(
                         reactions = msg.reactions,
