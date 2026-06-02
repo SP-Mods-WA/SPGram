@@ -1,6 +1,5 @@
 package com.spmods.spgram.app.components
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
@@ -9,7 +8,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -105,6 +103,16 @@ fun MobileLayout(root: RootComponent) {
             isCompletingSwipeBack = false
         }
     }
+
+    // ── Unread count — must be at Composable scope ─────────────────────────
+    // subscribeAsState() is a @Composable and MUST be called at top-level scope.
+    val chatsChild = stack.active.instance as? RootComponent.Child.ChatsChild
+    val chatsComponent = chatsChild?.component
+    // subscribeAsState() called here at Composable scope (not inside remember/let/lambda)
+    val chatsStateHolder = chatsComponent?.state?.subscribeAsState()
+    val chatsUnread = chatsStateHolder?.value?.chats
+        ?.sumOf { chat -> chat.unreadCount }
+        ?.coerceAtMost(99) ?: 0
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f)) {
@@ -223,16 +231,7 @@ fun MobileLayout(root: RootComponent) {
             }
         }
 
-        // ── Bottom Navigation Bar (Liquid Glass) ──────────────────────────
-        // FIX: Safe unread count using proper conditional state subscription
-        val activeChildInstance = stack.active.instance
-        val chatsUnread = if (activeChildInstance is RootComponent.Child.ChatsChild) {
-            val chatsState by activeChildInstance.component.state.subscribeAsState()
-            chatsState.chats.sumOf { it.unreadCount }.coerceAtMost(99)
-        } else {
-            0
-        }
-
+        // ── Bottom Navigation Bar ──────────────────────────────────────────
         AnimatedVisibility(
             visible = showBottomBar,
             enter = slideInVertically { it } + fadeIn(tween(200)),
