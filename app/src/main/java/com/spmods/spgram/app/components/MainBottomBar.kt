@@ -3,8 +3,6 @@ package com.spmods.spgram.app.components
 import com.spmods.spgram.app.R
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -150,12 +148,6 @@ private fun BottomBarItem(
                       else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(220), label = "IconColor",
     )
-    val pillWidth by animateDpAsState(
-        targetValue = if (selected) 56.dp else 0.dp,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 350f),
-        label = "PillWidth",
-    )
-
     Column(
         modifier = modifier
             .clickable(
@@ -167,16 +159,6 @@ private fun BottomBarItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // Top pill indicator
-        Box(
-            modifier = Modifier
-                .size(width = pillWidth, height = 3.dp)
-                .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.primary),
-        )
-
-        Spacer(Modifier.height(6.dp))
-
         BadgedBox(
             badge = {
                 when {
@@ -200,7 +182,7 @@ private fun BottomBarItem(
                     id = if (selected) item.fillIcon else item.unfillIcon
                 ),
                 contentDescription = item.label,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(26.dp),
                 colorFilter = ColorFilter.tint(iconColor),
             )
         }
