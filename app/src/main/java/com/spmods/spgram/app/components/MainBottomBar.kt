@@ -1,6 +1,6 @@
 package com.spmods.spgram.app.components
 
-import com.spmods.spgram.R
+import com.spmods.spgram.app.R
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
