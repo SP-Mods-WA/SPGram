@@ -224,15 +224,13 @@ fun MobileLayout(root: RootComponent) {
         }
 
         // ── Bottom Navigation Bar (Liquid Glass) ──────────────────────────
-        // FIX: Safe unread count — avoids subscribeAsState type inference error
-        val chatsUnread = remember(stack.active.instance) {
-            val component = (stack.active.instance as? RootComponent.Child.ChatsChild)?.component
-            component
-        }.let { component ->
-            val stateValue = component?.state?.subscribeAsState()
-            stateValue?.value?.chats
-                ?.sumOf { chat -> chat.unreadCount }
-                ?.coerceAtMost(99) ?: 0
+        // FIX: Safe unread count using proper conditional state subscription
+        val activeChildInstance = stack.active.instance
+        val chatsUnread = if (activeChildInstance is RootComponent.Child.ChatsChild) {
+            val chatsState by activeChildInstance.component.state.subscribeAsState()
+            chatsState.chats.sumOf { it.unreadCount }.coerceAtMost(99)
+        } else {
+            0
         }
 
         AnimatedVisibility(
