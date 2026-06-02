@@ -62,7 +62,6 @@ fun MobileLayout(root: RootComponent) {
         isDragToBackEnabled && isSwipeBackSupported(stack.active.instance) && !isSwipeBackBlocked
     val dragProgress = if (widthPx > 0f) (dragOffsetX / widthPx).coerceIn(0f, 1f) else 0f
 
-    // Active tab — 3 tabs: Chats, Stories, Calls
     var selectedTab by remember { mutableStateOf(MainTab.Chats) }
 
     val activeChild = stack.active.instance
@@ -104,15 +103,8 @@ fun MobileLayout(root: RootComponent) {
         }
     }
 
-    // ── Unread count — must be at Composable scope ─────────────────────────
-    // subscribeAsState() is a @Composable and MUST be called at top-level scope.
-    val chatsChild = stack.active.instance as? RootComponent.Child.ChatsChild
-    val chatsComponent = chatsChild?.component
-    // subscribeAsState() called here at Composable scope (not inside remember/let/lambda)
-    val chatsStateHolder = chatsComponent?.state?.subscribeAsState()
-    val chatsUnread = chatsStateHolder?.value?.chats
-        ?.sumOf { chat -> chat.unreadCount }
-        ?.coerceAtMost(99) ?: 0
+    // ── Unread count ───────────────────────────────────────────────────────
+    val chatsUnread = rememberChatsUnreadCount(stack.active.instance)
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f)) {
@@ -259,6 +251,16 @@ fun MobileLayout(root: RootComponent) {
             )
         }
     }
+}
+
+// Reads unread count from ChatsChild's ChatListComponent.
+// Uses chatsState (StateFlow<ChatsState>) with collectAsState() — NOT subscribeAsState().
+@Composable
+private fun rememberChatsUnreadCount(activeInstance: RootComponent.Child): Int {
+    val chatsChild = activeInstance as? RootComponent.Child.ChatsChild
+        ?: return 0
+    val chatsState by chatsChild.component.chatsState.collectAsState()
+    return chatsState.chats.sumOf { chat -> chat.unreadCount }.coerceAtMost(99)
 }
 
 private fun isSwipeBackSupported(child: RootComponent.Child): Boolean =
