@@ -150,7 +150,7 @@ fun ChatListTopBar(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -331,6 +331,47 @@ fun ChatListTopBar(
                     }
                 }
 
+                // Inline search bar below title
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    SearchBar(
+                        inputField = {
+                            SearchBarDefaults.InputField(
+                                query = searchQuery,
+                                onQueryChange = onSearchQueryChange,
+                                onSearch = {},
+                                expanded = false,
+                                onExpandedChange = {},
+                                placeholder = { Text(stringResource(R.string.search_conversations_placeholder)) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Rounded.Search,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { onSearchQueryChange("") }, shapes = iconButtonShapes) {
+                                            Icon(Icons.Rounded.Close, contentDescription = null)
+                                        }
+                                    }
+                                }
+                            )
+                        },
+                        expanded = false,
+                        onExpandedChange = {},
+                        shape = ShapeDefaults.ExtraLarge,
+                        colors = SearchBarDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            dividerColor = androidx.compose.ui.graphics.Color.Transparent
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {}
+                }
             }
         }
     }
