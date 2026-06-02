@@ -224,6 +224,15 @@ fun MobileLayout(root: RootComponent) {
         }
 
         // ── Bottom Navigation Bar (Liquid Glass) ──────────────────────────
+        // Collect unread count from ChatsChild
+        val chatsUnread = remember(stack.active.instance) {
+            (stack.active.instance as? RootComponent.Child.ChatsChild)
+                ?.component?.state
+        }?.let { stateFlow ->
+            val state by stateFlow.subscribeAsState()
+            state.chats.sumOf { it.unreadCount }.coerceAtMost(99)
+        } ?: 0
+
         AnimatedVisibility(
             visible = showBottomBar,
             enter = slideInVertically { it } + fadeIn(tween(200)),
@@ -231,6 +240,7 @@ fun MobileLayout(root: RootComponent) {
         ) {
             MainBottomBar(
                 selectedTab = selectedTab,
+                chatsUnread = chatsUnread,
                 onTabSelected = { tab ->
                     when (tab) {
                         MainTab.Chats -> {
