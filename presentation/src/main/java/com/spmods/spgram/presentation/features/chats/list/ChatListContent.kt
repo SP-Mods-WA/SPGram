@@ -728,7 +728,7 @@ fun ChatListContent(component: ChatListComponent) {
             modifier = Modifier
                 .padding(top = padding.calculateTopPadding())
                 .fillMaxSize(),
-            shape = if (isTablet) RoundedCornerShape(16.dp) else RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            shape = if (isTablet) RoundedCornerShape(16.dp) else RoundedCornerShape(0.dp),
             color = if (isTablet) Color.Transparent else MaterialTheme.colorScheme.surface
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
