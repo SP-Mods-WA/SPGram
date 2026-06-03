@@ -1329,15 +1329,16 @@ fun ChatListContent(component: ChatListComponent) {
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
-                            IconButton(
-                                onClick = { showStatusMenu = false },
-                                shapes = iconButtonShapes,
+                            Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        CircleShape
-                                    )
+                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = { showStatusMenu = false }
+                                    ),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     Icons.Rounded.Close,
@@ -1369,12 +1370,10 @@ fun ChatListContent(component: ChatListComponent) {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                StickerImage(
+                                Avatar(
                                     path = currentUser?.avatarPath,
-                                    modifier = Modifier
-                                        .size(52.dp)
-                                        .clip(CircleShape),
-                                    isInline = true,
+                                    name = listOfNotNull(currentUser?.firstName, currentUser?.lastName).joinToString(" ").ifBlank { "U" },
+                                    size = 52.dp,
                                 )
                                 Column {
                                     Text(
@@ -1512,7 +1511,7 @@ fun ChatListContent(component: ChatListComponent) {
                         .fillMaxWidth()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = androidx.compose.material.ripple.ripple(),
+                            indication = null,
                         ) {
                             showAlphaSheet = false
                             currentUser?.id?.let { component.onProfileClicked(it) }
@@ -1814,7 +1813,7 @@ private fun AlphaMenuItem(
             .fillMaxWidth()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = androidx.compose.material.ripple.ripple(),
+                indication = null,
                 onClick = onClick
             )
     ) {
