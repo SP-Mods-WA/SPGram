@@ -1,10 +1,13 @@
 package com.spmods.spgram.data.service
 
+import android.content.Intent
+import android.os.Build
 import android.os.PowerManager
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -41,6 +44,18 @@ class FcmPushService : FirebaseMessagingService() {
         val data = message.data
         if (data.isEmpty()) return
 
+        // Wake up TdLib background service so TdLib is ready to process notifications
+        try {
+            val serviceIntent = Intent(this, TdNotificationService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        } catch (e: Exception) {
+            Log.w("FcmPushService", "Could not start TdNotificationService", e)
+        }
+
         val powerManager = getSystemService(POWER_SERVICE) as? PowerManager ?: return
         val wakeLock =
             powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "spgram:FcmPushService")
@@ -56,10 +71,14 @@ class FcmPushService : FirebaseMessagingService() {
             val jsonPayload = json.toString()
             if (jsonPayload.isBlank()) return
 
-            wakeLock.acquire(10_000L)
+            wakeLock.acquire(20_000L)
             scope.launch {
                 try {
-                    withTimeout(8_000L) {
+                    // Wait for TdLib to be authenticated before processing
+                    withTimeout(15_000L) {
+                        if (!gateway.isAuthenticated.value) {
+                            gateway.isAuthenticated.first { it }
+                        }
                         gateway.execute(TdApi.ProcessPushNotification(jsonPayload))
                     }
                     Log.d("FcmPushService", "ProcessPushNotification success")
