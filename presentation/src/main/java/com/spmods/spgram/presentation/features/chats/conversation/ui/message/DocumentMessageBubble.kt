@@ -80,7 +80,7 @@ fun DocumentMessageBubble(
     downloadUtils: IDownloadUtils
 ) {
     val cornerRadius = 18.dp
-    val smallCorner = 4.dp
+    val smallCorner = 6.dp
     val tailCorner = 2.dp
 
     var isAutoDownloadSuppressed by remember(msg.id) { mutableStateOf(false) }
@@ -149,9 +149,9 @@ fun DocumentMessageBubble(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 6.dp)
+                    .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 8.dp)
                     .width(IntrinsicSize.Max)
-                    .widthIn(min = 184.dp, max = 300.dp)
+                    .widthIn(min = 230.dp, max = 300.dp)
             ) {
                 if (isGroup && !isOutgoing && !isSameSenderAbove) {
                     MessageSenderName(msg, toProfile = toProfile)
@@ -344,7 +344,7 @@ fun DocumentAlbumBubble(
     downloadUtils: IDownloadUtils
 ) {
     val cornerRadius = 18.dp
-    val smallCorner = 4.dp
+    val smallCorner = 6.dp
     val tailCorner = 2.dp
 
     val bubbleShape = RoundedCornerShape(
@@ -382,7 +382,7 @@ fun DocumentAlbumBubble(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 6.dp)
+                    .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 8.dp)
                     .width(IntrinsicSize.Max)
                     .widthIn(min = 200.dp, max = 300.dp)
             ) {
