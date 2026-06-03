@@ -94,7 +94,7 @@ fun ChatListItem(
         targetValue = when {
             isTabletSelected -> MaterialTheme.colorScheme.primaryContainer
             isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-            chat.isPinned -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            chat.isPinned -> androidx.compose.ui.graphics.Color.Transparent
             else -> Color.Transparent
         },
         label = "ItemBg"
