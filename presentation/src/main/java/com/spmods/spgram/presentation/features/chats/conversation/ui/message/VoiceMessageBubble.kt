@@ -78,7 +78,7 @@ fun VoiceMessageBubble(
     downloadUtils: IDownloadUtils
 ) {
     val cornerRadius = 18.dp
-    val smallCorner = 4.dp
+    val smallCorner = 6.dp
     val tailCorner = 2.dp
 
     LaunchedEffect(
@@ -138,7 +138,7 @@ fun VoiceMessageBubble(
                 modifier = Modifier
                     .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 6.dp)
                     .width(IntrinsicSize.Max)
-                    .widthIn(min = 184.dp, max = 300.dp)
+                    .widthIn(min = 220.dp, max = 300.dp)
             ) {
                 if (isGroup && !isOutgoing && !isSameSenderAbove) {
                     MessageSenderName(msg, toProfile = toProfile)
@@ -210,7 +210,7 @@ fun VoiceRow(
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary)
                 .clickable {
@@ -227,7 +227,7 @@ fun VoiceRow(
             if (content.isDownloading || content.isUploading) {
                 CircularWavyProgressIndicator(
                     progress = { if (content.isDownloading) content.downloadProgress else content.uploadProgress },
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(28.dp),
                     color = if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onPrimary,
                     trackColor = (if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onPrimary).copy(
                         alpha = 0.2f
@@ -264,7 +264,7 @@ fun VoiceRow(
                 progress = playerState.progress,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(32.dp),
+                    .height(36.dp),
                 activeColor = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
                 inactiveColor = (if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant).copy(
                     alpha = 0.3f
@@ -297,8 +297,8 @@ fun WaveformView(
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
-        val barWidth = 2.dp.toPx()
-        val gap = 1.dp.toPx()
+        val barWidth = 3.dp.toPx()
+        val gap = 2.dp.toPx()
         val totalBarWidth = barWidth + gap
 
         val barsCount = (width / totalBarWidth).toInt()
