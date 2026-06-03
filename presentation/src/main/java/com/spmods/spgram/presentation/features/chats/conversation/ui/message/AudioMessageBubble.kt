@@ -76,7 +76,7 @@ fun AudioMessageBubble(
     downloadUtils: IDownloadUtils
 ) {
     val cornerRadius = 18.dp
-    val smallCorner = 4.dp
+    val smallCorner = 6.dp
     val tailCorner = 2.dp
 
     LaunchedEffect(
@@ -135,9 +135,9 @@ fun AudioMessageBubble(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 6.dp)
+                    .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 8.dp)
                     .width(IntrinsicSize.Max)
-                    .widthIn(min = 184.dp, max = 300.dp)
+                    .widthIn(min = 230.dp, max = 300.dp)
             ) {
                 if (isGroup && !isOutgoing && !isSameSenderAbove) {
                     MessageSenderName(msg, toProfile = toProfile)
@@ -322,7 +322,7 @@ fun AudioAlbumBubble(
     downloadUtils: IDownloadUtils
 ) {
     val cornerRadius = 18.dp
-    val smallCorner = 4.dp
+    val smallCorner = 6.dp
     val tailCorner = 2.dp
 
     val bubbleShape = RoundedCornerShape(
@@ -359,7 +359,7 @@ fun AudioAlbumBubble(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 6.dp)
+                    .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 8.dp)
                     .width(IntrinsicSize.Max)
                     .widthIn(min = 200.dp, max = 300.dp)
             ) {
