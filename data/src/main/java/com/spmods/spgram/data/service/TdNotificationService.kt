@@ -62,8 +62,14 @@ class TdNotificationService : Service() {
             // startForegroundService() timing requirements on Android 8+.
             startForegroundNotification()
 
+            // For FCM: keep service alive briefly so TdLib can process push notifications
+            // then auto-stop after processing window
             if (appPreferences.pushProvider.value != PushProvider.GMS_LESS) {
-                stopForegroundService()
+                startListeningUpdates()
+                scope.launch {
+                    delay(20_000L)
+                    stopForegroundService()
+                }
                 return START_NOT_STICKY
             }
 
@@ -71,8 +77,7 @@ class TdNotificationService : Service() {
             startListeningUpdates()
             startPeriodicCheck()
         } else if (appPreferences.pushProvider.value != PushProvider.GMS_LESS) {
-            stopForegroundService()
-            return START_NOT_STICKY
+            // Already running, just keep alive for push processing window
         }
         return START_STICKY
     }
