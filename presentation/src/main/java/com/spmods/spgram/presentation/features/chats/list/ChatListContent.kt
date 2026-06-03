@@ -18,6 +18,15 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.material3.Divider
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -154,6 +163,7 @@ fun ChatListContent(component: ChatListComponent) {
 
     var showAccountMenu by remember { mutableStateOf(false) }
     var showStatusMenu by remember { mutableStateOf(false) }
+    var showAlphaSheet by remember { mutableStateOf(false) }
     var showDeleteChatsSheet by remember { mutableStateOf(false) }
     var statusAnchorBounds by remember { mutableStateOf<Rect?>(null) }
     val statusMenuTransitionState = remember { MutableTransitionState(false) }
@@ -575,9 +585,8 @@ fun ChatListContent(component: ChatListComponent) {
                                 searchQuery = searchState.searchQuery,
                                 onSearchQueryChange = component::onSearchQueryChange,
                                 onSearchToggle = component::onSearchToggle,
-                                onStatusClick = { anchorBounds ->
-                                    statusAnchorBounds = anchorBounds ?: statusAnchorBounds
-                                    showStatusMenu = true
+                                onStatusClick = { _ ->
+                                    showAlphaSheet = true
                                 },
                                 onMenuClick = { showAccountMenu = true }
                             )
@@ -1302,21 +1311,289 @@ fun ChatListContent(component: ChatListComponent) {
                     tonalElevation = 8.dp,
                     shadowElevation = 12.dp
                 ) {
-                    EmojisGrid(
-                        onEmojiSelected = { _, sticker ->
-                            val customEmojiId = sticker?.customEmojiId
-                            if (sticker != null && customEmojiId != null) {
-                                if (!sticker.path.isNullOrBlank()) {
-                                    cachedStatusEmojiPath = sticker.path
-                                }
-                                component.onSetEmojiStatus(customEmojiId, null)
-                                showStatusMenu = false
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    ) {
+                        // Title row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                text = "SPGram Alpha",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            IconButton(
+                                onClick = { showStatusMenu = false },
+                                shapes = iconButtonShapes,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        CircleShape
+                                    )
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
-                        },
-                        emojiOnlyMode = true,
-                        contentPadding = PaddingValues(bottom = 12.dp)
-                    )
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // User profile card
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) {
+                                    showStatusMenu = false
+                                    currentUser?.id?.let { component.onProfileClicked(it) }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                StickerImage(
+                                    path = currentUser?.profilePhotoPath,
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .clip(CircleShape),
+                                    isInline = true,
+                                )
+                                Column {
+                                    Text(
+                                        text = listOfNotNull(currentUser?.firstName, currentUser?.lastName)
+                                            .joinToString(" ").ifBlank { "User" },
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    currentUser?.phoneNumber?.let { phone ->
+                                        Text(
+                                            text = phone,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        // Menu items
+                        val menuItemColor = MaterialTheme.colorScheme.primaryContainer
+                        val menuIconColor = MaterialTheme.colorScheme.primary
+
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            AlphaMenuItem(Icons.Rounded.AccountBalanceWallet, "Wallet", null, menuItemColor, menuIconColor, iconButtonShapes) { showStatusMenu = false }
+                            AlphaMenuItem(Icons.Rounded.Person, "My Profile", "View your profile", menuItemColor, menuIconColor, iconButtonShapes) {
+                                showStatusMenu = false
+                                currentUser?.id?.let { component.onProfileClicked(it) }
+                            }
+                            AlphaMenuItem(Icons.Rounded.Bookmark, "Saved Messages", "Cloud storage", menuItemColor, menuIconColor, iconButtonShapes) {
+                                showStatusMenu = false
+                                currentUser?.id?.let { component.onChatClicked(it) }
+                            }
+                            AlphaMenuItem(Icons.Rounded.Settings, "Settings", "App configuration", menuItemColor, menuIconColor, iconButtonShapes) {
+                                showStatusMenu = false
+                                component.onSettingsClicked()
+                            }
+                            AlphaMenuItem(Icons.Rounded.HelpOutline, "Help & Feedback", "FAQ and support", menuItemColor, menuIconColor, iconButtonShapes) {
+                                showStatusMenu = false
+                                component.onOpenInstantView("https://telegram.org/faq#general-questions")
+                            }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Bottom links
+                        Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            TextButton(onClick = {
+                                showStatusMenu = false
+                                component.onOpenInstantView("https://telegram.org/privacy")
+                            }) { Text("Privacy Policy", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
+                            Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                            TextButton(onClick = {
+                                showStatusMenu = false
+                                component.onOpenInstantView("https://telegram.org/tos")
+                            }) { Text("Terms of Service", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
+                        }
+                        Text(
+                            text = "SPGram Alpha for Android v0.1.0",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                        )
+                        Spacer(Modifier.height(4.dp))
+                    }
                 }
+            }
+        }
+    }
+
+    // ── SPGram Alpha Bottom Sheet ─────────────────────────────────────────
+    if (showAlphaSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showAlphaSheet = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        ) {
+            val iconButtonShapes = ExpressiveDefaults.iconButtonShapes()
+            val menuItemColor = MaterialTheme.colorScheme.primaryContainer
+            val menuIconColor = MaterialTheme.colorScheme.primary
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 32.dp),
+            ) {
+                // Title + X
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "SPGram Alpha",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    IconButton(
+                        onClick = { showAlphaSheet = false },
+                        shapes = iconButtonShapes,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Close,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // User profile card
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = androidx.compose.material.ripple.rememberRipple(),
+                        ) {
+                            showAlphaSheet = false
+                            currentUser?.id?.let { component.onProfileClicked(it) }
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StickerImage(
+                            path = currentUser?.profilePhotoPath,
+                            modifier = Modifier.size(52.dp).clip(CircleShape),
+                            isInline = true,
+                        )
+                        Column {
+                            Text(
+                                text = listOfNotNull(currentUser?.firstName, currentUser?.lastName)
+                                    .joinToString(" ").ifBlank { "User" },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            currentUser?.phoneNumber?.let { phone ->
+                                Text(
+                                    text = phone,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                // Menu items
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    AlphaMenuItem(Icons.Rounded.AccountBalanceWallet, "Wallet", null, menuItemColor, menuIconColor, iconButtonShapes) {
+                        showAlphaSheet = false
+                    }
+                    AlphaMenuItem(Icons.Rounded.Person, "My Profile", "View your profile", menuItemColor, menuIconColor, iconButtonShapes) {
+                        showAlphaSheet = false
+                        currentUser?.id?.let { component.onProfileClicked(it) }
+                    }
+                    AlphaMenuItem(Icons.Rounded.Bookmark, "Saved Messages", "Cloud storage", menuItemColor, menuIconColor, iconButtonShapes) {
+                        showAlphaSheet = false
+                        currentUser?.id?.let { component.onChatClicked(it) }
+                    }
+                    AlphaMenuItem(Icons.Rounded.Settings, "Settings", "App configuration", menuItemColor, menuIconColor, iconButtonShapes) {
+                        showAlphaSheet = false
+                        component.onSettingsClicked()
+                    }
+                    AlphaMenuItem(Icons.Rounded.HelpOutline, "Help & Feedback", "FAQ and support", menuItemColor, menuIconColor, iconButtonShapes) {
+                        showAlphaSheet = false
+                        component.onOpenInstantView("https://telegram.org/faq#general-questions")
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = {
+                        showAlphaSheet = false
+                        component.onOpenInstantView("https://telegram.org/privacy")
+                    }) { Text("Privacy Policy", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
+                    Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 2.dp))
+                    TextButton(onClick = {
+                        showAlphaSheet = false
+                        component.onOpenInstantView("https://telegram.org/tos")
+                    }) { Text("Terms of Service", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
+                }
+                Text(
+                    text = "SPGram Alpha for Android v0.1.0",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+                Spacer(Modifier.height(8.dp))
             }
         }
     }
@@ -1513,5 +1790,64 @@ private fun rememberManagedChatListState(
             firstVisibleItemIndex = initialIndex,
             firstVisibleItemScrollOffset = initialOffset
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AlphaMenuItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String?,
+    iconBgColor: androidx.compose.ui.graphics.Color,
+    iconColor: androidx.compose.ui.graphics.Color,
+    shapes: com.spmods.spgram.presentation.core.ui.IconButtonShapes,
+    onClick: () -> Unit,
+) {
+    Surface(
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+        color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = androidx.compose.ui.Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = androidx.compose.material.ripple.rememberRipple(),
+                onClick = onClick
+            )
+    ) {
+        Row(
+            modifier = androidx.compose.ui.Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = androidx.compose.ui.Modifier
+                    .size(40.dp)
+                    .background(iconBgColor, androidx.compose.foundation.shape.CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = androidx.compose.ui.Modifier.size(22.dp)
+                )
+            }
+            Column {
+                Text(
+                    title,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                )
+                subtitle?.let {
+                    Text(
+                        it,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }
