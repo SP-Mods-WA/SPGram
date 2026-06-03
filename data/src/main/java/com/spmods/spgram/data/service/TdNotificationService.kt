@@ -66,7 +66,7 @@ class TdNotificationService : Service() {
             // then auto-stop after processing window
             if (appPreferences.pushProvider.value != PushProvider.GMS_LESS) {
                 startListeningUpdates()
-                scope.launch {
+                serviceScope.launch {
                     delay(20_000L)
                     stopForegroundService()
                 }
