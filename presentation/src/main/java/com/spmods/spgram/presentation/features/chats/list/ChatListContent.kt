@@ -18,6 +18,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import com.spmods.spgram.presentation.core.ui.ExpressiveDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Person
@@ -1369,7 +1370,7 @@ fun ChatListContent(component: ChatListComponent) {
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 StickerImage(
-                                    path = currentUser?.profilePhotoPath,
+                                    path = currentUser?.avatarPath,
                                     modifier = Modifier
                                         .size(52.dp)
                                         .clip(CircleShape),
@@ -1401,20 +1402,20 @@ fun ChatListContent(component: ChatListComponent) {
                         val menuIconColor = MaterialTheme.colorScheme.primary
 
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            AlphaMenuItem(Icons.Rounded.AccountBalanceWallet, "Wallet", null, menuItemColor, menuIconColor, iconButtonShapes) { showStatusMenu = false }
-                            AlphaMenuItem(Icons.Rounded.Person, "My Profile", "View your profile", menuItemColor, menuIconColor, iconButtonShapes) {
+                            AlphaMenuItem(Icons.Rounded.AccountBalanceWallet, "Wallet", null, menuItemColor, menuIconColor) { showStatusMenu = false }
+                            AlphaMenuItem(Icons.Rounded.Person, "My Profile", "View your profile", menuItemColor, menuIconColor) {
                                 showStatusMenu = false
                                 currentUser?.id?.let { component.onProfileClicked(it) }
                             }
-                            AlphaMenuItem(Icons.Rounded.Bookmark, "Saved Messages", "Cloud storage", menuItemColor, menuIconColor, iconButtonShapes) {
+                            AlphaMenuItem(Icons.Rounded.Bookmark, "Saved Messages", "Cloud storage", menuItemColor, menuIconColor) {
                                 showStatusMenu = false
                                 currentUser?.id?.let { component.onChatClicked(it) }
                             }
-                            AlphaMenuItem(Icons.Rounded.Settings, "Settings", "App configuration", menuItemColor, menuIconColor, iconButtonShapes) {
+                            AlphaMenuItem(Icons.Rounded.Settings, "Settings", "App configuration", menuItemColor, menuIconColor) {
                                 showStatusMenu = false
                                 component.onSettingsClicked()
                             }
-                            AlphaMenuItem(Icons.Rounded.HelpOutline, "Help & Feedback", "FAQ and support", menuItemColor, menuIconColor, iconButtonShapes) {
+                            AlphaMenuItem(Icons.Rounded.HelpOutline, "Help & Feedback", "FAQ and support", menuItemColor, menuIconColor) {
                                 showStatusMenu = false
                                 component.onOpenInstantView("https://telegram.org/faq#general-questions")
                             }
@@ -1460,7 +1461,6 @@ fun ChatListContent(component: ChatListComponent) {
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         ) {
-            val iconButtonShapes = ExpressiveDefaults.iconButtonShapes()
             val menuItemColor = MaterialTheme.colorScheme.primaryContainer
             val menuIconColor = MaterialTheme.colorScheme.primary
 
@@ -1482,12 +1482,16 @@ fun ChatListContent(component: ChatListComponent) {
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                    IconButton(
-                        onClick = { showAlphaSheet = false },
-                        shapes = iconButtonShapes,
+                    Box(
                         modifier = Modifier
                             .size(36.dp)
                             .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { showAlphaSheet = false }
+                            ),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Rounded.Close,
@@ -1508,7 +1512,7 @@ fun ChatListContent(component: ChatListComponent) {
                         .fillMaxWidth()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = androidx.compose.material.ripple.rememberRipple(),
+                            indication = androidx.compose.material.ripple.ripple(),
                         ) {
                             showAlphaSheet = false
                             currentUser?.id?.let { component.onProfileClicked(it) }
@@ -1519,10 +1523,10 @@ fun ChatListContent(component: ChatListComponent) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        StickerImage(
-                            path = currentUser?.profilePhotoPath,
-                            modifier = Modifier.size(52.dp).clip(CircleShape),
-                            isInline = true,
+                        Avatar(
+                            path = currentUser?.avatarPath,
+                            name = listOfNotNull(currentUser?.firstName, currentUser?.lastName).joinToString(" ").ifBlank { "U" },
+                            size = 52.dp,
                         )
                         Column {
                             Text(
@@ -1547,22 +1551,22 @@ fun ChatListContent(component: ChatListComponent) {
 
                 // Menu items
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    AlphaMenuItem(Icons.Rounded.AccountBalanceWallet, "Wallet", null, menuItemColor, menuIconColor, iconButtonShapes) {
+                    AlphaMenuItem(Icons.Rounded.AccountBalanceWallet, "Wallet", null, menuItemColor, menuIconColor) {
                         showAlphaSheet = false
                     }
-                    AlphaMenuItem(Icons.Rounded.Person, "My Profile", "View your profile", menuItemColor, menuIconColor, iconButtonShapes) {
+                    AlphaMenuItem(Icons.Rounded.Person, "My Profile", "View your profile", menuItemColor, menuIconColor) {
                         showAlphaSheet = false
                         currentUser?.id?.let { component.onProfileClicked(it) }
                     }
-                    AlphaMenuItem(Icons.Rounded.Bookmark, "Saved Messages", "Cloud storage", menuItemColor, menuIconColor, iconButtonShapes) {
+                    AlphaMenuItem(Icons.Rounded.Bookmark, "Saved Messages", "Cloud storage", menuItemColor, menuIconColor) {
                         showAlphaSheet = false
                         currentUser?.id?.let { component.onChatClicked(it) }
                     }
-                    AlphaMenuItem(Icons.Rounded.Settings, "Settings", "App configuration", menuItemColor, menuIconColor, iconButtonShapes) {
+                    AlphaMenuItem(Icons.Rounded.Settings, "Settings", "App configuration", menuItemColor, menuIconColor) {
                         showAlphaSheet = false
                         component.onSettingsClicked()
                     }
-                    AlphaMenuItem(Icons.Rounded.HelpOutline, "Help & Feedback", "FAQ and support", menuItemColor, menuIconColor, iconButtonShapes) {
+                    AlphaMenuItem(Icons.Rounded.HelpOutline, "Help & Feedback", "FAQ and support", menuItemColor, menuIconColor) {
                         showAlphaSheet = false
                         component.onOpenInstantView("https://telegram.org/faq#general-questions")
                     }
@@ -1801,7 +1805,6 @@ private fun AlphaMenuItem(
     subtitle: String?,
     iconBgColor: androidx.compose.ui.graphics.Color,
     iconColor: androidx.compose.ui.graphics.Color,
-    shapes: com.spmods.spgram.presentation.core.ui.IconButtonShapes,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -1811,7 +1814,7 @@ private fun AlphaMenuItem(
             .fillMaxWidth()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = androidx.compose.material.ripple.rememberRipple(),
+                indication = androidx.compose.material.ripple.ripple(),
                 onClick = onClick
             )
     ) {
