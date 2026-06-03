@@ -1,7 +1,6 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -23,18 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.koinInject
-import com.spmods.spgram.app.ui.theme.BubbleIncomingDark
-import com.spmods.spgram.app.ui.theme.BubbleIncomingLight
-import com.spmods.spgram.app.ui.theme.BubbleOutgoingDark
-import com.spmods.spgram.app.ui.theme.BubbleOutgoingLight
-import com.spmods.spgram.app.ui.theme.BubbleIncomingContentDark
-import com.spmods.spgram.app.ui.theme.BubbleIncomingContentLight
-import com.spmods.spgram.app.ui.theme.BubbleOutgoingContentDark
-import com.spmods.spgram.app.ui.theme.BubbleOutgoingContentLight
 import com.spmods.spgram.domain.models.ForwardInfo
 import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageModel
@@ -42,6 +34,11 @@ import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.util.DateFormatManager
 import com.spmods.spgram.presentation.features.chats.conversation.ui.TelegramBubbleShape
 
+// ── Telegram-exact bubble colours (inline — no cross-module import needed) ─
+private val TgBubbleOutLight   = Color(0xFFEFFDE7)
+private val TgBubbleOutDark    = Color(0xFF2B5278)
+private val TgBubbleInLight    = Color(0xFFFFFFFF)
+private val TgBubbleInDark     = Color(0xFF212121)
 
 @Composable
 fun TextMessageBubble(
@@ -64,37 +61,31 @@ fun TextMessageBubble(
     showReactions: Boolean = true,
     toProfile: (Long) -> Unit = {},
     onForwardOriginClick: (ForwardInfo) -> Unit = {},
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val isDark = isSystemInDarkTheme()
 
-    // ── Telegram-exact colours ────────────────────────────────────────────
+    // ── Telegram-exact colours ──────────────────────────────────────────
     val backgroundColor = when {
-        isOutgoing && isDark  -> BubbleOutgoingDark
-        isOutgoing && !isDark -> BubbleOutgoingLight
-        !isOutgoing && isDark -> BubbleIncomingDark
-        else                  -> BubbleIncomingLight
+        isOutgoing && isDark  -> TgBubbleOutDark
+        isOutgoing            -> TgBubbleOutLight
+        isDark                -> TgBubbleInDark
+        else                  -> TgBubbleInLight
     }
-    val contentColor = when {
-        isOutgoing && isDark  -> BubbleOutgoingContentDark
-        isOutgoing && !isDark -> BubbleOutgoingContentLight
-        !isOutgoing && isDark -> BubbleIncomingContentDark
-        else                  -> BubbleIncomingContentLight
-    }
-    val timeColor = contentColor.copy(alpha = 0.6f)
+    val contentColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
+    val timeColor    = contentColor.copy(alpha = 0.6f)
 
-    // ── Telegram bubble shape ─────────────────────────────────────────────
-    val hasTail = !isSameSenderBelow
+    // ── Telegram bubble shape ───────────────────────────────────────────
     val cornerRadius = bubbleRadius.dp
-    val smallCorner  = (bubbleRadius / 4f).coerceAtLeast(4f).dp
+    val smallCorner  = 6.dp          // ← was 4.dp; Telegram uses ~6dp grouped corner
 
-    val bubbleShape = remember(isOutgoing, isSameSenderAbove, hasTail, cornerRadius, smallCorner) {
+    val bubbleShape = remember(isOutgoing, isSameSenderAbove, isSameSenderBelow, cornerRadius) {
         TelegramBubbleShape(
-            isOutgoing       = isOutgoing,
-            hasTail          = hasTail,
+            isOutgoing        = isOutgoing,
+            hasTail           = !isSameSenderBelow,
             isSameSenderAbove = isSameSenderAbove,
-            cornerRadius     = cornerRadius,
-            smallCorner      = smallCorner,
+            cornerRadius      = cornerRadius,
+            smallCorner       = smallCorner,
         )
     }
 
@@ -103,73 +94,62 @@ fun TextMessageBubble(
 
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
     val renderData = rememberMessageTextRenderData(
-        text            = content.text,
-        entities        = content.entities,
-        isOutgoing      = isOutgoing,
+        text             = content.text,
+        entities         = content.entities,
+        isOutgoing       = isOutgoing,
         revealedSpoilers = revealedSpoilers,
-        fontSize        = fontSize,
+        fontSize         = fontSize
     )
     val isBigEmoji = renderData.isBigEmoji && renderData.bigEmojiItems.isNotEmpty()
 
     val hasReactions = showReactions && msg.reactions.isNotEmpty()
 
-    // ── Outer column: bubble surface + reactions floating below ───────────
+    // ── Outer column: Surface + reactions floating below ────────────────
     Column(
         modifier = modifier
-            .width(IntrinsicSize.Max)
             .widthIn(min = 60.dp),
-        horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start,
+        horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
-
-        // ── Bubble surface ────────────────────────────────────────────────
+        // ── Bubble surface ───────────────────────────────────────────
         Surface(
-            shape         = bubbleShape,
-            color         = if (isBigEmoji) androidx.compose.ui.graphics.Color.Transparent
-                            else backgroundColor,
-            contentColor  = contentColor,
-            tonalElevation  = if (isBigEmoji) 0.dp else 0.dp,
-            shadowElevation = if (isBigEmoji) 0.dp else 1.dp,
+            shape          = bubbleShape,
+            color          = if (isBigEmoji) Color.Transparent else backgroundColor,
+            contentColor   = contentColor,
+            tonalElevation = if (isBigEmoji) 0.dp else 1.dp,
+            shadowElevation = 0.dp
         ) {
             Column(
-                modifier = Modifier.padding(
-                    start  = 12.dp,
-                    end    = 12.dp,
-                    top    = 8.dp,
-                    // Add a little extra bottom padding when reactions will overlap
-                    bottom = if (hasReactions) 8.dp else if (isBigEmoji) 0.dp else 6.dp,
-                ),
+                modifier = Modifier
+                    .widthIn(min = 60.dp)
+                    .padding(
+                        start  = 12.dp,
+                        end    = 12.dp,
+                        top    = 8.dp,
+                        bottom = if (isBigEmoji) 0.dp else 6.dp
+                    )
             ) {
-                // Sender name (groups only)
                 if (isGroup && !isOutgoing && !isSameSenderAbove) {
                     MessageSenderName(msg, toProfile = toProfile)
                 }
 
-                // Forward header
                 msg.forwardInfo?.let { forward ->
-                    ForwardContent(
-                        forward      = forward,
-                        isOutgoing   = isOutgoing,
-                        onForwardClick = onForwardOriginClick,
-                    )
+                    ForwardContent(forward, isOutgoing, onForwardClick = onForwardOriginClick)
                 }
-
-                // Reply quote
                 msg.replyToMsg?.let { reply ->
                     ReplyContent(
                         replyToMsg = reply,
                         isOutgoing = isOutgoing,
-                        onClick    = { onReplyClick(reply) },
+                        onClick    = { onReplyClick(reply) }
                     )
                 }
 
-                // Message content (big emoji or normal text)
                 val finalFontSize = if (renderData.isBigEmoji) fontSize * 5f else fontSize
 
                 if (isBigEmoji) {
                     BigEmojiContent(
-                        items   = renderData.bigEmojiItems,
-                        sizeDp  = finalFontSize,
-                        modifier = Modifier.padding(bottom = 2.dp),
+                        items    = renderData.bigEmojiItems,
+                        sizeDp   = finalFontSize,
+                        modifier = Modifier.padding(bottom = 2.dp)
                     )
                 } else {
                     MessageText(
@@ -178,54 +158,51 @@ fun TextMessageBubble(
                         entities      = content.entities,
                         inlineContent = renderData.inlineContent,
                         style         = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize     = finalFontSize.sp,
+                            fontSize      = finalFontSize.sp,
                             letterSpacing = letterSpacing.sp,
-                            lineHeight   = (finalFontSize * 1.1f).sp,
+                            lineHeight    = (finalFontSize * 1.1f).sp
                         ),
                         modifier      = Modifier.padding(bottom = 2.dp),
                         isOutgoing    = isOutgoing,
                         onSpoilerClick = { index ->
-                            if (revealedSpoilers.contains(index)) {
+                            if (revealedSpoilers.contains(index))
                                 revealedSpoilers.remove(index)
-                            } else {
+                            else
                                 revealedSpoilers.add(index)
-                            }
                         },
-                        onClick    = onClick,
-                        onLongClick = onLongClick,
+                        onClick     = onClick,
+                        onLongClick = onLongClick
                     )
                 }
 
-                // Link preview
                 if (showLinkPreviews) {
                     content.webPage?.let { webPage ->
                         LinkPreview(
                             webPage           = webPage,
-                            isOutgoing        = isOutgoing,
+                            isOutgoing        = msg.isOutgoing,
                             onInstantViewClick = onInstantViewClick,
-                            onYouTubeClick    = onYouTubeClick,
+                            onYouTubeClick    = onYouTubeClick
                         )
                     }
                 }
 
-                // Timestamp + sending status (inside bubble, bottom-right)
                 Row(
                     modifier          = Modifier.align(Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (msg.editDate > 0) {
                         Icon(
-                            imageVector     = Icons.Default.Edit,
+                            imageVector        = Icons.Default.Edit,
                             contentDescription = stringResource(R.string.info_edited),
-                            modifier        = Modifier.size(14.dp),
-                            tint            = timeColor,
+                            modifier           = Modifier.size(14.dp),
+                            tint               = timeColor
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                     }
                     Text(
                         text  = formatTime(msg.date, timeFormat),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = timeColor,
+                        color = timeColor
                     )
                     if (isOutgoing) {
                         Spacer(modifier = Modifier.width(4.dp))
@@ -233,24 +210,23 @@ fun TextMessageBubble(
                             sendingState = msg.sendingState,
                             isRead       = msg.isRead,
                             baseColor    = timeColor,
-                            size         = 14.dp,
+                            size         = 14.dp
                         )
                     }
                 }
-            } // end bubble Column
+            }
         } // end Surface
 
-        // ── Reactions — rendered OUTSIDE the bubble, overlapping its bottom ──
-        // offset(y = -8.dp) makes them visually overlap the bubble edge,
-        // matching the official Telegram "floating below" appearance.
+        // ── [3.1] Reactions float OUTSIDE the bubble ─────────────────
+        // offset(y = -8.dp) overlaps the bubble bottom → Telegram look
         if (hasReactions) {
             MessageReactionsView(
-                reactions      = msg.reactions,
-                isOutgoing     = isOutgoing,
+                reactions       = msg.reactions,
                 onReactionClick = onReactionClick,
-                modifier       = Modifier
+                isOutgoing      = isOutgoing,
+                modifier        = Modifier
                     .offset(y = (-8).dp)
-                    .padding(horizontal = 6.dp),
+                    .padding(horizontal = 6.dp)
             )
         }
     }
