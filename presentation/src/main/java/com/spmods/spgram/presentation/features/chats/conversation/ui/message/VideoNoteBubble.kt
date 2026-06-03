@@ -79,7 +79,7 @@ fun VideoNoteBubble(
     onForwardOriginClick: (ForwardInfo) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val size = 260.dp
+    val size = 200.dp
     var notePosition by remember { mutableStateOf(Offset.Zero) }
     var isVisible by remember { mutableStateOf(false) }
     val resources = LocalResources.current
