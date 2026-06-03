@@ -303,15 +303,6 @@ fun ChatListTopBar(
                             }
                         }
 
-                        IconButton(onClick = onSearchToggle, shapes = iconButtonShapes) {
-                            Icon(
-                                imageVector = Icons.Rounded.Search,
-                                contentDescription = stringResource(R.string.action_search),
-                                modifier = Modifier.size(26.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
                         Spacer(modifier = Modifier.width(4.dp))
 
                         IconButton(
@@ -331,20 +322,25 @@ fun ChatListTopBar(
                     }
                 }
 
-                // Inline search bar below title
+                // Inline search bar — click triggers real search
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = onSearchToggle
+                        )
                 ) {
                     SearchBar(
                         inputField = {
                             SearchBarDefaults.InputField(
-                                query = searchQuery,
-                                onQueryChange = onSearchQueryChange,
+                                query = "",
+                                onQueryChange = {},
                                 onSearch = {},
                                 expanded = false,
-                                onExpandedChange = {},
+                                onExpandedChange = { if (it) onSearchToggle() },
                                 placeholder = { Text(stringResource(R.string.search_conversations_placeholder)) },
                                 leadingIcon = {
                                     Icon(
@@ -353,23 +349,22 @@ fun ChatListTopBar(
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 },
-                                trailingIcon = {
-                                    if (searchQuery.isNotEmpty()) {
-                                        IconButton(onClick = { onSearchQueryChange("") }, shapes = iconButtonShapes) {
-                                            Icon(Icons.Rounded.Close, contentDescription = null)
-                                        }
-                                    }
-                                }
                             )
                         },
                         expanded = false,
-                        onExpandedChange = {},
+                        onExpandedChange = { if (it) onSearchToggle() },
                         shape = ShapeDefaults.ExtraLarge,
                         colors = SearchBarDefaults.colors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             dividerColor = androidx.compose.ui.graphics.Color.Transparent
                         ),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                indication = null,
+                                onClick = onSearchToggle
+                            )
                     ) {}
                 }
             }
