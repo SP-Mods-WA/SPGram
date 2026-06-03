@@ -100,3 +100,4 @@ jobs:
         files: app/build/outputs/apk/official/release/*.apk
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
