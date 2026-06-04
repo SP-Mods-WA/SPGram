@@ -101,7 +101,7 @@ fun ChannelVideoMessageBubble(
 ) {
     val cornerRadius = bubbleRadius.dp
     val smallCorner = (bubbleRadius / 4f).coerceAtLeast(4f).dp
-    val tailCorner = 2.dp
+    val tailCorner = 0.dp
 
     val topStart = if (isSameSenderAbove) smallCorner else cornerRadius
     val topEnd = cornerRadius
@@ -168,8 +168,8 @@ fun ChannelVideoMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 1.dp,
+            color = Color(0xFFFFFFFF),
+            tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier
@@ -180,7 +180,7 @@ fun ChannelVideoMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(Color(0xFFFFFFFF))
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                             .zIndex(1f)
                     ) {
@@ -412,7 +412,7 @@ fun ChannelVideoMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(Color(0xFFFFFFFF))
                             .padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -462,7 +462,7 @@ fun ChannelVideoMessageBubble(
                                 MessageMetadata(
                                     msg = msg,
                                     isOutgoing = msg.isOutgoing,
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                    contentColor = Color(0xFF1A1A1A).copy(alpha = 0.8f)
                                 )
                             }
                         }
@@ -486,6 +486,7 @@ fun ChannelVideoMessageBubble(
             MessageReactionsView(
                 reactions = msg.reactions,
                 onReactionClick = onReactionClick,
+                showAddButton = false,
                 modifier = Modifier
                     .padding(top = 2.dp)
                     .align(Alignment.Start)
