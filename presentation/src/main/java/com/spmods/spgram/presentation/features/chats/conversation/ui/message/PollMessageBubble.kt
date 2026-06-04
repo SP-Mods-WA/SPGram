@@ -103,7 +103,7 @@ fun PollMessageBubble(
 ) {
     val cornerRadius = bubbleRadius.dp
     val smallCorner = (bubbleRadius / 4f).coerceAtLeast(4f).dp
-    val tailCorner = 2.dp
+    val tailCorner = 0.dp
 
     val bubbleShape = RoundedCornerShape(
         topStart = if (!isOutgoing && isSameSenderAbove) smallCorner else cornerRadius,
@@ -117,11 +117,11 @@ fun PollMessageBubble(
     )
 
     val containerColor =
-        if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+        if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF)
     val contentColor =
-        if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+        if (isOutgoing) Color(0xFF1A1A1A) else MaterialTheme.colorScheme.onSurface
     val accentColor = if (isOutgoing) {
-        MaterialTheme.colorScheme.onPrimaryContainer
+        Color(0xFF1A1A1A)
     } else {
         MaterialTheme.colorScheme.primary
     }
@@ -150,7 +150,7 @@ fun PollMessageBubble(
             shape = bubbleShape,
             color = containerColor,
             contentColor = contentColor,
-            tonalElevation = 1.dp
+            tonalElevation = 0.dp
         ) {
             Column(
                 modifier = Modifier
@@ -328,7 +328,7 @@ private fun PollHeroHeader(
                         Surface(
                             modifier = Modifier.widthIn(min = 220.dp, max = 260.dp),
                             shape = RoundedCornerShape(22.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                            color = Color(0xFFFFFFFF)
                         ) {
                             Column(modifier = Modifier.padding(vertical = 8.dp)) {
                                 if (hasVoted) {
@@ -622,7 +622,7 @@ private fun PollOptionCard(
                             option.voterCount
                         ),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color(0xFF1A1A1A)
                     )
                 }
             }
@@ -651,7 +651,7 @@ private fun PollOptionCard(
                     tint = if (option.isChosen || (showResults && (isCorrect || isWrong))) {
                         stateColor
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                        Color(0xFF1A1A1A)
                     },
                     modifier = Modifier.size(18.dp)
                 )
