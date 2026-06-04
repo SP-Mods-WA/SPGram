@@ -1,5 +1,6 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.channel
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Icon
@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +31,7 @@ import com.spmods.spgram.domain.models.ForwardInfo
 import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageModel
 import com.spmods.spgram.presentation.core.util.DateFormatManager
+import com.spmods.spgram.presentation.features.chats.conversation.ui.TelegramBubbleShape
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.BigEmojiContent
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.ForwardContent
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.LinkPreview
@@ -38,6 +40,12 @@ import com.spmods.spgram.presentation.features.chats.conversation.ui.message.Mes
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.MessageText
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.ReplyContent
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.rememberMessageTextRenderData
+
+// Telegram-exact channel bubble colors (inline)
+private val TgChBubbleLight = Color(0xFFFFFFFF)
+private val TgChBubbleDark  = Color(0xFF212121)
+private val TgChTimeLight   = Color(0x99000000)
+private val TgChTimeDark    = Color(0x99FFFFFF)
 
 @Composable
 fun ChannelTextMessageBubble(
@@ -62,37 +70,44 @@ fun ChannelTextMessageBubble(
     onForwardOriginClick: (ForwardInfo) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val cornerRadius = bubbleRadius.dp
-    val smallCorner = (bubbleRadius / 4f).coerceAtLeast(4f).dp
-    val tailCorner = 2.dp
+    val context  = LocalContext.current
+    val isDark   = isSystemInDarkTheme()
 
-    val bubbleShape = RoundedCornerShape(
-        topStart = if (isSameSenderAbove) smallCorner else cornerRadius,
-        topEnd = cornerRadius,
-        bottomStart =
-            if (isSameSenderBelow) smallCorner else tailCorner,
-        bottomEnd = if (showComments && msg.canGetMessageThread) 4.dp else cornerRadius
-    )
+    val bubbleColor  = if (isDark) TgChBubbleDark  else TgChBubbleLight
+    val contentColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
+    val timeColor    = if (isDark) TgChTimeDark     else TgChTimeLight
+
+    // TelegramBubbleShape — channel posts are incoming (isOutgoing = false)
+    val bubbleShape = remember(isSameSenderAbove, isSameSenderBelow, bubbleRadius) {
+        TelegramBubbleShape(
+            isOutgoing        = false,
+            hasTail           = !isSameSenderBelow,
+            isSameSenderAbove = isSameSenderAbove,
+            cornerRadius      = bubbleRadius.dp,
+            smallCorner       = 6.dp,
+        )
+    }
 
     val dateFormatManager: DateFormatManager = koinInject()
     val timeFormat = dateFormatManager.getHourMinuteFormat()
 
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
+    val hasReactions     = showReactions && msg.reactions.isNotEmpty()
 
     Column(
-        modifier = modifier.widthIn(min = 80.dp),
+        modifier            = modifier.widthIn(min = 80.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Surface(
-            shape = bubbleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 1.dp,
-            modifier = Modifier.fillMaxWidth()
+            shape           = bubbleShape,
+            color           = bubbleColor,
+            contentColor    = contentColor,
+            tonalElevation  = 0.dp,
+            shadowElevation = 1.dp,
+            modifier        = Modifier.fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier
-                    .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 6.dp)
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 6.dp)
             ) {
                 msg.forwardInfo?.let { forward ->
                     ForwardContent(forward, false, onForwardClick = onForwardOriginClick)
@@ -101,49 +116,41 @@ fun ChannelTextMessageBubble(
                     ReplyContent(
                         replyToMsg = reply,
                         isOutgoing = false,
-                        onClick = { onReplyClick(reply) }
+                        onClick    = { onReplyClick(reply) }
                     )
                 }
 
                 val renderData = rememberMessageTextRenderData(
-                    text = content.text,
-                    entities = content.entities,
-                    isOutgoing = false,
+                    text             = content.text,
+                    entities         = content.entities,
+                    isOutgoing       = false,
                     revealedSpoilers = revealedSpoilers,
-                    fontSize = fontSize
+                    fontSize         = fontSize
                 )
-
                 val finalFontSize = if (renderData.isBigEmoji) fontSize * 5f else fontSize
 
                 if (renderData.isBigEmoji && renderData.bigEmojiItems.isNotEmpty()) {
                     BigEmojiContent(
-                        items = renderData.bigEmojiItems,
-                        sizeDp = finalFontSize,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 2.dp)
+                        items    = renderData.bigEmojiItems,
+                        sizeDp   = finalFontSize,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp)
                     )
                 } else {
                     MessageText(
-                        text = renderData.annotatedText,
-                        rawText = content.text,
+                        text          = renderData.annotatedText,
+                        rawText       = content.text,
                         inlineContent = renderData.inlineContent,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = finalFontSize.sp,
+                        style         = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize      = finalFontSize.sp,
                             letterSpacing = letterSpacing.sp,
-                            lineHeight = (finalFontSize * 1.1f).sp
+                            lineHeight    = (finalFontSize * 1.1f).sp
                         ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 2.dp),
+                        modifier      = Modifier.fillMaxWidth().padding(bottom = 2.dp),
                         onSpoilerClick = { index ->
-                            if (revealedSpoilers.contains(index)) {
-                                revealedSpoilers.remove(index)
-                            } else {
-                                revealedSpoilers.add(index)
-                            }
+                            if (revealedSpoilers.contains(index)) revealedSpoilers.remove(index)
+                            else revealedSpoilers.add(index)
                         },
-                        onClick = onClick,
+                        onClick     = onClick,
                         onLongClick = onLongClick
                     )
                 }
@@ -151,68 +158,74 @@ fun ChannelTextMessageBubble(
                 if (showLinkPreviews) {
                     content.webPage?.let { webPage ->
                         LinkPreview(
-                            webPage = webPage,
-                            isOutgoing = msg.isOutgoing,
+                            webPage           = webPage,
+                            isOutgoing        = msg.isOutgoing,
                             onInstantViewClick = onInstantViewClick,
-                            onYouTubeClick = onYouTubeClick
+                            onYouTubeClick    = onYouTubeClick
                         )
                     }
                 }
 
+                // Metadata row: views + time + sending status
                 Row(
-                    modifier = Modifier.align(Alignment.End),
+                    modifier          = Modifier.align(Alignment.End),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     msg.views?.let { viewsCount ->
                         if (viewsCount > 0) {
                             Icon(
-                                imageVector = Icons.Outlined.Visibility,
+                                imageVector        = Icons.Outlined.Visibility,
                                 contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f)
+                                modifier           = Modifier.size(14.dp),
+                                tint               = timeColor
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
-                                text = formatViews(context, viewsCount),
+                                text  = formatViews(context, viewsCount),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f)
+                                color = timeColor
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(Modifier.width(8.dp))
                         }
                     }
                     Text(
-                        text = formatTime(msg.date, timeFormat),
+                        text  = formatTime(msg.date, timeFormat),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f)
+                        color = timeColor
                     )
-
                     if (msg.isOutgoing) {
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(Modifier.width(4.dp))
                         MessageSendingStatusIcon(
                             sendingState = msg.sendingState,
-                            isRead = msg.isRead,
-                            baseColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f),
-                            size = 14.dp
+                            isRead       = msg.isRead,
+                            baseColor    = timeColor,
+                            size         = 14.dp
                         )
                     }
-                }
-                if (showReactions && msg.reactions.isNotEmpty()) {
-                    MessageReactionsView(
-                        reactions = msg.reactions,
-                        onReactionClick = onReactionClick,
-                        modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
-                    )
                 }
             }
         }
 
+        // Reactions float BELOW the bubble (outside Surface) — same as group bubbles
+        if (hasReactions) {
+            MessageReactionsView(
+                reactions       = msg.reactions,
+                onReactionClick = onReactionClick,
+                showAddButton   = false,
+                modifier        = Modifier
+                    .offset(y = (-8).dp)
+                    .padding(horizontal = 6.dp)
+                    .align(Alignment.Start)
+            )
+        }
+
         if (showComments && msg.canGetMessageThread) {
             ChannelCommentsButton(
-                replyCount = msg.replyCount,
-                bubbleRadius = bubbleRadius,
+                replyCount        = msg.replyCount,
+                bubbleRadius      = bubbleRadius,
                 isSameSenderBelow = isSameSenderBelow,
-                onClick = { onCommentsClick(msg.id) },
-                modifier = Modifier.fillMaxWidth()
+                onClick           = { onCommentsClick(msg.id) },
+                modifier          = Modifier.fillMaxWidth()
             )
         }
     }
