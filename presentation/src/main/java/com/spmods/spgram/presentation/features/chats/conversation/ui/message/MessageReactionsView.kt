@@ -132,7 +132,7 @@ private fun MessageReactionItem(
         else     -> TgReactionNeutralBorderL
     }
     val textColor   = when {
-        isPaid || isChosen -> TgReactionChosenContent
+        isPaid || isChosen -> TgStarReactionContent
         isDark             -> TgReactionNeutralTextD
         else               -> TgReactionNeutralTextL
     }
