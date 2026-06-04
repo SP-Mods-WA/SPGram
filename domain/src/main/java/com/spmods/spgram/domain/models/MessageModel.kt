@@ -626,7 +626,8 @@ data class MessageReactionModel(
     val customEmojiPath: String? = null,
     val count: Int,
     val isChosen: Boolean,
-    val recentSenders: List<ReactionSender> = emptyList()
+    val recentSenders: List<ReactionSender> = emptyList(),
+    val isPaid: Boolean = false          // TdApi.ReactionTypePaid — channel star reaction
 )
 
 data class ReactionSender(
