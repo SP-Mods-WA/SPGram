@@ -453,6 +453,17 @@ class MessageMapper internal constructor(
                             )
                         }
 
+                        is TdApi.ReactionTypePaid -> {
+                            // Channel star/paid reaction — shown with gold styling in UI
+                            MessageReactionModel(
+                                emoji = "⭐",
+                                count = reaction.totalCount,
+                                isChosen = reaction.isChosen,
+                                recentSenders = recentSenders,
+                                isPaid = true
+                            )
+                        }
+
                         else -> null
                     }
                 }
