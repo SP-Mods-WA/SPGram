@@ -87,7 +87,7 @@ fun ChannelPhotoMessageBubble(
     val context = LocalContext.current
     val cornerRadius = bubbleRadius.dp
     val smallCorner = (bubbleRadius / 4f).coerceAtLeast(4f).dp
-    val tailCorner = 2.dp
+    val tailCorner = 0.dp
 
     // Corner definitions
     val topStart = if (isSameSenderAbove) smallCorner else cornerRadius
@@ -142,8 +142,8 @@ fun ChannelPhotoMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 1.dp,
+            color = Color(0xFFFFFFFF),
+            tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier
@@ -154,7 +154,7 @@ fun ChannelPhotoMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(Color(0xFFFFFFFF))
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                             .zIndex(1f)
                     ) {
@@ -285,7 +285,7 @@ fun ChannelPhotoMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(Color(0xFFFFFFFF))
                             .padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -335,7 +335,7 @@ fun ChannelPhotoMessageBubble(
                                 MessageMetadata(
                                     msg = msg,
                                     isOutgoing = msg.isOutgoing,
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                    contentColor = Color(0xFF1A1A1A).copy(alpha = 0.8f)
                                 )
                             }
                         }
@@ -345,6 +345,7 @@ fun ChannelPhotoMessageBubble(
                     MessageReactionsView(
                         reactions = msg.reactions,
                         onReactionClick = onReactionClick,
+                    showAddButton = false,
                         modifier = Modifier.padding(start = 8.dp, bottom = 8.dp, top = 2.dp)
                     )
                 }
