@@ -132,7 +132,6 @@ import com.spmods.spgram.presentation.core.ui.Avatar
 import com.spmods.spgram.presentation.core.ui.ConfirmationSheet
 import com.spmods.spgram.presentation.core.util.LocalTabletInterfaceEnabled
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.getEmojiFontFamily
-import com.spmods.spgram.presentation.features.chats.list.components.AccountMenu
 import com.spmods.spgram.presentation.features.chats.list.components.ArchiveHeaderCard
 import com.spmods.spgram.presentation.features.chats.list.components.ChatListItem
 import com.spmods.spgram.presentation.features.chats.list.components.ChatListShimmer
@@ -162,7 +161,6 @@ fun ChatListContent(component: ChatListComponent) {
 
     val haptic = LocalHapticFeedback.current
 
-    var showAccountMenu by remember { mutableStateOf(false) }
     var showStatusMenu by remember { mutableStateOf(false) }
     var showAlphaSheet by remember { mutableStateOf(false) }
     var showDeleteChatsSheet by remember { mutableStateOf(false) }
@@ -461,33 +459,6 @@ fun ChatListContent(component: ChatListComponent) {
         }
     }
 
-    if (showAccountMenu) {
-        AccountMenu(
-            user = currentUser,
-            attachMenuBots = uiState.attachMenuBots,
-            onDismiss = { showAccountMenu = false },
-            onSavedMessagesClick = {
-                currentUser?.id?.let { component.onChatClicked(it) }
-            },
-            onSettingsClick = { component.onSettingsClicked() },
-            onHelpClick = {
-                component.onOpenInstantView("https://telegram.org/faq#general-questions")
-            },
-            onProfileClick = {
-                currentUser?.id?.let { component.onProfileClicked(it) }
-            },
-            updateState = uiState.updateState,
-            onUpdateClick = { component.onUpdateClicked() },
-            onBotClick = { bot ->
-                component.onOpenWebApp(
-                    url = uiState.botWebAppUrl ?: "",
-                    botUserId = bot.botUserId,
-                    botName = uiState.botWebAppName ?: bot.name
-                )
-            }
-        )
-    }
-
     if (showPermissionRequest) {
         PermissionRequestSheet(onDismiss = {
             showPermissionRequest = false
@@ -589,7 +560,7 @@ fun ChatListContent(component: ChatListComponent) {
                                 onStatusClick = { _ ->
                                     showAlphaSheet = true
                                 },
-                                onMenuClick = { showAccountMenu = true }
+                                onMenuClick = { component.onSettingsClicked() }
                             )
                         }
                     }
