@@ -98,8 +98,8 @@ fun VideoMessageBubble(
     isAnyViewerOpen: Boolean = false
 ) {
     val cornerRadius = 18.dp
-    val smallCorner = 4.dp
-    val tailCorner = 2.dp
+    val smallCorner = 6.dp
+    val tailCorner = 0.dp
 
     val context = LocalContext.current
     var stablePath by remember(msg.id, content.fileId) { mutableStateOf(content.path) }
@@ -174,8 +174,8 @@ fun VideoMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF),
+            contentColor = if (isOutgoing) Color(0xFF1A1A1A) else Color(0xFF1A1A1A),
         ) {
             Column(modifier = Modifier
                 .widthIn(max = 280.dp)
@@ -184,7 +184,7 @@ fun VideoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF))
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -195,7 +195,7 @@ fun VideoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF))
                             .padding(horizontal = 4.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -376,14 +376,14 @@ fun VideoMessageBubble(
 
                 if (content.caption.isNotEmpty()) {
                     val timeColor = if (isOutgoing)
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        Color(0xFF1A1A1A).copy(alpha = 0.7f)
                     else
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        Color(0xFF1A1A1A).copy(alpha = 0.7f)
 
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp)
                             .zIndex(1f)
                     ) {
