@@ -59,6 +59,11 @@ private val TgReactionNeutralBorderD = Color(0xFF3A3A3C)
 private val TgReactionNeutralTextL  = Color(0xFF000000)
 private val TgReactionNeutralTextD  = Color(0xFFFFFFFF)
 
+// ── Star / Paid reaction colours (gold) ────────────────────────────────────
+private val TgStarReactionBg      = Color(0xFFFF9900)   // Telegram gold amber
+private val TgStarReactionContent = Color.White
+
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MessageReactionsView(
@@ -67,7 +72,8 @@ fun MessageReactionsView(
     modifier: Modifier = Modifier,
     isOutgoing: Boolean = false,
     emojiFontFamily: FontFamily = LocalMessageRenderDependencies.current.emojiFontFamily,
-    customEmojiPathsById: Map<Long, String?> = LocalMessageRenderDependencies.current.customEmojiPaths
+    customEmojiPathsById: Map<Long, String?> = LocalMessageRenderDependencies.current.customEmojiPaths,
+    showAddButton: Boolean = true,
 ) {
     if (reactions.isEmpty()) return
 
@@ -89,8 +95,8 @@ fun MessageReactionsView(
             }
         }
 
-        // [3.3] "+" add-reaction button
-        AddReactionButton()
+        // [3.3] "+" add-reaction button — only for group/private, not channels
+        if (showAddButton) AddReactionButton()
     }
 }
 
@@ -111,18 +117,25 @@ private fun MessageReactionItem(
     val isChosen = reaction.isChosen
     val isDark   = isSystemInDarkTheme()
 
-    // [2.6] Telegram-exact colours
-    val bgColor = if (isChosen) TgReactionChosenBg
-                  else if (isDark) TgReactionNeutralBgD
-                  else TgReactionNeutralBgL
-
-    val borderColor = if (isChosen) Color.Transparent
-                      else if (isDark) TgReactionNeutralBorderD
-                      else TgReactionNeutralBorderL
-
-    val textColor = if (isChosen) TgReactionChosenText
-                    else if (isDark) TgReactionNeutralTextD
-                    else TgReactionNeutralTextL
+    // [2.6] Telegram-exact colours — gold for paid/star, blue for chosen, grey for neutral
+    val isPaid      = reaction.isPaid
+    val bgColor     = when {
+        isPaid   -> TgStarReactionBg
+        isChosen -> TgReactionChosenBg
+        isDark   -> TgReactionNeutralBgD
+        else     -> TgReactionNeutralBgL
+    }
+    val borderColor = when {
+        isPaid   -> Color.Transparent
+        isChosen -> Color.Transparent
+        isDark   -> TgReactionNeutralBorderD
+        else     -> TgReactionNeutralBorderL
+    }
+    val textColor   = when {
+        isPaid || isChosen -> TgReactionChosenContent
+        isDark             -> TgReactionNeutralTextD
+        else               -> TgReactionNeutralTextL
+    }
 
     // Bounce scale animation when chosen
     val scale by animateFloatAsState(
@@ -155,7 +168,7 @@ private fun MessageReactionItem(
                         if (reaction.recentSenders.isNotEmpty()) showSheet = true
                     }
                 )
-                .padding(horizontal = 8.dp, vertical = 5.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment    = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -169,7 +182,7 @@ private fun MessageReactionItem(
             } else if (emoji != null) {
                 Text(
                     text       = emoji,
-                    fontSize   = 15.sp,
+                    fontSize   = 14.sp,
                     fontFamily = emojiFontFamily
                 )
             }
@@ -257,13 +270,13 @@ private fun AddReactionButton(onClick: () -> Unit = {}) {
             .background(bgColor)
             .border(1.dp, borderColor, CircleShape)
             .combinedClickable(onClick = onClick, onLongClick = {})
-            .padding(horizontal = 8.dp, vertical = 5.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector        = Icons.Default.Add,
             contentDescription = "Add reaction",
-            modifier           = Modifier.size(16.dp),
+            modifier           = Modifier.size(15.dp),
             tint               = iconColor
         )
     }
