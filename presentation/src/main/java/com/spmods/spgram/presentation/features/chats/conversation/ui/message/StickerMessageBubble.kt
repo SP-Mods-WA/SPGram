@@ -69,7 +69,7 @@ fun StickerMessageBubble(
         msg.forwardInfo?.let { forward ->
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = Color(0xFFFFFFFF),
                 modifier = Modifier
                     .padding(bottom = 4.dp)
                     .widthIn(max = 200.dp)
@@ -86,7 +86,7 @@ fun StickerMessageBubble(
         msg.replyToMsg?.let { reply ->
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = Color(0xFFFFFFFF),
                 modifier = Modifier
                     .padding(bottom = 4.dp)
                     .widthIn(max = 200.dp)
