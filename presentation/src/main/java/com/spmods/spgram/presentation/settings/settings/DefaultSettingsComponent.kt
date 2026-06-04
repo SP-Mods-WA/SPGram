@@ -32,7 +32,9 @@ class DefaultSettingsComponent(
     private val onProxySettingsClick: () -> Unit,
     private val onStickersClick: () -> Unit,
     private val onAboutClick: () -> Unit,
-    private val onDebugClick: () -> Unit
+    private val onDebugClick: () -> Unit,
+    private val onMyProfileClick: (Long) -> Unit = {},
+    private val onSavedMessagesClick: (Long) -> Unit = {}
 ) : SettingsComponent, AppComponentContext by context {
 
     private val repository: UserRepository = container.repositories.userRepository
@@ -223,5 +225,23 @@ class DefaultSettingsComponent(
                 fullScreenVideoPath = null
             )
         }
+    }
+
+    override fun onWalletClicked() {
+        externalNavigator.openUrl("https://t.me/wallet")
+    }
+
+    override fun onMyProfileClicked() {
+        val userId = _state.value.currentUser?.id ?: return
+        onMyProfileClick(userId)
+    }
+
+    override fun onSavedMessagesClicked() {
+        val userId = _state.value.currentUser?.id ?: return
+        onSavedMessagesClick(userId)
+    }
+
+    override fun onHelpFeedbackClicked() {
+        externalNavigator.openUrl("https://telegram.org/faq#general-questions")
     }
 }
