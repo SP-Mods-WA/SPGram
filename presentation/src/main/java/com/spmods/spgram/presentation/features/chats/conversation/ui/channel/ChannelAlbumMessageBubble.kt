@@ -151,7 +151,7 @@ fun ChannelAlbumMessageBubble(
 
     val cornerRadius = bubbleRadius.dp
     val smallCorner = (bubbleRadius / 4f).coerceAtLeast(4f).dp
-    val tailCorner = 2.dp
+    val tailCorner = 0.dp
 
     val bubbleShape = RoundedCornerShape(
         topStart = if (isSameSenderAbove) smallCorner else cornerRadius,
@@ -200,7 +200,7 @@ fun ChannelAlbumMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = Color(0xFFFFFFFF),
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(bubbleShape)
@@ -288,7 +288,7 @@ fun ChannelAlbumMessageBubble(
                             MessageMetadata(
                                 msg = lastMsg,
                                 isOutgoing = lastMsg.isOutgoing,
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                contentColor = Color(0xFF1A1A1A).copy(alpha = 0.8f)
                             )
                         }
                     }
@@ -309,6 +309,7 @@ fun ChannelAlbumMessageBubble(
         MessageReactionsView(
             reactions = firstMsg.reactions,
             onReactionClick = onReactionClick,
+                    showAddButton = false,
             modifier = Modifier
                 .padding(top = 2.dp)
                 .align(Alignment.Start)
@@ -345,7 +346,7 @@ fun ChannelDocumentAlbumBubble(
 
     val cornerRadius = bubbleRadius.dp
     val smallCorner = (bubbleRadius / 4f).coerceAtLeast(4f).dp
-    val tailCorner = 2.dp
+    val tailCorner = 0.dp
 
     val bubbleShape = RoundedCornerShape(
         topStart = if (isSameSenderAbove) smallCorner else cornerRadius,
@@ -354,8 +355,8 @@ fun ChannelDocumentAlbumBubble(
         bottomEnd = if (showComments && firstMsg.canGetMessageThread) 4.dp else cornerRadius
     )
 
-    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    val contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val backgroundColor = Color(0xFFFFFFFF)
+    val contentColor = Color(0xFF1A1A1A)
     val timeColor = contentColor.copy(alpha = 0.7f)
 
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
@@ -369,7 +370,7 @@ fun ChannelDocumentAlbumBubble(
             shape = bubbleShape,
             color = backgroundColor,
             contentColor = contentColor,
-            tonalElevation = 1.dp,
+            tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -515,6 +516,7 @@ fun ChannelDocumentAlbumBubble(
         MessageReactionsView(
             reactions = firstMsg.reactions,
             onReactionClick = onReactionClick,
+                    showAddButton = false,
             modifier = Modifier.padding(top = 2.dp)
         )
     }
@@ -548,7 +550,7 @@ fun ChannelAudioAlbumBubble(
 
     val cornerRadius = bubbleRadius.dp
     val smallCorner = (bubbleRadius / 4f).coerceAtLeast(4f).dp
-    val tailCorner = 2.dp
+    val tailCorner = 0.dp
 
     val bubbleShape = RoundedCornerShape(
         topStart = if (isSameSenderAbove) smallCorner else cornerRadius,
@@ -557,8 +559,8 @@ fun ChannelAudioAlbumBubble(
         bottomEnd = if (showComments && firstMsg.canGetMessageThread) 4.dp else cornerRadius
     )
 
-    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    val contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val backgroundColor = Color(0xFFFFFFFF)
+    val contentColor = Color(0xFF1A1A1A)
     val timeColor = contentColor.copy(alpha = 0.7f)
 
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
@@ -572,7 +574,7 @@ fun ChannelAudioAlbumBubble(
             shape = bubbleShape,
             color = backgroundColor,
             contentColor = contentColor,
-            tonalElevation = 1.dp,
+            tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -722,6 +724,7 @@ fun ChannelAudioAlbumBubble(
         MessageReactionsView(
             reactions = firstMsg.reactions,
             onReactionClick = onReactionClick,
+                    showAddButton = false,
             modifier = Modifier.padding(top = 2.dp)
         )
     }
