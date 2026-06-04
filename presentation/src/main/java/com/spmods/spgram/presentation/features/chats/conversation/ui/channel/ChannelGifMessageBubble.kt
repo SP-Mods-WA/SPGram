@@ -110,7 +110,7 @@ fun ChannelGifMessageBubble(
     val context = LocalContext.current
     val cornerRadius = bubbleRadius.dp
     val smallCorner = (bubbleRadius / 4f).coerceAtLeast(4f).dp
-    val tailCorner = 2.dp
+    val tailCorner = 0.dp
 
     val bubbleShape = RoundedCornerShape(
         topStart = if (isSameSenderAbove) smallCorner else cornerRadius,
@@ -162,8 +162,8 @@ fun ChannelGifMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 1.dp,
+            color = Color(0xFFFFFFFF),
+            tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.animateContentSize()) {
@@ -171,7 +171,7 @@ fun ChannelGifMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp)
                             .zIndex(1f)
                     ) {
@@ -182,7 +182,7 @@ fun ChannelGifMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp)
                             .zIndex(1f)
                     ) {
@@ -392,7 +392,7 @@ fun ChannelGifMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 6.dp)
                             .zIndex(1f)
                     ) {
@@ -444,13 +444,13 @@ fun ChannelGifMessageBubble(
                                             imageVector = Icons.Outlined.Visibility,
                                             contentDescription = null,
                                             modifier = Modifier.size(14.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f)
+                                            tint = Color(0x99000000)
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             text = formatViews(context, viewsCount),
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f)
+                                            color = Color(0x99000000)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                     }
@@ -458,7 +458,7 @@ fun ChannelGifMessageBubble(
                                 Text(
                                     text = formatTime(msg.date, timeFormat),
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f)
+                                    color = Color(0x99000000)
                                 )
                                 if (msg.isOutgoing) {
                                     Spacer(modifier = Modifier.width(4.dp))
@@ -482,7 +482,7 @@ fun ChannelGifMessageBubble(
                                             imageVector = statusIcon,
                                             contentDescription = null,
                                             modifier = Modifier.size(14.dp),
-                                            tint = if (sendingState is MessageSendingState.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                            tint = if (sendingState is MessageSendingState.Failed) MaterialTheme.colorScheme.error else Color(0xFF1A1A1A).copy(
                                                 0.6f
                                             )
                                         )
@@ -510,6 +510,7 @@ fun ChannelGifMessageBubble(
             MessageReactionsView(
                 reactions = msg.reactions,
                 onReactionClick = onReactionClick,
+                showAddButton = false,
                 modifier = Modifier
                     .padding(top = 2.dp)
                     .align(Alignment.Start)
