@@ -158,6 +158,7 @@ fun ChannelVoiceMessageBubble(
         MessageReactionsView(
             reactions = msg.reactions,
             onReactionClick = onReactionClick,
+            showAddButton = false,
             modifier = Modifier.padding(top = 2.dp)
         )
     }
