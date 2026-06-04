@@ -155,6 +155,7 @@
 
     <!-- Account Menu -->
     <string name="app_name_dev">SPGram Alpha</string>
+        <string name="menu_wallet">Wallet</string>
     <string name="action_add_account">Add Account</string>
     <string name="add_account_subtitle">Login to another account</string>
     <string name="menu_my_profile">My Profile</string>
