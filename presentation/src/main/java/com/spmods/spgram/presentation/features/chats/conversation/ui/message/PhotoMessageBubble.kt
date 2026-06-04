@@ -82,8 +82,8 @@ fun PhotoMessageBubble(
 ) {
     val context = LocalContext.current
     val cornerRadius = 18.dp
-    val smallCorner = 4.dp
-    val tailCorner = 2.dp
+    val smallCorner = 6.dp
+    val tailCorner = 0.dp
 
     var stablePath by remember(msg.id, content.fileId) { mutableStateOf(content.path) }
     val hasPath = !stablePath.isNullOrBlank()
@@ -137,8 +137,8 @@ fun PhotoMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF),
+            contentColor = if (isOutgoing) Color(0xFF1A1A1A) else Color(0xFF1A1A1A),
         ) {
             Column(modifier = Modifier
                 .widthIn(max = 340.dp)
@@ -147,7 +147,7 @@ fun PhotoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp)
                             .zIndex(1f)
                     ) {
@@ -159,7 +159,7 @@ fun PhotoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF))
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -170,7 +170,7 @@ fun PhotoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF))
                             .padding(horizontal = 4.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -312,14 +312,14 @@ fun PhotoMessageBubble(
 
                 if (content.caption.isNotEmpty()) {
                     val timeColor = if (isOutgoing)
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        Color(0xFF1A1A1A).copy(alpha = 0.7f)
                     else
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        Color(0xFF1A1A1A).copy(alpha = 0.7f)
 
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .background(if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp)
                             .zIndex(1f)
                     ) {
