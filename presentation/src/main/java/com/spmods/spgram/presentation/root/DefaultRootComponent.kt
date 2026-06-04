@@ -566,7 +566,9 @@ class DefaultRootComponent(
                     onProxySettingsClick = { navigation.bringToFront(Config.Proxy) },
                     onStickersClick = { navigation.bringToFront(Config.Stickers) },
                     onAboutClick = { navigation.bringToFront(Config.About) },
-                    onDebugClick = { navigation.bringToFront(Config.Debug) }
+                    onDebugClick = { navigation.bringToFront(Config.Debug) },
+                    onMyProfileClick = { userId -> navigateToChat(userId) },
+                    onSavedMessagesClick = { userId -> navigateToChat(userId) }
                 )
             )
 
