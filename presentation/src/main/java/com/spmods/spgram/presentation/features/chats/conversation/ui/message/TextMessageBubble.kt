@@ -1,11 +1,11 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,11 +34,14 @@ import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.util.DateFormatManager
 import com.spmods.spgram.presentation.features.chats.conversation.ui.TelegramBubbleShape
 
-// ── Telegram-exact bubble colours (inline — no cross-module import needed) ─
-private val TgBubbleOutLight   = Color(0xFFEFFDE7)
-private val TgBubbleOutDark    = Color(0xFF2B5278)
-private val TgBubbleInLight    = Color(0xFFFFFFFF)
-private val TgBubbleInDark     = Color(0xFF212121)
+// Telegram-exact bubble colours (inline)
+private val TgBubbleOutLight = Color(0xFFEFFDE7)
+private val TgBubbleOutDark  = Color(0xFF2B5278)
+private val TgBubbleInLight  = Color(0xFFFFFFFF)
+private val TgBubbleInDark   = Color(0xFF212121)
+
+// Reaction chip height ≈ 28dp → spacer 18dp → reactions overlap bubble ~10dp
+private val REACTION_OVERLAP_SPACER = 18.dp
 
 @Composable
 fun TextMessageBubble(
@@ -65,7 +68,6 @@ fun TextMessageBubble(
 ) {
     val isDark = isSystemInDarkTheme()
 
-    // ── Telegram-exact colours ──────────────────────────────────────────
     val backgroundColor = when {
         isOutgoing && isDark  -> TgBubbleOutDark
         isOutgoing            -> TgBubbleOutLight
@@ -75,17 +77,13 @@ fun TextMessageBubble(
     val contentColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
     val timeColor    = contentColor.copy(alpha = 0.6f)
 
-    // ── Telegram bubble shape ───────────────────────────────────────────
-    val cornerRadius = bubbleRadius.dp
-    val smallCorner  = 6.dp          // ← was 4.dp; Telegram uses ~6dp grouped corner
-
-    val bubbleShape = remember(isOutgoing, isSameSenderAbove, isSameSenderBelow, cornerRadius) {
+    val bubbleShape = remember(isOutgoing, isSameSenderAbove, isSameSenderBelow) {
         TelegramBubbleShape(
             isOutgoing        = isOutgoing,
             hasTail           = !isSameSenderBelow,
             isSameSenderAbove = isSameSenderAbove,
-            cornerRadius      = cornerRadius,
-            smallCorner       = smallCorner,
+            cornerRadius      = bubbleRadius.dp,
+            smallCorner       = 6.dp,
         )
     }
 
@@ -100,134 +98,159 @@ fun TextMessageBubble(
         revealedSpoilers = revealedSpoilers,
         fontSize         = fontSize
     )
-    val isBigEmoji = renderData.isBigEmoji && renderData.bigEmojiItems.isNotEmpty()
-
+    val isBigEmoji   = renderData.isBigEmoji && renderData.bigEmojiItems.isNotEmpty()
     val hasReactions = showReactions && msg.reactions.isNotEmpty()
 
-    // ── Outer column: Surface + reactions floating below ────────────────
-    Column(
-        modifier = modifier
-            .widthIn(min = 60.dp),
-        horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
-    ) {
-        // ── Bubble surface ───────────────────────────────────────────
-        Surface(
-            shape          = bubbleShape,
-            color          = if (isBigEmoji) Color.Transparent else backgroundColor,
-            contentColor   = contentColor,
-            tonalElevation = if (isBigEmoji) 0.dp else 1.dp,
-            shadowElevation = 0.dp
+    // ────────────────────────────────────────────────────────────────────
+    //  Layout:
+    //
+    //   ┌─ Box ──────────────────────────────────┐
+    //   │  ┌─ Column ──────────────────────────┐ │
+    //   │  │  ┌─ Surface (bubble) ───────────┐ │ │
+    //   │  │  │  content …                   │ │ │
+    //   │  │  └─────────────────────────────-┘ │ │
+    //   │  │  Spacer(18dp)  ← reaction area    │ │
+    //   │  └───────────────────────────────────┘ │
+    //   │                                         │
+    //   │  MessageReactionsView  ← BottomStart    │
+    //   │  (28dp tall → overlaps bubble by ~10dp) │
+    //   └─────────────────────────────────────────┘
+    //
+    //  Reactions are ALWAYS Alignment.Start (left-to-right), regardless
+    //  of outgoing/incoming — matches official Telegram behaviour.
+    // ────────────────────────────────────────────────────────────────────
+
+    Box(modifier = modifier.widthIn(min = 60.dp)) {
+
+        // ── Inner column: bubble + spacer reserve ───────────────────
+        Column(
+            modifier            = Modifier.widthIn(min = 60.dp),
+            horizontalAlignment = Alignment.Start
         ) {
-            Column(
-                modifier = Modifier
-                    .widthIn(min = 60.dp)
-                    .padding(
+            // ── Bubble surface ─────────────────────────────────────
+            Surface(
+                shape           = bubbleShape,
+                color           = if (isBigEmoji) Color.Transparent else backgroundColor,
+                contentColor    = contentColor,
+                tonalElevation  = 0.dp,
+                shadowElevation = if (isBigEmoji) 0.dp else 1.dp,
+            ) {
+                Column(
+                    modifier = Modifier.padding(
                         start  = 12.dp,
                         end    = 12.dp,
                         top    = 8.dp,
                         bottom = if (isBigEmoji) 0.dp else 6.dp
                     )
-            ) {
-                if (isGroup && !isOutgoing && !isSameSenderAbove) {
-                    MessageSenderName(msg, toProfile = toProfile)
-                }
-
-                msg.forwardInfo?.let { forward ->
-                    ForwardContent(forward, isOutgoing, onForwardClick = onForwardOriginClick)
-                }
-                msg.replyToMsg?.let { reply ->
-                    ReplyContent(
-                        replyToMsg = reply,
-                        isOutgoing = isOutgoing,
-                        onClick    = { onReplyClick(reply) }
-                    )
-                }
-
-                val finalFontSize = if (renderData.isBigEmoji) fontSize * 5f else fontSize
-
-                if (isBigEmoji) {
-                    BigEmojiContent(
-                        items    = renderData.bigEmojiItems,
-                        sizeDp   = finalFontSize,
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
-                } else {
-                    MessageText(
-                        text          = renderData.annotatedText,
-                        rawText       = content.text,
-                        entities      = content.entities,
-                        inlineContent = renderData.inlineContent,
-                        style         = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize      = finalFontSize.sp,
-                            letterSpacing = letterSpacing.sp,
-                            lineHeight    = (finalFontSize * 1.1f).sp
-                        ),
-                        modifier      = Modifier.padding(bottom = 2.dp),
-                        isOutgoing    = isOutgoing,
-                        onSpoilerClick = { index ->
-                            if (revealedSpoilers.contains(index))
-                                revealedSpoilers.remove(index)
-                            else
-                                revealedSpoilers.add(index)
-                        },
-                        onClick     = onClick,
-                        onLongClick = onLongClick
-                    )
-                }
-
-                if (showLinkPreviews) {
-                    content.webPage?.let { webPage ->
-                        LinkPreview(
-                            webPage           = webPage,
-                            isOutgoing        = msg.isOutgoing,
-                            onInstantViewClick = onInstantViewClick,
-                            onYouTubeClick    = onYouTubeClick
-                        )
-                    }
-                }
-
-                Row(
-                    modifier          = Modifier.align(Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (msg.editDate > 0) {
-                        Icon(
-                            imageVector        = Icons.Default.Edit,
-                            contentDescription = stringResource(R.string.info_edited),
-                            modifier           = Modifier.size(14.dp),
-                            tint               = timeColor
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                    // Sender name (groups, incoming, first in sequence)
+                    if (isGroup && !isOutgoing && !isSameSenderAbove) {
+                        MessageSenderName(msg, toProfile = toProfile)
                     }
-                    Text(
-                        text  = formatTime(msg.date, timeFormat),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = timeColor
-                    )
-                    if (isOutgoing) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        MessageSendingStatusIcon(
-                            sendingState = msg.sendingState,
-                            isRead       = msg.isRead,
-                            baseColor    = timeColor,
-                            size         = 14.dp
-                        )
-                    }
-                }
-            }
-        } // end Surface
 
-        // ── [3.1] Reactions float OUTSIDE the bubble ─────────────────
-        // offset(y = -8.dp) overlaps the bubble bottom → Telegram look
+                    msg.forwardInfo?.let { forward ->
+                        ForwardContent(forward, isOutgoing, onForwardClick = onForwardOriginClick)
+                    }
+                    msg.replyToMsg?.let { reply ->
+                        ReplyContent(
+                            replyToMsg = reply,
+                            isOutgoing = isOutgoing,
+                            onClick    = { onReplyClick(reply) }
+                        )
+                    }
+
+                    val finalFontSize = if (renderData.isBigEmoji) fontSize * 5f else fontSize
+
+                    if (isBigEmoji) {
+                        BigEmojiContent(
+                            items    = renderData.bigEmojiItems,
+                            sizeDp   = finalFontSize,
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                    } else {
+                        MessageText(
+                            text          = renderData.annotatedText,
+                            rawText       = content.text,
+                            entities      = content.entities,
+                            inlineContent = renderData.inlineContent,
+                            style         = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize      = finalFontSize.sp,
+                                letterSpacing = letterSpacing.sp,
+                                lineHeight    = (finalFontSize * 1.1f).sp
+                            ),
+                            modifier      = Modifier.padding(bottom = 2.dp),
+                            isOutgoing    = isOutgoing,
+                            onSpoilerClick = { index ->
+                                if (revealedSpoilers.contains(index))
+                                    revealedSpoilers.remove(index)
+                                else
+                                    revealedSpoilers.add(index)
+                            },
+                            onClick     = onClick,
+                            onLongClick = onLongClick
+                        )
+                    }
+
+                    if (showLinkPreviews) {
+                        content.webPage?.let { webPage ->
+                            LinkPreview(
+                                webPage           = webPage,
+                                isOutgoing        = msg.isOutgoing,
+                                onInstantViewClick = onInstantViewClick,
+                                onYouTubeClick    = onYouTubeClick
+                            )
+                        }
+                    }
+
+                    // Time + status (bottom-right inside bubble)
+                    Row(
+                        modifier          = Modifier.align(Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (msg.editDate > 0) {
+                            Icon(
+                                imageVector        = Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.info_edited),
+                                modifier           = Modifier.size(14.dp),
+                                tint               = timeColor
+                            )
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        Text(
+                            text  = formatTime(msg.date, timeFormat),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = timeColor
+                        )
+                        if (isOutgoing) {
+                            Spacer(Modifier.width(4.dp))
+                            MessageSendingStatusIcon(
+                                sendingState = msg.sendingState,
+                                isRead       = msg.isRead,
+                                baseColor    = timeColor,
+                                size         = 14.dp
+                            )
+                        }
+                    }
+                } // end content Column
+            } // end Surface
+
+            // Reserve vertical space so Box is tall enough for reaction overlap
+            if (hasReactions) Spacer(Modifier.height(REACTION_OVERLAP_SPACER))
+
+        } // end inner Column
+
+        // ── Reactions: BottomStart of Box → overlaps bubble ~10dp ───
+        // Alignment.Start ensures left-to-right for BOTH outgoing and incoming
         if (hasReactions) {
             MessageReactionsView(
                 reactions       = msg.reactions,
                 onReactionClick = onReactionClick,
                 isOutgoing      = isOutgoing,
                 modifier        = Modifier
-                    .offset(y = (-8).dp)
-                    .padding(horizontal = 6.dp)
+                    .align(Alignment.BottomStart)
+                    .padding(start = 6.dp, end = 4.dp, bottom = 2.dp)
             )
         }
-    }
+
+    } // end Box
 }
