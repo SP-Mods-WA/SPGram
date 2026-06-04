@@ -36,6 +36,10 @@ interface SettingsComponent {
     fun onSetEmojiStatus(customEmojiId: Long, statusPath: String?)
     fun onAvatarClick()
     fun onDismissAvatarViewer()
+    fun onWalletClicked()
+    fun onMyProfileClicked()
+    fun onSavedMessagesClicked()
+    fun onHelpFeedbackClicked()
 
     data class State(
         val currentUser: UserModel? = null,
