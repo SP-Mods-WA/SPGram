@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.rounded.Announcement
 import androidx.compose.material.icons.rounded.Brush
 import androidx.compose.material.icons.rounded.Code
@@ -165,6 +166,14 @@ fun AboutContent(component: AboutComponent) {
                     iconBackgroundColor = Color(0xFF4285F4),
                     position = ItemPosition.TOP,
                     onClick = { uriHandler.openUri("https://telegram.org/tos") }
+                )
+                SettingsItem(
+                    icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                    title = stringResource(R.string.menu_help_feedback),
+                    subtitle = stringResource(R.string.menu_help_feedback_subtitle),
+                    iconBackgroundColor = Color(0xFF34A853),
+                    position = ItemPosition.MIDDLE,
+                    onClick = { uriHandler.openUri("https://telegram.org/faq#general-questions") }
                 )
                 SettingsItem(
                     icon = Icons.Rounded.Code,
