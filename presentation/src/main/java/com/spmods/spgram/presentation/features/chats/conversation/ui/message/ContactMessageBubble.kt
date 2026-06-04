@@ -69,7 +69,7 @@ fun ContactMessageBubble(
 
     val cornerRadius = bubbleRadius.dp
     val smallCorner = (bubbleRadius / 4f).coerceAtLeast(4f).dp
-    val tailCorner = 2.dp
+    val tailCorner = 0.dp
 
     val bubbleShape = RoundedCornerShape(
         topStart = if (!isOutgoing && isSameSenderAbove) smallCorner else cornerRadius,
@@ -83,9 +83,9 @@ fun ContactMessageBubble(
     )
 
     val backgroundColor =
-        if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+        if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF)
     val contentColor =
-        if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+        if (isOutgoing) Color(0xFF1A1A1A) else Color(0xFF1A1A1A)
     val timeColor = contentColor.copy(alpha = 0.7f)
 
     Column(
@@ -98,7 +98,7 @@ fun ContactMessageBubble(
             shape = bubbleShape,
             color = backgroundColor,
             contentColor = contentColor,
-            tonalElevation = 2.dp,
+            tonalElevation = 0.dp,
             modifier = Modifier.combinedClickable(
                 onClick = {
                     if (content.userId != 0L) {
