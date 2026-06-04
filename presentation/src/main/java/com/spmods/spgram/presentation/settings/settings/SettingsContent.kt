@@ -49,6 +49,8 @@ import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.rounded.DataUsage
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
@@ -128,7 +130,6 @@ import com.spmods.spgram.presentation.core.ui.SectionHeader
 import com.spmods.spgram.presentation.core.ui.SettingsItem
 import com.spmods.spgram.presentation.core.ui.StyledQRCode
 import com.spmods.spgram.presentation.core.ui.UserProfileHeader
-import com.spmods.spgram.presentation.core.ui.UsernamesTile
 import com.spmods.spgram.presentation.core.ui.generatePureBitmap
 import com.spmods.spgram.presentation.core.ui.rememberCollapsingToolbarScaffoldState
 import com.spmods.spgram.presentation.core.ui.saveBitmapToGallery
@@ -166,8 +167,6 @@ fun SettingsContent(component: SettingsComponent) {
     val purpleColor = Color(0xFFAF52DE)
     val indigoColor = Color(0xFF536DFE)
     val phoneColor = Color(0xFF007AFF)
-    val usernameColor = Color(0xFF34C759)
-    val idColor = Color(0xFFAF52DE)
 
     val collapsingToolbarState = rememberCollapsingToolbarScaffoldState()
     var isPhoneVisible by remember { mutableStateOf(false) }
@@ -683,8 +682,6 @@ fun SettingsContent(component: SettingsComponent) {
                             }
                             
                             val phoneClipLabel = stringResource(R.string.phone_number_label)
-                            val yourIdSubTitle = stringResource(R.string.your_id_label)
-                            
 
                             SettingsItem(
                                 icon = Icons.Default.PhoneIphone,
@@ -693,7 +690,7 @@ fun SettingsContent(component: SettingsComponent) {
                                     R.string.phone_subtitle_hidden
                                 ),
                                 iconBackgroundColor = phoneColor,
-                                position = ItemPosition.TOP,
+                                position = ItemPosition.STANDALONE,
                                 onLongClick = {
                                     isPhoneVisible = !isPhoneVisible
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -708,56 +705,34 @@ fun SettingsContent(component: SettingsComponent) {
                                     )
                                 }
                             )
-
-                            val usernames = user.usernames
-                            if (usernames != null && (usernames.activeUsernames.isNotEmpty() || usernames.collectibleUsernames.isNotEmpty() || usernames.disabledUsernames.isNotEmpty())) {
-                                UsernamesTile(
-                                    activeUsernames = usernames.activeUsernames,
-                                    collectibleUsernames = usernames.collectibleUsernames,
-                                    disabledUsernames = usernames.disabledUsernames,
-                                    localClipboard = localClipboard,
-                                    position = ItemPosition.MIDDLE
-                                )
-                            } else if (!user.username.isNullOrEmpty()) {
-                                val usernameSubTitle = stringResource(R.string.username_label)
-
-                                SettingsItem(
-                                    icon = Icons.Rounded.Person,
-                                    title = "@${user.username}",
-                                    subtitle = usernameSubTitle,
-                                    iconBackgroundColor = usernameColor,
-                                    position = ItemPosition.MIDDLE,
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        ClipData.newPlainText(usernameSubTitle, AnnotatedString("@${user.username}"))
-                                    }
-                                )
-                            }
-
-                            SettingsItem(
-                                icon = Icons.Rounded.Info,
-                                title = user.id.toString(),
-                                subtitle = yourIdSubTitle,
-                                iconBackgroundColor = idColor,
-                                position = ItemPosition.MIDDLE,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    ClipData.newPlainText(yourIdSubTitle, AnnotatedString(user.id.toString()))
-                                }
-                            )
-
-                            SettingsItem(
-                                icon = Icons.Rounded.Edit,
-                                title = stringResource(R.string.menu_edit),
-                                subtitle = stringResource(R.string.edit_profile_subtitle),
-                                iconBackgroundColor = blueColor,
-                                position = ItemPosition.BOTTOM,
-                                onClick = component::onEditProfileClicked,
-                                modifier = Modifier.semantics {
-                                    contentDescription = "SettingsEditProfile"
-                                }
-                            )
                         }
+                    }
+
+                    item {
+                        SettingsItem(
+                            icon = Icons.Rounded.AccountBalanceWallet,
+                            title = stringResource(R.string.menu_wallet),
+                            subtitle = null,
+                            iconBackgroundColor = tealColor,
+                            position = ItemPosition.TOP,
+                            onClick = component::onWalletClicked
+                        )
+                        SettingsItem(
+                            icon = Icons.Rounded.Person,
+                            title = stringResource(R.string.menu_my_profile),
+                            subtitle = stringResource(R.string.menu_my_profile_subtitle),
+                            iconBackgroundColor = blueColor,
+                            position = ItemPosition.MIDDLE,
+                            onClick = component::onMyProfileClicked
+                        )
+                        SettingsItem(
+                            icon = Icons.Outlined.BookmarkBorder,
+                            title = stringResource(R.string.menu_saved_messages),
+                            subtitle = stringResource(R.string.menu_saved_messages_subtitle),
+                            iconBackgroundColor = greenColor,
+                            position = ItemPosition.BOTTOM,
+                            onClick = component::onSavedMessagesClicked
+                        )
                     }
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !state.isTMeLinkEnabled) {
