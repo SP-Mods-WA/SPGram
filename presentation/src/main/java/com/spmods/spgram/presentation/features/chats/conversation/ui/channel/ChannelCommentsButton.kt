@@ -28,7 +28,7 @@ fun ChannelCommentsButton(
     val context = LocalContext.current
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = Color(0xFFFFFFFF),
         shape = RoundedCornerShape(
             topStart = 4.dp,
             topEnd = 4.dp,
