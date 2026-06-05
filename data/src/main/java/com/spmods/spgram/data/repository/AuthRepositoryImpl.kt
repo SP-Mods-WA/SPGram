@@ -56,7 +56,6 @@ class AuthRepositoryImpl(
 
     init {
         scope.launch {
-            // Proactively check current state in case we missed the update
             launchAuthAction {
                 val state = remote.getAuthorizationState()
                 handleUpdate(state)
@@ -87,7 +86,6 @@ class AuthRepositoryImpl(
             try {
                 var attempts = 0
                 while (true) {
-                    // Double check if we still need to send parameters
                     val currentState = coRunCatching { remote.getAuthorizationState() }.getOrNull()
                     if (currentState != null && currentState !is TdApi.AuthorizationStateWaitTdlibParameters) {
                         break
@@ -95,7 +93,6 @@ class AuthRepositoryImpl(
 
                     val result = coRunCatching { remote.setTdlibParameters(parametersProvider.create()) }
                     if (result.isSuccess) {
-                        // After success, immediately re-check state to move past WaitParameters
                         val nextState = coRunCatching { remote.getAuthorizationState() }.getOrNull()
                         if (nextState != null) {
                             handleUpdate(nextState)
@@ -149,7 +146,6 @@ class AuthRepositoryImpl(
     }
 
     override fun registerUser(firstName: String, lastName: String) {
-        // AuthSubmissionStage.REGISTER — treated as single payload "firstName|lastName"
         val payload = "$firstName|$lastName"
         submitAuthAction(AuthSubmissionStage.REGISTER, payload) {
             val parts = payload.split("|", limit = 2)
@@ -161,8 +157,8 @@ class AuthRepositoryImpl(
         when (val action = pendingAction) {
             null -> Unit
             else -> when (action.stage) {
-                AuthSubmissionStage.PHONE -> sendPhone(action.payload)
-                AuthSubmissionStage.CODE -> sendCode(action.payload)
+                AuthSubmissionStage.PHONE    -> sendPhone(action.payload)
+                AuthSubmissionStage.CODE     -> sendCode(action.payload)
                 AuthSubmissionStage.PASSWORD -> sendPassword(action.payload)
                 AuthSubmissionStage.REGISTER -> {
                     val parts = action.payload.split("|", limit = 2)
@@ -239,18 +235,15 @@ class AuthRepositoryImpl(
         _authUiStatus.value = AuthUiStatus.Idle
     }
 
-    private fun canSubmitStage(
-        stage: AuthSubmissionStage
-    ): Boolean {
+    private fun canSubmitStage(stage: AuthSubmissionStage): Boolean {
         val currentPendingAction = pendingAction
-        if (currentPendingAction?.stage == stage) {
-            return false
-        }
+        if (currentPendingAction?.stage == stage) return false
 
         return when (stage) {
-            AuthSubmissionStage.PHONE -> _authState.value is AuthStep.InputPhone
-            AuthSubmissionStage.CODE -> _authState.value is AuthStep.InputCode
+            AuthSubmissionStage.PHONE    -> _authState.value is AuthStep.InputPhone
+            AuthSubmissionStage.CODE     -> _authState.value is AuthStep.InputCode
             AuthSubmissionStage.PASSWORD -> _authState.value is AuthStep.InputPassword
+            AuthSubmissionStage.REGISTER -> _authState.value is AuthStep.InputRegistration
         }
     }
 
@@ -259,12 +252,14 @@ class AuthRepositoryImpl(
         state: AuthStep
     ): Boolean {
         return when (stage) {
-            AuthSubmissionStage.PHONE -> state !is AuthStep.InputPhone &&
+            AuthSubmissionStage.PHONE    -> state !is AuthStep.InputPhone &&
                     state !is AuthStep.Loading &&
                     state !is AuthStep.WaitParameters
-            AuthSubmissionStage.CODE -> state is AuthStep.InputPassword ||
+            AuthSubmissionStage.CODE     -> state is AuthStep.InputPassword ||
+                    state is AuthStep.InputRegistration ||
                     state is AuthStep.Ready
             AuthSubmissionStage.PASSWORD -> state is AuthStep.Ready
+            AuthSubmissionStage.REGISTER -> state is AuthStep.Ready
         }
     }
 
@@ -273,13 +268,13 @@ class AuthRepositoryImpl(
         throwable: Throwable
     ): Boolean {
         val functionNames = when (stage) {
-            AuthSubmissionStage.PHONE -> listOf("setAuthenticationPhoneNumber")
-            AuthSubmissionStage.CODE -> listOf(
+            AuthSubmissionStage.PHONE    -> listOf("setAuthenticationPhoneNumber")
+            AuthSubmissionStage.CODE     -> listOf(
                 "checkAuthenticationCode",
                 "checkAuthenticationEmailCode"
             )
-
             AuthSubmissionStage.PASSWORD -> listOf("checkAuthenticationPassword")
+            AuthSubmissionStage.REGISTER -> listOf("registerUser")
         }
 
         return isExpectedNextState(stage, _authState.value) &&
