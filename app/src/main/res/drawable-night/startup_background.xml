@@ -5,10 +5,15 @@
             <solid android:color="#FF121212" />
         </shape>
     </item>
-
     <item
-        android:width="72dp"
-        android:height="72dp"
-        android:drawable="@drawable/splash_logo_monochrome"
-        android:gravity="center" />
+        android:gravity="center"
+        android:bottom="120dp"
+        android:top="120dp"
+        android:left="120dp"
+        android:right="120dp">
+        <bitmap
+            android:src="@drawable/splash_img"
+            android:gravity="center"
+            android:tileMode="disabled" />
+    </item>
 </layer-list>
