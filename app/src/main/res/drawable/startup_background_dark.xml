@@ -7,7 +7,7 @@
     </item>
     <item android:gravity="center">
         <scale
-            android:drawable="@mipmap/ic_launcher_round"
+            android:drawable="@drawable/splash_img"
             android:scaleHeight="20%"
             android:scaleWidth="20%"
             android:scaleGravity="center" />
