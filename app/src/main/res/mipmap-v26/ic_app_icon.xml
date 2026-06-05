@@ -9,6 +9,6 @@
             android:insetRight="0%"
             android:insetTop="5%"
             android:insetBottom="0%"
-            android:drawable="@mipmap/ic_launcher_round" />
+            android:drawable="@mipmap/ic_launcher" />
     </foreground>
 </adaptive-icon>
