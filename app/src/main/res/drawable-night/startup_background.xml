@@ -7,7 +7,7 @@
     </item>
     <item android:gravity="center">
         <bitmap
-            android:src="@drawable/splash_img"
+            android:src="@mipmap/splash_img"
             android:gravity="center" />
     </item>
 </layer-list>
