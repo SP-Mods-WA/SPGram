@@ -345,7 +345,6 @@ fun ChannelPhotoMessageBubble(
                     MessageReactionsView(
                         reactions = msg.reactions,
                         onReactionClick = onReactionClick,
-                    showAddButton = false,
                         modifier = Modifier.padding(start = 8.dp, bottom = 8.dp, top = 2.dp)
                     )
                 }
