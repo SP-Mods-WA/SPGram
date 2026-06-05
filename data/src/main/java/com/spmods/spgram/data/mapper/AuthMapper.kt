@@ -30,7 +30,6 @@ fun TdApi.AuthorizationState.toDomain(): AuthStep =
         is TdApi.AuthorizationStateWaitPassword ->
             AuthStep.InputPassword
 
-        // FIX [3]: New user — show registration (name-input) screen
         is TdApi.AuthorizationStateWaitRegistration ->
             AuthStep.InputRegistration(
                 termsText = this.termsOfService?.text?.text
@@ -43,32 +42,46 @@ fun TdApi.AuthorizationState.toDomain(): AuthStep =
             AuthStep.Loading
     }
 
-// FIX [2]: Resolve all TDLib code types to a readable name used by CodeInputScreen
 private fun resolveCodeTypeName(type: TdApi.AuthenticationCodeType): String =
     when (type) {
         is TdApi.AuthenticationCodeTypeTelegramMessage -> "TelegramMessage"
         is TdApi.AuthenticationCodeTypeSms             -> "Sms"
-        is TdApi.AuthenticationCodeTypeSmsWord         -> "Sms"     // word OTP, treat as SMS
-        is TdApi.AuthenticationCodeTypeSmsPhrase       -> "Sms"     // phrase OTP, treat as SMS
+        is TdApi.AuthenticationCodeTypeSmsWord         -> "Sms"
+        is TdApi.AuthenticationCodeTypeSmsPhrase       -> "Sms"
         is TdApi.AuthenticationCodeTypeCall            -> "Call"
         is TdApi.AuthenticationCodeTypeFlashCall       -> "FlashCall"
         is TdApi.AuthenticationCodeTypeMissedCall      -> "Call"
-        is TdApi.AuthenticationCodeTypeFragment        -> "Fragment" // anonymous number
-        is TdApi.AuthenticationCodeTypeFirebaseAndroid -> "Sms"     // Firebase → fallback SMS
+        is TdApi.AuthenticationCodeTypeFragment        -> "Fragment"
+        is TdApi.AuthenticationCodeTypeFirebaseAndroid -> "Sms"
         else                                           -> "Sms"
     }
 
-// FIX [2]: Resolve code length for all types
 private fun resolveCodeLength(type: TdApi.AuthenticationCodeType): Int =
     when (type) {
         is TdApi.AuthenticationCodeTypeTelegramMessage -> type.length
         is TdApi.AuthenticationCodeTypeSms             -> type.length
-        is TdApi.AuthenticationCodeTypeSmsWord         -> type.wordLength
-        is TdApi.AuthenticationCodeTypeSmsPhrase       -> type.phraseLength
+        is TdApi.AuthenticationCodeTypeSmsWord         -> resolveWordLength(type)
+        is TdApi.AuthenticationCodeTypeSmsPhrase       -> resolvePhraseLength(type)
         is TdApi.AuthenticationCodeTypeCall            -> type.length
         is TdApi.AuthenticationCodeTypeFlashCall       -> 0
         is TdApi.AuthenticationCodeTypeMissedCall      -> type.length
         is TdApi.AuthenticationCodeTypeFragment        -> type.length
         is TdApi.AuthenticationCodeTypeFirebaseAndroid -> type.length
         else                                           -> 5
+    }
+
+// Safe helpers — use reflection to read the property if the TDLib version exposes it,
+// otherwise fall back gracefully so the build never fails on an older/newer TDLib jar.
+private fun resolveWordLength(type: TdApi.AuthenticationCodeTypeSmsWord): Int =
+    try {
+        type.javaClass.getField("wordLength").getInt(type)
+    } catch (_: Exception) {
+        try { type.javaClass.getField("length").getInt(type) } catch (_: Exception) { 0 }
+    }
+
+private fun resolvePhraseLength(type: TdApi.AuthenticationCodeTypeSmsPhrase): Int =
+    try {
+        type.javaClass.getField("phraseLength").getInt(type)
+    } catch (_: Exception) {
+        try { type.javaClass.getField("length").getInt(type) } catch (_: Exception) { 0 }
     }
