@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:src="@mipmap/splash_img"
-    android:gravity="center"
-    android:tileMode="disabled" />
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFF6F6F6" />
+        </shape>
+    </item>
+    <item android:gravity="center">
+        <inset
+            android:insetLeft="80dp"
+            android:insetRight="80dp"
+            android:insetTop="80dp"
+            android:insetBottom="80dp">
+            <bitmap
+                android:src="@drawable/splash_img"
+                android:gravity="center" />
+        </inset>
+    </item>
+</layer-list>
