@@ -211,7 +211,6 @@ fun ChannelTextMessageBubble(
             MessageReactionsView(
                 reactions       = msg.reactions,
                 onReactionClick = onReactionClick,
-                showAddButton   = false,
                 modifier        = Modifier
                     .offset(y = (-8).dp)
                     .padding(horizontal = 6.dp)
