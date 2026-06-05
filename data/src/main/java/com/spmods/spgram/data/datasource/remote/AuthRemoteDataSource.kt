@@ -10,5 +10,6 @@ interface AuthRemoteDataSource {
     suspend fun setAuthCode(code: String)
     suspend fun checkEmailCode(code: String)
     suspend fun checkPassword(password: String)
+    suspend fun registerUser(firstName: String, lastName: String)
     suspend fun logout()
 }
