@@ -2,7 +2,7 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:gravity="center">
         <bitmap
-            android:src="@mipmap/splash_img"
+            android:src="@drawable/splash_img"
             android:gravity="center" />
     </item>
 </layer-list>
