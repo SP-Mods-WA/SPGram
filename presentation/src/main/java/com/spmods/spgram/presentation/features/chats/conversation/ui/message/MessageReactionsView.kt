@@ -1,6 +1,5 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -19,13 +18,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -73,7 +68,6 @@ fun MessageReactionsView(
     isOutgoing: Boolean = false,
     emojiFontFamily: FontFamily = LocalMessageRenderDependencies.current.emojiFontFamily,
     customEmojiPathsById: Map<Long, String?> = LocalMessageRenderDependencies.current.customEmojiPaths,
-    showAddButton: Boolean = true,
 ) {
     if (reactions.isEmpty()) return
 
@@ -82,7 +76,6 @@ fun MessageReactionsView(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement   = Arrangement.spacedBy(4.dp)
     ) {
-        // Reaction chips
         reactions.forEachIndexed { index, reaction ->
             val reactionKey = reaction.emoji ?: reaction.customEmojiId ?: "unknown_$index"
             key(reactionKey) {
@@ -94,9 +87,6 @@ fun MessageReactionsView(
                 )
             }
         }
-
-        // [3.3] "+" add-reaction button — only for group/private, not channels
-        if (showAddButton) AddReactionButton()
     }
 }
 
@@ -252,32 +242,4 @@ private fun MessageReactionItem(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// [3.3] "+" add-reaction chip
-// ─────────────────────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun AddReactionButton(onClick: () -> Unit = {}) {
-    val isDark      = isSystemInDarkTheme()
-    val bgColor     = if (isDark) TgReactionNeutralBgD    else TgReactionNeutralBgL
-    val borderColor = if (isDark) TgReactionNeutralBorderD else TgReactionNeutralBorderL
-    val iconColor   = if (isDark) TgReactionNeutralTextD  else TgReactionNeutralTextL
-
-    Box(
-        modifier         = Modifier
-            .clip(CircleShape)
-            .background(bgColor)
-            .border(1.dp, borderColor, CircleShape)
-            .combinedClickable(onClick = onClick, onLongClick = {})
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector        = Icons.Default.Add,
-            contentDescription = "Add reaction",
-            modifier           = Modifier.size(15.dp),
-            tint               = iconColor
-        )
-    }
-}
