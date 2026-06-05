@@ -310,7 +310,6 @@ fun ChannelAlbumMessageBubble(
         MessageReactionsView(
             reactions = firstMsg.reactions,
             onReactionClick = onReactionClick,
-                    showAddButton = false,
             modifier = Modifier
                 .padding(top = 2.dp)
                 .align(Alignment.Start)
@@ -517,7 +516,6 @@ fun ChannelDocumentAlbumBubble(
         MessageReactionsView(
             reactions = firstMsg.reactions,
             onReactionClick = onReactionClick,
-                    showAddButton = false,
             modifier = Modifier.padding(top = 2.dp)
         )
     }
@@ -725,7 +723,6 @@ fun ChannelAudioAlbumBubble(
         MessageReactionsView(
             reactions = firstMsg.reactions,
             onReactionClick = onReactionClick,
-                    showAddButton = false,
             modifier = Modifier.padding(top = 2.dp)
         )
     }
