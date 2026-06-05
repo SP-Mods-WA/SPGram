@@ -7,7 +7,7 @@
         <inset
             android:insetLeft="0%"
             android:insetRight="0%"
-            android:insetTop="5%"
+            android:insetTop="0%"
             android:insetBottom="0%"
             android:drawable="@mipmap/ic_launcher" />
     </foreground>
