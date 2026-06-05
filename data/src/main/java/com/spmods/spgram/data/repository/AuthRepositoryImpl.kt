@@ -148,6 +148,15 @@ class AuthRepositoryImpl(
         }
     }
 
+    override fun registerUser(firstName: String, lastName: String) {
+        // AuthSubmissionStage.REGISTER — treated as single payload "firstName|lastName"
+        val payload = "$firstName|$lastName"
+        submitAuthAction(AuthSubmissionStage.REGISTER, payload) {
+            val parts = payload.split("|", limit = 2)
+            remote.registerUser(parts.getOrElse(0) { firstName }, parts.getOrElse(1) { "" })
+        }
+    }
+
     override fun retryLastAction() {
         when (val action = pendingAction) {
             null -> Unit
@@ -155,6 +164,10 @@ class AuthRepositoryImpl(
                 AuthSubmissionStage.PHONE -> sendPhone(action.payload)
                 AuthSubmissionStage.CODE -> sendCode(action.payload)
                 AuthSubmissionStage.PASSWORD -> sendPassword(action.payload)
+                AuthSubmissionStage.REGISTER -> {
+                    val parts = action.payload.split("|", limit = 2)
+                    registerUser(parts.getOrElse(0) { "" }, parts.getOrElse(1) { "" })
+                }
             }
         }
     }
