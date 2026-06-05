@@ -11,6 +11,7 @@ interface AuthComponent {
     fun onCodeEntered(code: String)
     fun onResendCode()
     fun onPasswordEntered(password: String)
+    fun onRegisterUser(firstName: String, lastName: String)   // FIX [3]
     fun onBackToPhone()
     fun onRetry()
     fun onProxyClicked()
@@ -34,7 +35,8 @@ interface AuthComponent {
             val timeout: Int = 0,
             val emailPattern: String? = null
         ) : AuthState()
-
         object InputPassword : AuthState()
+        // FIX [3]: New user registration state
+        data class InputRegistration(val termsText: String? = null) : AuthState()
     }
 }
