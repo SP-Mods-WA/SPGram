@@ -41,6 +41,7 @@ import com.spmods.spgram.presentation.core.util.LocalTabletInterfaceEnabled
 import com.spmods.spgram.presentation.features.auth.components.AuthErrorDialog
 import com.spmods.spgram.presentation.features.auth.components.CodeInputScreen
 import com.spmods.spgram.presentation.features.auth.components.PasswordInputScreen
+import com.spmods.spgram.presentation.features.auth.components.RegistrationInputScreen
 import com.spmods.spgram.presentation.features.auth.components.PhoneInputScreen
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -54,7 +55,7 @@ fun AuthContent(component: AuthComponent) {
     val maxContentWidth = if (isTablet && isLandscape) 1000.dp else 600.dp
     val motionScheme = MaterialTheme.motionScheme
 
-    val isCustomBackHandlingEnabled = model.authState is AuthComponent.AuthState.InputCode || model.authState is AuthComponent.AuthState.InputPassword
+    val isCustomBackHandlingEnabled = model.authState is AuthComponent.AuthState.InputCode || model.authState is AuthComponent.AuthState.InputPassword || model.authState is AuthComponent.AuthState.InputRegistration
 
     BackHandler(enabled = isCustomBackHandlingEnabled) {
         component.onBackToPhone()
@@ -79,13 +80,14 @@ fun AuthContent(component: AuthComponent) {
                                     is AuthComponent.AuthState.InputPhone -> stringResource(R.string.auth_title_phone)
                                     is AuthComponent.AuthState.InputCode -> stringResource(R.string.auth_title_verification)
                                     is AuthComponent.AuthState.InputPassword -> stringResource(R.string.auth_title_password)
+                                    is AuthComponent.AuthState.InputRegistration -> "Your Name"
                                 },
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
                         },
                         navigationIcon = {
-                            if (model.authState is AuthComponent.AuthState.InputCode || model.authState is AuthComponent.AuthState.InputPassword) {
+                            if (model.authState is AuthComponent.AuthState.InputCode || model.authState is AuthComponent.AuthState.InputPassword || model.authState is AuthComponent.AuthState.InputRegistration) {
                                 IconButton(onClick = component::onBackToPhone) {
                                     Icon(
                                         Icons.AutoMirrored.Rounded.ArrowBack,
@@ -164,6 +166,14 @@ fun AuthContent(component: AuthComponent) {
                             uiStatus = model.uiStatus
                         )
 
+                        is AuthComponent.AuthState.InputRegistration -> {
+                            val regState = model.authState as AuthComponent.AuthState.InputRegistration
+                            RegistrationInputScreen(
+                                termsText  = regState.termsText,
+                                isLoading  = model.isSubmitting,
+                                onRegister = component::onRegisterUser,
+                            )
+                        }
                         is AuthComponent.AuthState.InputPassword -> PasswordInputScreen(
                             onConfirm = component::onPasswordEntered,
                             isSubmitting = model.isSubmitting,
@@ -189,5 +199,6 @@ private val AuthComponent.AuthState.index: Int
     get() = when (this) {
         is AuthComponent.AuthState.InputPhone -> 1
         is AuthComponent.AuthState.InputCode -> 2
-        is AuthComponent.AuthState.InputPassword -> 3
+        is AuthComponent.AuthState.InputRegistration -> 3
+                is AuthComponent.AuthState.InputPassword -> 3
     }
