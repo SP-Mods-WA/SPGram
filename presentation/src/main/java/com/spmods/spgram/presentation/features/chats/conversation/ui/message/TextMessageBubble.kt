@@ -116,8 +116,8 @@ fun TextMessageBubble(
     //   │  (28dp tall → overlaps bubble by ~10dp) │
     //   └─────────────────────────────────────────┘
     //
-    //  Reactions are ALWAYS Alignment.Start (left-to-right), regardless
-    //  of outgoing/incoming — matches official Telegram behaviour.
+    //  Reactions always start from the left (BottomStart), matching
+    //  official Telegram behaviour for both outgoing and incoming.
     // ────────────────────────────────────────────────────────────────────
 
     Box(modifier = modifier.widthIn(min = 60.dp)) {
@@ -239,8 +239,7 @@ fun TextMessageBubble(
 
         } // end inner Column
 
-        // ── Reactions: BottomStart of Box → overlaps bubble ~10dp ───
-        // Alignment.Start ensures left-to-right for BOTH outgoing and incoming
+        // ── Reactions: BottomStart of Box → overlaps bubble bottom ~10dp ──
         if (hasReactions) {
             MessageReactionsView(
                 reactions       = msg.reactions,
