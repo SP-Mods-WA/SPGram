@@ -849,6 +849,9 @@ private fun MessageRowItem(
         label = "padding"
     )
 
+    // Outer Box: full-width for click target + graphicsLayer animations
+    // Background is NOT applied here — applied on the inner Row so it wraps
+    // only the bubble content width, not the full screen width.
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -858,8 +861,6 @@ private fun MessageRowItem(
                 alpha = itemAlpha.value
                 translationY = offsetY.value
             }
-            .background(backgroundColor, rowShape)
-            .border(width = 1.5.dp, color = borderColor, shape = rowShape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -870,6 +871,8 @@ private fun MessageRowItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(backgroundColor, rowShape)
+                .border(width = 1.5.dp, color = borderColor, shape = rowShape)
                 .padding(horizontal = horizontalPadding, vertical = 1.dp),
             verticalAlignment = Alignment.Bottom
         ) {
