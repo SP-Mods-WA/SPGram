@@ -5,10 +5,10 @@
     </background>
     <foreground>
         <inset
-            android:insetLeft="0dp"
-            android:insetRight="0dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
+            android:insetLeft="5%"
+            android:insetRight="5%"
+            android:insetTop="10%"
+            android:insetBottom="0%"
             android:drawable="@mipmap/ic_launcher_round" />
     </foreground>
 </adaptive-icon>
