@@ -37,6 +37,9 @@ class DefaultAuthComponent(
                         emailPattern = step.emailPattern
                     )
                     is AuthStep.InputPassword -> AuthComponent.AuthState.InputPassword
+                is AuthStep.InputRegistration -> AuthComponent.AuthState.InputRegistration(
+                    termsText = step.termsText
+                )
                     else -> null
                 }
                 if (newAuthState != null) {
@@ -91,6 +94,10 @@ class DefaultAuthComponent(
     override fun onPasswordEntered(password: String) {
         _model.update { it.copy(isSubmitting = true) }
         repository.sendPassword(password)
+    }
+
+    override fun onRegisterUser(firstName: String, lastName: String) {
+        store.accept(AuthStore.Intent.RegisterUser(firstName, lastName))
     }
 
     override fun onBackToPhone() {
