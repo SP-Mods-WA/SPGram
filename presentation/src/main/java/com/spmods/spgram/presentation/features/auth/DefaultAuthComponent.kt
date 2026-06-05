@@ -30,24 +30,24 @@ class DefaultAuthComponent(
                 val newAuthState = when (step) {
                     is AuthStep.InputPhone -> AuthComponent.AuthState.InputPhone
                     is AuthStep.InputCode -> AuthComponent.AuthState.InputCode(
-                        codeLength = step.codeLength,
-                        codeType = step.codeType,
+                        codeLength   = step.codeLength,
+                        codeType     = step.codeType,
                         nextCodeType = step.nextType,
-                        timeout = step.timeout,
+                        timeout      = step.timeout,
                         emailPattern = step.emailPattern
                     )
-                    is AuthStep.InputPassword -> AuthComponent.AuthState.InputPassword
-                is AuthStep.InputRegistration -> AuthComponent.AuthState.InputRegistration(
-                    termsText = step.termsText
-                )
+                    is AuthStep.InputPassword     -> AuthComponent.AuthState.InputPassword
+                    is AuthStep.InputRegistration -> AuthComponent.AuthState.InputRegistration(
+                        termsText = step.termsText
+                    )
                     else -> null
                 }
                 if (newAuthState != null) {
                     _model.update {
                         it.copy(
-                            authState = newAuthState,
+                            authState    = newAuthState,
                             isSubmitting = repository.authUiStatus.value.isSubmitting(),
-                            uiStatus = repository.authUiStatus.value
+                            uiStatus     = repository.authUiStatus.value
                         )
                     }
                 }
@@ -58,7 +58,7 @@ class DefaultAuthComponent(
             .onEach { status ->
                 _model.update {
                     it.copy(
-                        uiStatus = status,
+                        uiStatus     = status,
                         isSubmitting = status.isSubmitting()
                     )
                 }
@@ -69,7 +69,7 @@ class DefaultAuthComponent(
             .onEach { errorMessage ->
                 _model.update {
                     it.copy(
-                        error = errorMessage,
+                        error        = errorMessage,
                         isSubmitting = false
                     )
                 }
@@ -97,7 +97,8 @@ class DefaultAuthComponent(
     }
 
     override fun onRegisterUser(firstName: String, lastName: String) {
-        store.accept(AuthStore.Intent.RegisterUser(firstName, lastName))
+        _model.update { it.copy(isSubmitting = true) }
+        repository.registerUser(firstName, lastName)
     }
 
     override fun onBackToPhone() {
