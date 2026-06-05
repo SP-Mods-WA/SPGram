@@ -228,7 +228,7 @@ class DefaultSettingsComponent(
     }
 
     override fun onWalletClicked() {
-        externalNavigator.openUrl("https://t.me/wallet")
+        // Not yet implemented - same as original Alpha dialog
     }
 
     override fun onMyProfileClicked() {
