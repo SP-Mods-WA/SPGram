@@ -2,6 +2,7 @@ package com.spmods.spgram.presentation.features.chats.conversation.ui.channel
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -168,7 +169,7 @@ fun ChannelVideoMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = Color(0xFFFFFFFF),
+            color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
             tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -180,7 +181,7 @@ fun ChannelVideoMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFFFFFFF))
+                            .background(if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                             .zIndex(1f)
                     ) {
@@ -412,7 +413,7 @@ fun ChannelVideoMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFFFFFFF))
+                            .background(if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
                             .padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -462,7 +463,7 @@ fun ChannelVideoMessageBubble(
                                 MessageMetadata(
                                     msg = msg,
                                     isOutgoing = msg.isOutgoing,
-                                    contentColor = Color(0xFF1A1A1A).copy(alpha = 0.8f)
+                                    contentColor = Color(0xFF212121).copy(alpha = 0.8f)
                                 )
                             }
                         }
