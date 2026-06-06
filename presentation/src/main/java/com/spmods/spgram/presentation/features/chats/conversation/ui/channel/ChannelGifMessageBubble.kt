@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -162,7 +163,7 @@ fun ChannelGifMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = Color(0xFFFFFFFF),
+            color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
             tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -171,7 +172,7 @@ fun ChannelGifMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFFFFFFF))
+                            .background(if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp)
                             .zIndex(1f)
                     ) {
@@ -182,7 +183,7 @@ fun ChannelGifMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFFFFFFF))
+                            .background(if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp)
                             .zIndex(1f)
                     ) {
@@ -392,7 +393,7 @@ fun ChannelGifMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFFFFFFF))
+                            .background(if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 6.dp)
                             .zIndex(1f)
                     ) {
@@ -482,7 +483,7 @@ fun ChannelGifMessageBubble(
                                             imageVector = statusIcon,
                                             contentDescription = null,
                                             modifier = Modifier.size(14.dp),
-                                            tint = if (sendingState is MessageSendingState.Failed) MaterialTheme.colorScheme.error else Color(0xFF1A1A1A).copy(
+                                            tint = if (sendingState is MessageSendingState.Failed) MaterialTheme.colorScheme.error else Color(0xFF212121).copy(
                                                 0.6f
                                             )
                                         )
