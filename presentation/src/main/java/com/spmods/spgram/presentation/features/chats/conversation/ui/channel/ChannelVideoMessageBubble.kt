@@ -486,7 +486,7 @@ fun ChannelVideoMessageBubble(
             MessageReactionsView(
                 reactions = msg.reactions,
                 onReactionClick = onReactionClick,
-                modifier = Modifier
+                modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp)
                     .padding(top = 2.dp)
                     .align(Alignment.Start)
             )
