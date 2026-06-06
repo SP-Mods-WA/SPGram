@@ -208,4 +208,4 @@ private fun contrastRatio(foreground: Color, background: Color): Float {
     return (lighter + 0.05f) / (darker + 0.05f)
 }
 
-val LocalDarkTheme = compositionLocalOf { false }
+
