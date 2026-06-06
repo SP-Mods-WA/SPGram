@@ -1,6 +1,6 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.channel
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -71,7 +71,7 @@ fun ChannelTextMessageBubble(
     modifier: Modifier = Modifier
 ) {
     val context  = LocalContext.current
-    val isDark   = isSystemInDarkTheme()
+    val isDark   = LocalDarkTheme.current
 
     val bubbleColor  = if (isDark) TgChBubbleDark  else TgChBubbleLight
     val contentColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
