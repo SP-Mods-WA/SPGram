@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -161,8 +162,8 @@ fun GifMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF),
-            contentColor = if (isOutgoing) Color(0xFF212121) else Color(0xFF212121),
+            color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
+            contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
             Column(modifier = Modifier
                 .widthIn(min = 160.dp, max = 320.dp)
@@ -171,7 +172,7 @@ fun GifMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF))
+                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -182,7 +183,7 @@ fun GifMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF))
+                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
                             .padding(horizontal = 4.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -391,13 +392,13 @@ fun GifMessageBubble(
 
                 if (content.caption.isNotEmpty()) {
                     val timeColor =
-                        if (isOutgoing) Color(0xFF212121).copy(0.7f) else Color(0xFF212121).copy(
+                        if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(0.7f) // 
                             0.7f
                         )
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF))
+                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp)
                             .zIndex(1f)
                     ) {
