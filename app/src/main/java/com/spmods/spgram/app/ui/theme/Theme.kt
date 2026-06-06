@@ -59,7 +59,7 @@ private val LightColorScheme = lightColorScheme(
 fun SPGramTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     amoledTheme: Boolean = false,
     customThemePalette: CustomThemePalette? = null,
     content: @Composable () -> Unit
