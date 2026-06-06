@@ -163,38 +163,37 @@ class DefaultRootComponent(
     }
 
     private fun observeAuthState() {
-    authRepository.authState
-        .onEach { state ->
-            val activeConfig = childStack.value.active.configuration
-            when (state) {
-                is AuthStep.Ready -> {
-                    if (activeConfig is Config.Auth || activeConfig is Config.Startup) {
-                        navigation.replaceAll(Config.Chats())
+        authRepository.authState
+            .onEach { state ->
+                val activeConfig = childStack.value.active.configuration
+                when (state) {
+                    is AuthStep.Ready -> {
+                        if (activeConfig is Config.Auth || activeConfig is Config.Startup) {
+                            navigation.replaceAll(Config.Chats())
+                        }
                     }
-                }
 
-                is AuthStep.InputPhone,
-                is AuthStep.InputCode,
-                is AuthStep.InputPassword,
-                is AuthStep.InputRegistration -> {
-                    _isLocked.update { false }
-                    appPreferences.setPasscode(null)
-                    appPreferences.setBiometricEnabled(false)
-                    if (activeConfig !is Config.Auth) {
-                        navigation.replaceAll(Config.Auth)
+                    is AuthStep.InputPhone,
+                    is AuthStep.InputCode,
+                    is AuthStep.InputPassword -> {
+                        _isLocked.update { false }
+                        appPreferences.setPasscode(null)
+                        appPreferences.setBiometricEnabled(false)
+                        if (activeConfig !is Config.Auth) {
+                            navigation.replaceAll(Config.Auth)
+                        }
                     }
-                }
 
-                is AuthStep.Loading,
-                is AuthStep.WaitParameters -> {
-                    if (activeConfig !is Config.Startup && activeConfig !is Config.Auth) {
-                        navigation.replaceAll(Config.Startup)
+                    is AuthStep.Loading,
+                    is AuthStep.WaitParameters -> {
+                        if (activeConfig !is Config.Startup && activeConfig !is Config.Auth) {
+                            navigation.replaceAll(Config.Startup)
+                        }
                     }
                 }
             }
-        }
-        .launchIn(scope)
-}
+            .launchIn(scope)
+    }
 
     private fun observeMaintenanceSettings() {
         combine(appPreferences.cacheLimitSize, appPreferences.autoClearCacheTime) { limit, time ->
@@ -568,7 +567,7 @@ class DefaultRootComponent(
                     onStickersClick = { navigation.bringToFront(Config.Stickers) },
                     onAboutClick = { navigation.bringToFront(Config.About) },
                     onDebugClick = { navigation.bringToFront(Config.Debug) },
-                    onMyProfileClick = { userId -> navigateToChat(userId) },
+                    onMyProfileClick = { userId -> navigation.push(Config.Profile(userId)) },
                     onSavedMessagesClick = { userId -> navigateToChat(userId) }
                 )
             )
