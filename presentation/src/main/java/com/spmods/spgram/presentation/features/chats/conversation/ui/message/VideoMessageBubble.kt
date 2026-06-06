@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -174,8 +175,8 @@ fun VideoMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF),
-            contentColor = if (isOutgoing) Color(0xFF212121) else Color(0xFF212121),
+            color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
+            contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
             Column(modifier = Modifier
                 .widthIn(max = 280.dp)
@@ -184,7 +185,7 @@ fun VideoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF))
+                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -195,7 +196,7 @@ fun VideoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF))
+                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
                             .padding(horizontal = 4.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -375,15 +376,12 @@ fun VideoMessageBubble(
                 }
 
                 if (content.caption.isNotEmpty()) {
-                    val timeColor = if (isOutgoing)
-                        Color(0xFF212121).copy(alpha = 0.7f)
-                    else
-                        Color(0xFF212121).copy(alpha = 0.7f)
+                    val timeColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(alpha = 0.7f)
 
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF))
+                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp)
                             .zIndex(1f)
                     ) {
