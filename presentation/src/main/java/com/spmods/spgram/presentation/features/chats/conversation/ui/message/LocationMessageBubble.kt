@@ -89,9 +89,9 @@ fun LocationMessageBubble(
     )
 
     val backgroundColor =
-        if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF)
+        if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF)
     val contentColor =
-        if (isOutgoing) Color(0xFF1A1A1A) else Color(0xFF1A1A1A)
+        if (isOutgoing) Color(0xFF212121) else Color(0xFF212121)
     val timeColor = contentColor.copy(alpha = 0.7f)
     val camera = rememberSaveableMapViewCamera(
         MapViewCamera(
@@ -279,9 +279,9 @@ fun VenueMessageBubble(
     )
 
     val backgroundColor =
-        if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF)
+        if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF)
     val contentColor =
-        if (isOutgoing) Color(0xFF1A1A1A) else Color(0xFF1A1A1A)
+        if (isOutgoing) Color(0xFF212121) else Color(0xFF212121)
     val timeColor = contentColor.copy(alpha = 0.7f)
     val camera = rememberSaveableMapViewCamera(
         MapViewCamera(
