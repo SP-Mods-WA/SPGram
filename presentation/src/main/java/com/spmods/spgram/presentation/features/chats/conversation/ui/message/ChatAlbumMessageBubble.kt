@@ -285,7 +285,7 @@ fun ChatAlbumMessageBubble(
         MessageReactionsView(
             reactions = firstMsg.reactions,
             onReactionClick = onReactionClick,
-            modifier = Modifier.padding(horizontal = 4.dp)
+            modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp)
         )
     }
 }
