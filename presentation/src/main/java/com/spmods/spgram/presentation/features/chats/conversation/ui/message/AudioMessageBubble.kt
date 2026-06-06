@@ -1,7 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -116,7 +116,7 @@ fun AudioMessageBubble(
     )
 
     val backgroundColor =
-        if (isOutgoing) (if (isSystemInDarkTheme()) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
+        if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF))
     val contentColor =
         if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
     val timeColor = contentColor.copy(alpha = 0.7f)
@@ -339,7 +339,7 @@ fun AudioAlbumBubble(
     )
 
     val backgroundColor =
-        if (isOutgoing) (if (isSystemInDarkTheme()) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
+        if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF))
     val contentColor =
         if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
     val timeColor = contentColor.copy(alpha = 0.7f)
@@ -492,7 +492,7 @@ fun ChannelAudioAlbumBubble(
         bottomEnd = cornerRadius
     )
 
-    val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF)
+    val backgroundColor = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)
     val contentColor = MaterialTheme.colorScheme.onSurfaceVariant
     val timeColor = contentColor.copy(alpha = 0.7f)
 
