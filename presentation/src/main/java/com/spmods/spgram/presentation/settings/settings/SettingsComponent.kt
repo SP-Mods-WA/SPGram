@@ -1,6 +1,7 @@
 package com.spmods.spgram.presentation.settings.settings
 
 import com.arkivanov.decompose.value.Value
+import com.spmods.spgram.domain.models.AttachMenuBotModel
 import com.spmods.spgram.domain.models.UserModel
 import com.spmods.spgram.presentation.core.util.IDownloadUtils
 
@@ -40,6 +41,7 @@ interface SettingsComponent {
     fun onMyProfileClicked()
     fun onSavedMessagesClicked()
     fun onHelpFeedbackClicked()
+    fun onDismissWebApp()
 
     data class State(
         val currentUser: UserModel? = null,
@@ -50,6 +52,10 @@ interface SettingsComponent {
         val isSupportVisible: Boolean = false,
         val isMoreOptionsVisible: Boolean = false,
         val fullScreenImages: List<String>? = null,
-        val fullScreenVideoPath: String? = null
+        val fullScreenVideoPath: String? = null,
+        val attachMenuBots: List<AttachMenuBotModel> = emptyList(),
+        val botWebAppUrl: String? = null,
+        val botWebAppBotId: Long? = null,
+        val botWebAppName: String? = null
     )
 }
