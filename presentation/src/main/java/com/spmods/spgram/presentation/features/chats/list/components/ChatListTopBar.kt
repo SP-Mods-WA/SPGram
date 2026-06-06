@@ -1,15 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.list.components
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.Star
@@ -47,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -62,6 +56,15 @@ import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.ui.ExpressiveDefaults
 import com.spmods.spgram.presentation.core.util.LocalTabletInterfaceEnabled
 import com.spmods.spgram.presentation.features.stickers.ui.view.StickerImage
+
+// Header gradient colors matching the image
+private val HeaderGradient = Brush.verticalGradient(
+    colors = listOf(
+        Color(0xFFE8F5E9), // light green top
+        Color(0xFFF8F0FF), // light purple bottom
+    )
+)
+private val SearchBorderColor = Color(0xFF4CAF50) // green border
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -144,6 +147,7 @@ fun ChatListTopBar(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(HeaderGradient)
                     .statusBarsPadding()
                     .then(if (isTablet) Modifier.padding(top = 6.dp) else Modifier)
             ) {
@@ -327,6 +331,11 @@ fun ChatListTopBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .border(
+                            width = 1.5.dp,
+                            color = SearchBorderColor,
+                            shape = RoundedCornerShape(50)
+                        )
                         .clickable(
                             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                             indication = null,
@@ -346,17 +355,17 @@ fun ChatListTopBar(
                                     Icon(
                                         Icons.Rounded.Search,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        tint = SearchBorderColor
                                     )
                                 },
                             )
                         },
                         expanded = false,
                         onExpandedChange = { if (it) onSearchToggle() },
-                        shape = ShapeDefaults.ExtraLarge,
+                        shape = RoundedCornerShape(50),
                         colors = SearchBarDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            dividerColor = androidx.compose.ui.graphics.Color.Transparent
+                            containerColor = Color.White.copy(alpha = 0.85f),
+                            dividerColor = Color.Transparent
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
