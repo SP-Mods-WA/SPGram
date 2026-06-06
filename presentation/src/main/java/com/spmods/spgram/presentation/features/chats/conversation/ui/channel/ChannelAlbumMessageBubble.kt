@@ -1,7 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.channel
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -202,7 +202,7 @@ fun ChannelAlbumMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
+            color = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF),
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(bubbleShape)
@@ -355,7 +355,7 @@ fun ChannelDocumentAlbumBubble(
         bottomEnd = if (showComments && firstMsg.canGetMessageThread) 4.dp else cornerRadius
     )
 
-    val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF)
+    val backgroundColor = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)
     val contentColor = Color(0xFF212121)
     val timeColor = contentColor.copy(alpha = 0.7f)
 
@@ -558,7 +558,7 @@ fun ChannelAudioAlbumBubble(
         bottomEnd = if (showComments && firstMsg.canGetMessageThread) 4.dp else cornerRadius
     )
 
-    val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF)
+    val backgroundColor = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)
     val contentColor = Color(0xFF212121)
     val timeColor = contentColor.copy(alpha = 0.7f)
 
