@@ -8,7 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -163,7 +163,7 @@ fun ChannelGifMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
+            color = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF),
             tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -172,7 +172,7 @@ fun ChannelGifMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
+                            .background(if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp)
                             .zIndex(1f)
                     ) {
@@ -183,7 +183,7 @@ fun ChannelGifMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
+                            .background(if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp)
                             .zIndex(1f)
                     ) {
@@ -393,7 +393,7 @@ fun ChannelGifMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
+                            .background(if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF))
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 6.dp)
                             .zIndex(1f)
                     ) {
