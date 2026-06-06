@@ -2,6 +2,7 @@
 
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.annotation.OptIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
