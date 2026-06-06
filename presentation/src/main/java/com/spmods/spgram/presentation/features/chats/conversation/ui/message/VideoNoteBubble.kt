@@ -95,7 +95,7 @@ fun VideoNoteBubble(
         msg.forwardInfo?.let { forward ->
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
                 modifier = Modifier
                     .padding(bottom = 4.dp)
                     .widthIn(max = 200.dp)
@@ -112,7 +112,7 @@ fun VideoNoteBubble(
         msg.replyToMsg?.let { reply ->
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
                 modifier = Modifier
                     .padding(bottom = 4.dp)
                     .widthIn(max = 200.dp)
