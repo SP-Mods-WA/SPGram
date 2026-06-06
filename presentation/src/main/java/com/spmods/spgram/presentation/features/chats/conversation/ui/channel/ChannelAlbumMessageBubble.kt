@@ -1,6 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.channel
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -201,7 +202,7 @@ fun ChannelAlbumMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = Color(0xFFFFFFFF),
+            color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(bubbleShape)
@@ -289,7 +290,7 @@ fun ChannelAlbumMessageBubble(
                             MessageMetadata(
                                 msg = lastMsg,
                                 isOutgoing = lastMsg.isOutgoing,
-                                contentColor = Color(0xFF1A1A1A).copy(alpha = 0.8f)
+                                contentColor = Color(0xFF212121).copy(alpha = 0.8f)
                             )
                         }
                     }
@@ -354,8 +355,8 @@ fun ChannelDocumentAlbumBubble(
         bottomEnd = if (showComments && firstMsg.canGetMessageThread) 4.dp else cornerRadius
     )
 
-    val backgroundColor = Color(0xFFFFFFFF)
-    val contentColor = Color(0xFF1A1A1A)
+    val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF)
+    val contentColor = Color(0xFF212121)
     val timeColor = contentColor.copy(alpha = 0.7f)
 
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
@@ -557,8 +558,8 @@ fun ChannelAudioAlbumBubble(
         bottomEnd = if (showComments && firstMsg.canGetMessageThread) 4.dp else cornerRadius
     )
 
-    val backgroundColor = Color(0xFFFFFFFF)
-    val contentColor = Color(0xFF1A1A1A)
+    val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF)
+    val contentColor = Color(0xFF212121)
     val timeColor = contentColor.copy(alpha = 0.7f)
 
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
