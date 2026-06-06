@@ -3,6 +3,7 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
 import androidx.annotation.OptIn
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -69,7 +70,7 @@ fun StickerMessageBubble(
         msg.forwardInfo?.let { forward ->
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFFFFFFF),
+                color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
                 modifier = Modifier
                     .padding(bottom = 4.dp)
                     .widthIn(max = 200.dp)
@@ -86,7 +87,7 @@ fun StickerMessageBubble(
         msg.replyToMsg?.let { reply ->
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFFFFFFF),
+                color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
                 modifier = Modifier
                     .padding(bottom = 4.dp)
                     .widthIn(max = 200.dp)
