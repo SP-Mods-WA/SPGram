@@ -40,8 +40,6 @@ private val TgBubbleOutDark  = Color(0xFF2B5278)
 private val TgBubbleInLight  = Color(0xFFFFFFFF)
 private val TgBubbleInDark   = Color(0xFF212121)
 
-// Reaction chip height ≈ 28dp → spacer 18dp → reactions overlap bubble ~10dp
-private val REACTION_OVERLAP_SPACER = 18.dp
 
 @Composable
 fun TextMessageBubble(
@@ -101,155 +99,122 @@ fun TextMessageBubble(
     val isBigEmoji   = renderData.isBigEmoji && renderData.bigEmojiItems.isNotEmpty()
     val hasReactions = showReactions && msg.reactions.isNotEmpty()
 
-    // ────────────────────────────────────────────────────────────────────
-    //  Layout:
-    //
-    //   ┌─ Box ──────────────────────────────────┐
-    //   │  ┌─ Column ──────────────────────────┐ │
-    //   │  │  ┌─ Surface (bubble) ───────────┐ │ │
-    //   │  │  │  content …                   │ │ │
-    //   │  │  └─────────────────────────────-┘ │ │
-    //   │  │  Spacer(18dp)  ← reaction area    │ │
-    //   │  └───────────────────────────────────┘ │
-    //   │                                         │
-    //   │  MessageReactionsView  ← BottomStart    │
-    //   │  (28dp tall → overlaps bubble by ~10dp) │
-    //   └─────────────────────────────────────────┘
-    //
-    //  Reactions always start from the left (BottomStart), matching
-    //  official Telegram behaviour for both outgoing and incoming.
-    // ────────────────────────────────────────────────────────────────────
-
-    Box(modifier = modifier.widthIn(min = 60.dp)) {
-
-        // ── Inner column: bubble + spacer reserve ───────────────────
-        Column(
-            modifier            = Modifier.widthIn(min = 60.dp),
-            horizontalAlignment = Alignment.Start
+    // Reactions sit directly below the bubble, left-aligned — no overlap
+    Column(
+        modifier            = modifier.widthIn(min = 60.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Surface(
+            shape           = bubbleShape,
+            color           = if (isBigEmoji) Color.Transparent else backgroundColor,
+            contentColor    = contentColor,
+            tonalElevation  = 0.dp,
+            shadowElevation = if (isBigEmoji) 0.dp else 1.dp,
         ) {
-            // ── Bubble surface ─────────────────────────────────────
-            Surface(
-                shape           = bubbleShape,
-                color           = if (isBigEmoji) Color.Transparent else backgroundColor,
-                contentColor    = contentColor,
-                tonalElevation  = 0.dp,
-                shadowElevation = if (isBigEmoji) 0.dp else 1.dp,
+            Column(
+                modifier = Modifier.padding(
+                    start  = 12.dp,
+                    end    = 12.dp,
+                    top    = 8.dp,
+                    bottom = if (isBigEmoji) 0.dp else 6.dp
+                )
             ) {
-                Column(
-                    modifier = Modifier.padding(
-                        start  = 12.dp,
-                        end    = 12.dp,
-                        top    = 8.dp,
-                        bottom = if (isBigEmoji) 0.dp else 6.dp
+                if (isGroup && !isOutgoing && !isSameSenderAbove) {
+                    MessageSenderName(msg, toProfile = toProfile)
+                }
+
+                msg.forwardInfo?.let { forward ->
+                    ForwardContent(forward, isOutgoing, onForwardClick = onForwardOriginClick)
+                }
+                msg.replyToMsg?.let { reply ->
+                    ReplyContent(
+                        replyToMsg = reply,
+                        isOutgoing = isOutgoing,
+                        onClick    = { onReplyClick(reply) }
                     )
+                }
+
+                val finalFontSize = if (renderData.isBigEmoji) fontSize * 5f else fontSize
+
+                if (isBigEmoji) {
+                    BigEmojiContent(
+                        items    = renderData.bigEmojiItems,
+                        sizeDp   = finalFontSize,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                } else {
+                    MessageText(
+                        text          = renderData.annotatedText,
+                        rawText       = content.text,
+                        entities      = content.entities,
+                        inlineContent = renderData.inlineContent,
+                        style         = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize      = finalFontSize.sp,
+                            letterSpacing = letterSpacing.sp,
+                            lineHeight    = (finalFontSize * 1.1f).sp
+                        ),
+                        modifier      = Modifier.padding(bottom = 2.dp),
+                        isOutgoing    = isOutgoing,
+                        onSpoilerClick = { index ->
+                            if (revealedSpoilers.contains(index))
+                                revealedSpoilers.remove(index)
+                            else
+                                revealedSpoilers.add(index)
+                        },
+                        onClick     = onClick,
+                        onLongClick = onLongClick
+                    )
+                }
+
+                if (showLinkPreviews) {
+                    content.webPage?.let { webPage ->
+                        LinkPreview(
+                            webPage           = webPage,
+                            isOutgoing        = msg.isOutgoing,
+                            onInstantViewClick = onInstantViewClick,
+                            onYouTubeClick    = onYouTubeClick
+                        )
+                    }
+                }
+
+                Row(
+                    modifier          = Modifier.align(Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Sender name (groups, incoming, first in sequence)
-                    if (isGroup && !isOutgoing && !isSameSenderAbove) {
-                        MessageSenderName(msg, toProfile = toProfile)
+                    if (msg.editDate > 0) {
+                        Icon(
+                            imageVector        = Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.info_edited),
+                            modifier           = Modifier.size(14.dp),
+                            tint               = timeColor
+                        )
+                        Spacer(Modifier.width(4.dp))
                     }
-
-                    msg.forwardInfo?.let { forward ->
-                        ForwardContent(forward, isOutgoing, onForwardClick = onForwardOriginClick)
-                    }
-                    msg.replyToMsg?.let { reply ->
-                        ReplyContent(
-                            replyToMsg = reply,
-                            isOutgoing = isOutgoing,
-                            onClick    = { onReplyClick(reply) }
+                    Text(
+                        text  = formatTime(msg.date, timeFormat),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = timeColor
+                    )
+                    if (isOutgoing) {
+                        Spacer(Modifier.width(4.dp))
+                        MessageSendingStatusIcon(
+                            sendingState = msg.sendingState,
+                            isRead       = msg.isRead,
+                            baseColor    = timeColor,
+                            size         = 14.dp
                         )
                     }
+                }
+            }
+        }
 
-                    val finalFontSize = if (renderData.isBigEmoji) fontSize * 5f else fontSize
-
-                    if (isBigEmoji) {
-                        BigEmojiContent(
-                            items    = renderData.bigEmojiItems,
-                            sizeDp   = finalFontSize,
-                            modifier = Modifier.padding(bottom = 2.dp)
-                        )
-                    } else {
-                        MessageText(
-                            text          = renderData.annotatedText,
-                            rawText       = content.text,
-                            entities      = content.entities,
-                            inlineContent = renderData.inlineContent,
-                            style         = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize      = finalFontSize.sp,
-                                letterSpacing = letterSpacing.sp,
-                                lineHeight    = (finalFontSize * 1.1f).sp
-                            ),
-                            modifier      = Modifier.padding(bottom = 2.dp),
-                            isOutgoing    = isOutgoing,
-                            onSpoilerClick = { index ->
-                                if (revealedSpoilers.contains(index))
-                                    revealedSpoilers.remove(index)
-                                else
-                                    revealedSpoilers.add(index)
-                            },
-                            onClick     = onClick,
-                            onLongClick = onLongClick
-                        )
-                    }
-
-                    if (showLinkPreviews) {
-                        content.webPage?.let { webPage ->
-                            LinkPreview(
-                                webPage           = webPage,
-                                isOutgoing        = msg.isOutgoing,
-                                onInstantViewClick = onInstantViewClick,
-                                onYouTubeClick    = onYouTubeClick
-                            )
-                        }
-                    }
-
-                    // Time + status (bottom-right inside bubble)
-                    Row(
-                        modifier          = Modifier.align(Alignment.End),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (msg.editDate > 0) {
-                            Icon(
-                                imageVector        = Icons.Default.Edit,
-                                contentDescription = stringResource(R.string.info_edited),
-                                modifier           = Modifier.size(14.dp),
-                                tint               = timeColor
-                            )
-                            Spacer(Modifier.width(4.dp))
-                        }
-                        Text(
-                            text  = formatTime(msg.date, timeFormat),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                            color = timeColor
-                        )
-                        if (isOutgoing) {
-                            Spacer(Modifier.width(4.dp))
-                            MessageSendingStatusIcon(
-                                sendingState = msg.sendingState,
-                                isRead       = msg.isRead,
-                                baseColor    = timeColor,
-                                size         = 14.dp
-                            )
-                        }
-                    }
-                } // end content Column
-            } // end Surface
-
-            // Reserve vertical space so Box is tall enough for reaction overlap
-            if (hasReactions) Spacer(Modifier.height(REACTION_OVERLAP_SPACER))
-
-        } // end inner Column
-
-        // ── Reactions: BottomStart of Box → overlaps bubble bottom ~10dp ──
         if (hasReactions) {
             MessageReactionsView(
                 reactions       = msg.reactions,
                 onReactionClick = onReactionClick,
                 isOutgoing      = isOutgoing,
-                modifier        = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 6.dp, end = 4.dp, bottom = 2.dp)
+                modifier        = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp)
             )
         }
-
-    } // end Box
+    }
 }
