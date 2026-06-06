@@ -2,6 +2,7 @@ package com.spmods.spgram.presentation.features.chats.conversation.ui.channel
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
