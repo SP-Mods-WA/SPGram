@@ -1,6 +1,6 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -62,7 +62,7 @@ fun TextMessageBubble(
     onForwardOriginClick: (ForwardInfo) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalDarkTheme.current
 
     val backgroundColor = when {
         isOutgoing && isDark  -> TgBubbleOutDark
