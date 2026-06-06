@@ -1,6 +1,6 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -117,7 +117,7 @@ fun VoiceMessageBubble(
     )
 
     val backgroundColor =
-        if (isOutgoing) (if (isSystemInDarkTheme()) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
+        if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF))
     val contentColor =
         if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
     val timeColor = contentColor.copy(alpha = 0.7f)
@@ -230,15 +230,15 @@ fun VoiceRow(
                 CircularWavyProgressIndicator(
                     progress = { if (content.isDownloading) content.downloadProgress else content.uploadProgress },
                     modifier = Modifier.size(28.dp),
-                    color = if (isOutgoing) if (isOutgoing) (if (isSystemInDarkTheme()) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
-                    trackColor = (if (isOutgoing) if (isOutgoing) (if (isSystemInDarkTheme()) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary).copy(
+                    color = if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
+                    trackColor = (if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary).copy(
                         alpha = 0.2f
                     ),
                 )
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource(R.string.cancel_button),
-                    tint = if (isOutgoing) if (isOutgoing) (if (isSystemInDarkTheme()) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
+                    tint = if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(16.dp)
                 )
             } else {
@@ -250,7 +250,7 @@ fun VoiceRow(
                 Icon(
                     imageVector = icon,
                     contentDescription = if (playerState.isPlaying) "Pause" else "Play",
-                    tint = if (isOutgoing) if (isOutgoing) (if (isSystemInDarkTheme()) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
+                    tint = if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(24.dp)
                 )
             }
