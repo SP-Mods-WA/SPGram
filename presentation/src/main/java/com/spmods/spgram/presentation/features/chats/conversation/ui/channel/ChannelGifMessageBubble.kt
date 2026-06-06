@@ -8,7 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import com.spmods.spgram.app.ui.theme.LocalDarkTheme
+import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
