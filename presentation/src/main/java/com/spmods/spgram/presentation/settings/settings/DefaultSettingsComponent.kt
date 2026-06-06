@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.spmods.spgram.domain.managers.DomainManager
 import com.spmods.spgram.domain.repository.AppPreferencesProvider
+import com.spmods.spgram.domain.repository.AttachMenuBotRepository
 import com.spmods.spgram.domain.repository.ExternalNavigator
 import com.spmods.spgram.domain.repository.UserProfileEditRepository
 import com.spmods.spgram.domain.repository.UserRepository
@@ -43,12 +44,18 @@ class DefaultSettingsComponent(
     private val domainManager: DomainManager = container.utils.domainManager()
     private val preferences: AppPreferencesProvider = container.preferences.appPreferences
     override val downloadUtils: IDownloadUtils = container.utils.downloadUtils()
+    private val attachMenuBotRepository = container.repositories.attachMenuBotRepository
 
     private val _state = MutableValue(SettingsComponent.State())
     override val state: Value<SettingsComponent.State> = _state
     private val scope = componentScope
 
     init {
+        scope.launch {
+            attachMenuBotRepository.getAttachMenuBots().collect { bots ->
+                _state.update { it.copy(attachMenuBots = bots) }
+            }
+        }
         scope.launch {
             try {
                 val me = repository.getMe()
@@ -228,7 +235,17 @@ class DefaultSettingsComponent(
     }
 
     override fun onWalletClicked() {
-        // Not yet implemented - same as original Alpha dialog
+        val walletBot = _state.value.attachMenuBots.firstOrNull { it.showInSideMenu && it.name.contains("wallet", ignoreCase = true) }
+            ?: _state.value.attachMenuBots.firstOrNull { it.showInSideMenu }
+        if (walletBot != null) {
+            _state.update {
+                it.copy(
+                    botWebAppUrl = "",
+                    botWebAppBotId = walletBot.botUserId,
+                    botWebAppName = walletBot.name
+                )
+            }
+        }
     }
 
     override fun onMyProfileClicked() {
@@ -243,5 +260,9 @@ class DefaultSettingsComponent(
 
     override fun onHelpFeedbackClicked() {
         externalNavigator.openUrl("https://telegram.org/faq#general-questions")
+    }
+
+    override fun onDismissWebApp() {
+        _state.update { it.copy(botWebAppUrl = null, botWebAppBotId = null, botWebAppName = null) }
     }
 }
