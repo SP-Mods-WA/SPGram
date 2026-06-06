@@ -1,11 +1,9 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,10 +33,10 @@ import com.spmods.spgram.presentation.core.util.DateFormatManager
 import com.spmods.spgram.presentation.features.chats.conversation.ui.TelegramBubbleShape
 
 // Telegram-exact bubble colours (inline)
-private val TgBubbleOutLight = Color(0xFFEFFDE7)
+private val TgBubbleOutLight = Color(0xFFEEFFDE)
 private val TgBubbleOutDark  = Color(0xFF2B5278)
 private val TgBubbleInLight  = Color(0xFFFFFFFF)
-private val TgBubbleInDark   = Color(0xFF212121)
+private val TgBubbleInDark   = Color(0xFF182533)
 
 
 @Composable
@@ -72,7 +70,7 @@ fun TextMessageBubble(
         isDark                -> TgBubbleInDark
         else                  -> TgBubbleInLight
     }
-    val contentColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
+    val contentColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF212121)
     val timeColor    = contentColor.copy(alpha = 0.6f)
 
     val bubbleShape = remember(isOutgoing, isSameSenderAbove, isSameSenderBelow) {
