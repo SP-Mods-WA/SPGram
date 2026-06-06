@@ -1,5 +1,6 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
