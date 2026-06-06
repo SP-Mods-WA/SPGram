@@ -392,9 +392,7 @@ fun GifMessageBubble(
 
                 if (content.caption.isNotEmpty()) {
                     val timeColor =
-                        if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(0.7f) // 
-                            0.7f
-                        )
+                        if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(alpha = 0.7f)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
