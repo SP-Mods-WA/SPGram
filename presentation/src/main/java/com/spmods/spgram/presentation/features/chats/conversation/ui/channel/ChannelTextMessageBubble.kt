@@ -206,14 +206,12 @@ fun ChannelTextMessageBubble(
             }
         }
 
-        // Reactions float BELOW the bubble (outside Surface) — same as group bubbles
         if (hasReactions) {
             MessageReactionsView(
                 reactions       = msg.reactions,
                 onReactionClick = onReactionClick,
                 modifier        = Modifier
-                    .offset(y = (-8).dp)
-                    .padding(horizontal = 6.dp)
+                    .padding(top = 4.dp, start = 4.dp, end = 4.dp)
                     .align(Alignment.Start)
             )
         }
