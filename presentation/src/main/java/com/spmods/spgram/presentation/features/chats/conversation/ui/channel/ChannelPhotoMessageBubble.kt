@@ -341,14 +341,15 @@ fun ChannelPhotoMessageBubble(
                         }
                     }
                 }
-                if (showReactions && msg.reactions.isNotEmpty()) {
-                    MessageReactionsView(
-                        reactions = msg.reactions,
-                        onReactionClick = onReactionClick,
-                        modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp)
-                    )
-                }
             }
+        }
+
+        if (showReactions && msg.reactions.isNotEmpty()) {
+            MessageReactionsView(
+                reactions = msg.reactions,
+                onReactionClick = onReactionClick,
+                modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp)
+            )
         }
 
         if (showComments && msg.canGetMessageThread) {
