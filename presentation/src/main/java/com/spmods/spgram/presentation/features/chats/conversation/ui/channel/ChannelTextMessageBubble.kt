@@ -43,7 +43,7 @@ import com.spmods.spgram.presentation.features.chats.conversation.ui.message.rem
 
 // Telegram-exact channel bubble colors (inline)
 private val TgChBubbleLight = Color(0xFFFFFFFF)
-private val TgChBubbleDark  = Color(0xFF212121)
+private val TgChBubbleDark  = Color(0xFF182533)
 private val TgChTimeLight   = Color(0x99000000)
 private val TgChTimeDark    = Color(0x99FFFFFF)
 
