@@ -6,6 +6,7 @@ import android.os.Looper
 import android.provider.Settings
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.spmods.spgram.app.MainActivity
@@ -106,6 +107,7 @@ fun AppThemeContainer(
         }
     }
 
+    CompositionLocalProvider(LocalDarkTheme provides darkTheme) {
     SPGramTheme(
         darkTheme = darkTheme,
         dynamicColor = isDynamicColorsEnabled && !isCustomThemeEnabled,
@@ -141,4 +143,5 @@ fun AppThemeContainer(
     ) {
         content()
     }
+    } // CompositionLocalProvider
 }
