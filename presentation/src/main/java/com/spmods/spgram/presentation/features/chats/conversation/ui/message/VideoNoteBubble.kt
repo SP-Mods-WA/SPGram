@@ -2,7 +2,7 @@
 
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
-import com.spmods.spgram.app.ui.theme.LocalDarkTheme
+import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.annotation.OptIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
