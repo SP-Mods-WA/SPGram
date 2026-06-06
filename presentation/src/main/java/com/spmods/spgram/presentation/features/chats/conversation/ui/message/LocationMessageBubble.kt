@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,10 +89,14 @@ fun LocationMessageBubble(
         } else cornerRadius
     )
 
-    val backgroundColor =
-        if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF)
-    val contentColor =
-        if (isOutgoing) Color(0xFF212121) else Color(0xFF212121)
+    val isDark = LocalDarkTheme.current
+    val backgroundColor = when {
+        isOutgoing && isDark -> Color(0xFF2B5278)
+        isOutgoing           -> Color(0xFFEEFFDE)
+        isDark               -> Color(0xFF182533)
+        else                 -> Color(0xFFFFFFFF)
+    }
+    val contentColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF212121)
     val timeColor = contentColor.copy(alpha = 0.7f)
     val camera = rememberSaveableMapViewCamera(
         MapViewCamera(
@@ -278,10 +283,14 @@ fun VenueMessageBubble(
         } else cornerRadius
     )
 
-    val backgroundColor =
-        if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF)
-    val contentColor =
-        if (isOutgoing) Color(0xFF212121) else Color(0xFF212121)
+    val isDark = LocalDarkTheme.current
+    val backgroundColor = when {
+        isOutgoing && isDark -> Color(0xFF2B5278)
+        isOutgoing           -> Color(0xFFEEFFDE)
+        isDark               -> Color(0xFF182533)
+        else                 -> Color(0xFFFFFFFF)
+    }
+    val contentColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF212121)
     val timeColor = contentColor.copy(alpha = 0.7f)
     val camera = rememberSaveableMapViewCamera(
         MapViewCamera(
