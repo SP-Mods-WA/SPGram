@@ -1,6 +1,6 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.channel
 
-import com.spmods.spgram.app.ui.theme.LocalDarkTheme
+import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
