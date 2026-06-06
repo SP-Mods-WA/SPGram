@@ -122,6 +122,7 @@ import androidx.window.core.layout.WindowSizeClass
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import kotlinx.coroutines.flow.firstOrNull
 import org.koin.compose.koinInject
+import com.spmods.spgram.presentation.features.webapp.MiniAppViewer
 import com.spmods.spgram.domain.repository.StickerRepository
 import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.ui.CollapsingToolbarScaffold
@@ -1018,5 +1019,23 @@ fun SettingsContent(component: SettingsComponent) {
             onDismiss = component::onDismissAvatarViewer,
             downloadUtils = component.downloadUtils
         )
+    }
+
+    AnimatedVisibility(
+        visible = state.botWebAppBotId != null,
+        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+    ) {
+        val botUserId = state.botWebAppBotId
+        if (botUserId != null) {
+            MiniAppViewer(
+                chatId = botUserId,
+                botUserId = botUserId,
+                baseUrl = state.botWebAppUrl ?: "",
+                botName = state.botWebAppName ?: stringResource(R.string.mini_app_default_name),
+                webAppRepository = koinInject(),
+                onDismiss = component::onDismissWebApp
+            )
+        }
     }
 }
