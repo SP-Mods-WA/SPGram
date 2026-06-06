@@ -128,7 +128,7 @@ fun DocumentMessageBubble(
     )
 
     val backgroundColor =
-        if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+        if (isOutgoing) (if (isSystemInDarkTheme()) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
     val contentColor =
         if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
     val timeColor = contentColor.copy(alpha = 0.7f)
@@ -359,7 +359,7 @@ fun DocumentAlbumBubble(
     )
 
     val backgroundColor =
-        if (isOutgoing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+        if (isOutgoing) (if (isSystemInDarkTheme()) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
     val contentColor =
         if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
     val timeColor = contentColor.copy(alpha = 0.7f)
@@ -514,7 +514,7 @@ fun ChannelDocumentAlbumBubble(
         bottomEnd = cornerRadius
     )
 
-    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF)
     val contentColor = MaterialTheme.colorScheme.onSurfaceVariant
     val timeColor = contentColor.copy(alpha = 0.7f)
 
