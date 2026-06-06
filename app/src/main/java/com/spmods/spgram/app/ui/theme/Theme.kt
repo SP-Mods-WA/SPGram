@@ -12,6 +12,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.graphics.luminance
@@ -59,7 +60,7 @@ private val LightColorScheme = lightColorScheme(
 fun SPGramTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false,
+    dynamicColor: Boolean = true,
     amoledTheme: Boolean = false,
     customThemePalette: CustomThemePalette? = null,
     content: @Composable () -> Unit
@@ -206,3 +207,5 @@ private fun contrastRatio(foreground: Color, background: Color): Float {
     val darker = minOf(fg, bg)
     return (lighter + 0.05f) / (darker + 0.05f)
 }
+
+val LocalDarkTheme = compositionLocalOf { false }
