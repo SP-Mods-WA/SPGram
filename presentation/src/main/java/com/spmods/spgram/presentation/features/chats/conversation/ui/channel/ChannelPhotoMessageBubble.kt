@@ -1,7 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.channel
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -143,7 +143,7 @@ fun ChannelPhotoMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
+            color = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF),
             tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -155,7 +155,7 @@ fun ChannelPhotoMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
+                            .background(if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF))
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                             .zIndex(1f)
                     ) {
@@ -286,7 +286,7 @@ fun ChannelPhotoMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF))
+                            .background(if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF))
                             .padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 4.dp)
                             .zIndex(1f)
                     ) {
