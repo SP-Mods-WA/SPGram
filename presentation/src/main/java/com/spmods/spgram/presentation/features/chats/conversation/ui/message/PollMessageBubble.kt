@@ -53,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -116,12 +117,16 @@ fun PollMessageBubble(
         }
     )
 
-    val containerColor =
-        if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF)
-    val contentColor =
-        if (isOutgoing) Color(0xFF212121) else MaterialTheme.colorScheme.onSurface
+    val isDark = LocalDarkTheme.current
+    val containerColor = when {
+        isOutgoing && isDark -> Color(0xFF2B5278)
+        isOutgoing           -> Color(0xFFEEFFDE)
+        isDark               -> Color(0xFF182533)
+        else                 -> Color(0xFFFFFFFF)
+    }
+    val contentColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF212121)
     val accentColor = if (isOutgoing) {
-        Color(0xFF212121)
+        if (isDark) Color(0xFFFFFFFF) else Color(0xFF212121)
     } else {
         MaterialTheme.colorScheme.primary
     }
@@ -328,7 +333,7 @@ private fun PollHeroHeader(
                         Surface(
                             modifier = Modifier.widthIn(min = 220.dp, max = 260.dp),
                             shape = RoundedCornerShape(22.dp),
-                            color = Color(0xFFFFFFFF)
+                            color = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)
                         ) {
                             Column(modifier = Modifier.padding(vertical = 8.dp)) {
                                 if (hasVoted) {
@@ -622,7 +627,7 @@ private fun PollOptionCard(
                             option.voterCount
                         ),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF212121)
+                        color = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121)
                     )
                 }
             }
@@ -651,7 +656,7 @@ private fun PollOptionCard(
                     tint = if (option.isChosen || (showResults && (isCorrect || isWrong))) {
                         stateColor
                     } else {
-                        Color(0xFF212121)
+                        if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121)
                     },
                     modifier = Modifier.size(18.dp)
                 )
