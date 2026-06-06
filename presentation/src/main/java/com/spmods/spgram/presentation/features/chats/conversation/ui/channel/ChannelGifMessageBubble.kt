@@ -445,13 +445,13 @@ fun ChannelGifMessageBubble(
                                             imageVector = Icons.Outlined.Visibility,
                                             contentDescription = null,
                                             modifier = Modifier.size(14.dp),
-                                            tint = Color(0x99000000)
+                                            tint = if (LocalDarkTheme.current) Color(0x99FFFFFF) else Color(0x99000000)
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             text = formatViews(context, viewsCount),
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                            color = Color(0x99000000)
+                                            color = if (LocalDarkTheme.current) Color(0x99FFFFFF) else Color(0x99000000)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                     }
@@ -459,7 +459,7 @@ fun ChannelGifMessageBubble(
                                 Text(
                                     text = formatTime(msg.date, timeFormat),
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                    color = Color(0x99000000)
+                                    color = if (LocalDarkTheme.current) Color(0x99FFFFFF) else Color(0x99000000)
                                 )
                                 if (msg.isOutgoing) {
                                     Spacer(modifier = Modifier.width(4.dp))
@@ -483,9 +483,7 @@ fun ChannelGifMessageBubble(
                                             imageVector = statusIcon,
                                             contentDescription = null,
                                             modifier = Modifier.size(14.dp),
-                                            tint = if (sendingState is MessageSendingState.Failed) MaterialTheme.colorScheme.error else Color(0xFF212121).copy(
-                                                0.6f
-                                            )
+                                            tint = if (sendingState is MessageSendingState.Failed) MaterialTheme.colorScheme.error else if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.6f) else Color(0xFF212121).copy(alpha = 0.6f)
                                         )
                                     }
                                 }
