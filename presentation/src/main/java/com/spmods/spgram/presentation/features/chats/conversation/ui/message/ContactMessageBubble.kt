@@ -1,6 +1,6 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -87,7 +87,7 @@ fun ContactMessageBubble(
     val backgroundColor =
         if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF)
     val contentColor =
-        if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else Color(0xFF212121)
+        if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121)
     val timeColor = contentColor.copy(alpha = 0.7f)
 
     Column(
