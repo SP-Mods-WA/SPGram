@@ -1,7 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.channel
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,7 +67,7 @@ fun ChannelVoiceMessageBubble(
         bottomEnd = if (showComments && msg.canGetMessageThread) 4.dp else cornerRadius
     )
 
-    val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF)
+    val backgroundColor = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)
     val contentColor = MaterialTheme.colorScheme.onSurfaceVariant
     val timeColor = contentColor.copy(alpha = 0.7f)
 
