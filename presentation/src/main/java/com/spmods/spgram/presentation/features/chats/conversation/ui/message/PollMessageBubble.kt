@@ -117,11 +117,11 @@ fun PollMessageBubble(
     )
 
     val containerColor =
-        if (isOutgoing) Color(0xFFEFFDE7) else Color(0xFFFFFFFF)
+        if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF)
     val contentColor =
-        if (isOutgoing) Color(0xFF1A1A1A) else MaterialTheme.colorScheme.onSurface
+        if (isOutgoing) Color(0xFF212121) else MaterialTheme.colorScheme.onSurface
     val accentColor = if (isOutgoing) {
-        Color(0xFF1A1A1A)
+        Color(0xFF212121)
     } else {
         MaterialTheme.colorScheme.primary
     }
@@ -622,7 +622,7 @@ private fun PollOptionCard(
                             option.voterCount
                         ),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF1A1A1A)
+                        color = Color(0xFF212121)
                     )
                 }
             }
@@ -651,7 +651,7 @@ private fun PollOptionCard(
                     tint = if (option.isChosen || (showResults && (isCorrect || isWrong))) {
                         stateColor
                     } else {
-                        Color(0xFF1A1A1A)
+                        Color(0xFF212121)
                     },
                     modifier = Modifier.size(18.dp)
                 )
