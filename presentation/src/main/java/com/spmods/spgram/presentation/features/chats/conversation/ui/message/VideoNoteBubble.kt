@@ -2,7 +2,7 @@
 
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.spmods.spgram.app.ui.theme.LocalDarkTheme
 import androidx.annotation.OptIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -96,7 +96,7 @@ fun VideoNoteBubble(
         msg.forwardInfo?.let { forward ->
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
+                color = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF),
                 modifier = Modifier
                     .padding(bottom = 4.dp)
                     .widthIn(max = 200.dp)
@@ -113,7 +113,7 @@ fun VideoNoteBubble(
         msg.replyToMsg?.let { reply ->
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = if (isSystemInDarkTheme()) Color(0xFF182533) else Color(0xFFFFFFFF),
+                color = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF),
                 modifier = Modifier
                     .padding(bottom = 4.dp)
                     .widthIn(max = 200.dp)
