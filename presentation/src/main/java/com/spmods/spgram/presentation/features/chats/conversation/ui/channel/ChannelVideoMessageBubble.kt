@@ -463,7 +463,7 @@ fun ChannelVideoMessageBubble(
                                 MessageMetadata(
                                     msg = msg,
                                     isOutgoing = msg.isOutgoing,
-                                    contentColor = Color(0xFF212121).copy(alpha = 0.8f)
+                                    contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.8f) else Color(0xFF212121).copy(alpha = 0.8f)
                                 )
                             }
                         }
