@@ -165,10 +165,11 @@ fun ChatListTopBar(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
-                    // FIX 1: clip BEFORE background so bottom corners are properly rounded
+                    // FIX 3: clip + background BEFORE statusBarsPadding
+                    // so gradient extends behind the status bar like the image
                     .clip(HeaderShape)
                     .background(HeaderGradient)
+                    .statusBarsPadding()           // content only pushes down, bg fills status bar area
                     .then(if (isTablet) Modifier.padding(top = 6.dp) else Modifier)
             ) {
                 Row(
