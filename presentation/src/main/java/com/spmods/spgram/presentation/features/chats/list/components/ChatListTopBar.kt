@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -53,21 +52,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import com.spmods.spgram.domain.models.UserModel
@@ -77,56 +69,20 @@ import com.spmods.spgram.presentation.core.ui.ExpressiveDefaults
 import com.spmods.spgram.presentation.core.util.LocalTabletInterfaceEnabled
 import com.spmods.spgram.presentation.features.stickers.ui.view.StickerImage
 
-// Header gradient
+// Header gradient — horizontal: green (left) → purple (right) matching the image
 private val HeaderGradient = Brush.horizontalGradient(
     colors = listOf(
-        Color(0xFFD6F0DC), // mint green
-        Color(0xFFE8E0F5), // soft lavender
+        Color(0xFFD6F0DC), // mint green - left
+        Color(0xFFE8E0F5), // soft lavender - right
     )
 )
-private val SearchBorderColor = Color(0xFF4CAF50)
+private val SearchBorderColor = Color(0xFF4CAF50) // green border
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HeaderConcaveShape
-//
-// The Column gets  padding(bottom = curveDepthDp)  added BEFORE clip().
-// So `size.height` seen by this shape already includes that extra space.
-// The curve is drawn inside that extra space, so Scaffold never clips it.
-// ─────────────────────────────────────────────────────────────────────────────
-private class HeaderConcaveShape(
-    private val cornerRadiusPx: Float,
-    private val curveDepthPx: Float,
-) : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val w = size.width
-        val h = size.height          // full height including the extra bottom padding
-        val r = cornerRadiusPx
-        val cd = curveDepthPx
-        // The visible content ends at (h - cd); the curve dips below that.
-        val contentBottom = h - cd
-
-        val path = Path().apply {
-            moveTo(0f, r)
-            // top-left rounded corner
-            cubicTo(0f, 0f, 0f, 0f, r, 0f)
-            // top edge
-            lineTo(w - r, 0f)
-            // top-right rounded corner
-            cubicTo(w, 0f, w, 0f, w, r)
-            // right edge down to content bottom
-            lineTo(w, contentBottom)
-            // concave bottom curve  (right → left, bulging downward)
-            cubicTo(
-                w * 0.75f, contentBottom + cd,
-                w * 0.25f, contentBottom + cd,
-                0f, contentBottom,
-            )
-            // left edge back to start
-            close()
-        }
-        return Outline.Generic(path)
-    }
-}
+// Bottom rounded shape for the header — gives the "convex bottom" look like the image
+private val HeaderShape = RoundedCornerShape(
+    bottomStart = 28.dp,
+    bottomEnd = 28.dp
+)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -141,7 +97,7 @@ fun ChatListTopBar(
     onSearchQueryChange: (String) -> Unit,
     onSearchToggle: () -> Unit,
     onStatusClick: (Rect?) -> Unit,
-    onMenuClick: () -> Unit,
+    onMenuClick: () -> Unit
 ) {
     var statusAnchorBounds by remember { mutableStateOf<Rect?>(null) }
     val iconButtonShapes = ExpressiveDefaults.iconButtonShapes()
@@ -152,16 +108,6 @@ fun ChatListTopBar(
     val isTablet =
         adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) && isTabletInterfaceEnabled
 
-    val density = LocalDensity.current
-    val cornerRadiusDp = 24.dp
-    val curveDepthDp   = 28.dp   // must match the padding(bottom = ...) below
-    val headerShape = remember(density) {
-        HeaderConcaveShape(
-            cornerRadiusPx = with(density) { cornerRadiusDp.toPx() },
-            curveDepthPx   = with(density) { curveDepthDp.toPx() },
-        )
-    }
-
     AnimatedContent(
         targetState = isSearchActive,
         transitionSpec = {
@@ -171,7 +117,7 @@ fun ChatListTopBar(
                 fadeIn().togetherWith(fadeOut() + slideOutVertically { -it / 4 })
             }
         },
-        label = "TopBarSearchTransition",
+        label = "TopBarSearchTransition"
     ) { active ->
         if (active) {
             Box(
@@ -179,7 +125,7 @@ fun ChatListTopBar(
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .then(if (isTablet) Modifier.padding(top = 6.dp) else Modifier)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 SearchBar(
                     inputField = {
@@ -201,7 +147,7 @@ fun ChatListTopBar(
                                         Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.action_clear))
                                     }
                                 }
-                            },
+                            }
                         )
                     },
                     expanded = false,
@@ -209,54 +155,52 @@ fun ChatListTopBar(
                     shape = ShapeDefaults.LargeIncreased,
                     colors = SearchBarDefaults.colors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        dividerColor = Color.Transparent,
+                        dividerColor = Color.Transparent
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 ) {}
             }
         } else {
-            // ── ORDER IS CRITICAL ────────────────────────────────────────────
-            // statusBarsPadding()   → status bar inset (before clip, outside shape)
-            // padding(bottom = curveDepthDp) → gives the curve room below content
-            // clip(headerShape)     → applies the concave shape to the full height
-            // background(...)       → fills inside the clipped shape
-            // ────────────────────────────────────────────────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .wrapContentHeight()
-                    .statusBarsPadding()
+                    // FIX 3: clip + background BEFORE statusBarsPadding
+                    // so gradient extends behind the status bar like the image
+                    .clip(HeaderShape)
+                    .background(HeaderGradient)
+                    .statusBarsPadding()           // content only pushes down, bg fills status bar area
                     .then(if (isTablet) Modifier.padding(top = 6.dp) else Modifier)
-                    .padding(bottom = curveDepthDp)   // ← space for concave curve
-                    .clip(headerShape)                 // ← shape sees full height
-                    .background(HeaderGradient),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .animateContentSize(animationSpec = motionScheme.defaultSpatialSpec()),
+                            .animateContentSize(
+                                animationSpec = motionScheme.defaultSpatialSpec()
+                            )
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = stringResource(R.string.app_name_spgram),
                                 style = MaterialTheme.typography.headlineSmallEmphasized,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF25D366),
+                                color = Color(0xFF25D366)
                             )
 
                             if (!user?.statusEmojiPath.isNullOrBlank()) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Box(
                                     modifier = Modifier
-                                        .onGloballyPositioned { statusAnchorBounds = it.boundsInRoot() }
-                                        .clickable { onStatusClick(statusAnchorBounds) },
+                                        .onGloballyPositioned {
+                                            statusAnchorBounds = it.boundsInRoot()
+                                        }
+                                        .clickable { onStatusClick(statusAnchorBounds) }
                                 ) {
                                     StickerImage(
                                         path = user.statusEmojiPath,
@@ -270,9 +214,11 @@ fun ChatListTopBar(
                                     contentDescription = stringResource(R.string.telegram_premium_title),
                                     modifier = Modifier
                                         .size(22.dp)
-                                        .onGloballyPositioned { statusAnchorBounds = it.boundsInRoot() }
+                                        .onGloballyPositioned {
+                                            statusAnchorBounds = it.boundsInRoot()
+                                        }
                                         .clickable { onStatusClick(statusAnchorBounds) },
-                                    tint = Color(0xFF31A6FD),
+                                    tint = Color(0xFF31A6FD)
                                 )
                             }
                         }
@@ -283,58 +229,70 @@ fun ChatListTopBar(
                                     ConnectionStatus.WaitingForNetwork -> Triple(
                                         stringResource(R.string.waiting_for_network),
                                         MaterialTheme.colorScheme.error,
-                                        TopBarStatusAction.Retry,
+                                        TopBarStatusAction.Retry
                                     )
+
                                     ConnectionStatus.Connecting -> Triple(
                                         stringResource(R.string.connecting),
                                         MaterialTheme.colorScheme.onSurfaceVariant,
-                                        TopBarStatusAction.ProxySettings,
+                                        TopBarStatusAction.ProxySettings
                                     )
+
                                     ConnectionStatus.Updating -> Triple(
                                         stringResource(R.string.updating),
                                         MaterialTheme.colorScheme.primary,
-                                        TopBarStatusAction.Retry,
+                                        TopBarStatusAction.Retry
                                     )
+
                                     ConnectionStatus.ConnectingToProxy -> Triple(
                                         stringResource(R.string.connecting_to_proxy),
                                         MaterialTheme.colorScheme.primary,
-                                        TopBarStatusAction.ProxySettings,
+                                        TopBarStatusAction.ProxySettings
                                     )
                                 }
+
                                 TopBarStatusInfo(text = text, color = color, action = action)
                             }
+
                             isProxyEnabled -> TopBarStatusInfo(
                                 text = stringResource(R.string.proxy_enabled),
                                 color = MaterialTheme.colorScheme.primary,
-                                action = TopBarStatusAction.ProxySettings,
+                                action = TopBarStatusAction.ProxySettings
                             )
+
                             else -> null
                         }
 
                         AnimatedContent(
                             targetState = statusInfo,
                             transitionSpec = {
-                                val enter = fadeIn(animationSpec = motionScheme.defaultEffectsSpec()) +
-                                    slideInVertically(
-                                        animationSpec = motionScheme.defaultSpatialSpec(),
-                                        initialOffsetY = { it / 2 },
-                                    ) +
-                                    expandVertically(
-                                        animationSpec = motionScheme.defaultSpatialSpec(),
-                                        expandFrom = Alignment.Top,
-                                    )
-                                val exit = fadeOut(animationSpec = motionScheme.fastEffectsSpec()) +
-                                    slideOutVertically(
-                                        animationSpec = motionScheme.fastSpatialSpec(),
-                                        targetOffsetY = { it / 3 },
-                                    ) +
-                                    shrinkVertically(
-                                        animationSpec = motionScheme.fastSpatialSpec(),
-                                        shrinkTowards = Alignment.Top,
-                                    )
+                                val enter = fadeIn(
+                                    animationSpec = motionScheme.defaultEffectsSpec()
+                                ) +
+                                        slideInVertically(
+                                            animationSpec = motionScheme.defaultSpatialSpec(),
+                                            initialOffsetY = { it / 2 }
+                                        ) +
+                                        expandVertically(
+                                            animationSpec = motionScheme.defaultSpatialSpec(),
+                                            expandFrom = Alignment.Top
+                                        )
+
+                                val exit = fadeOut(
+                                    animationSpec = motionScheme.fastEffectsSpec()
+                                ) +
+                                        slideOutVertically(
+                                            animationSpec = motionScheme.fastSpatialSpec(),
+                                            targetOffsetY = { it / 3 }
+                                        ) +
+                                        shrinkVertically(
+                                            animationSpec = motionScheme.fastSpatialSpec(),
+                                            shrinkTowards = Alignment.Top
+                                        )
+
                                 enter.togetherWith(exit).using(SizeTransform(clip = false))
                             },
-                            label = "TopBarStatusTextTransition",
+                            label = "TopBarStatusTextTransition"
                         ) { info ->
                             if (info != null) {
                                 Text(
@@ -343,10 +301,10 @@ fun ChatListTopBar(
                                     color = info.color,
                                     modifier = Modifier.clickable {
                                         when (info.action) {
-                                            TopBarStatusAction.Retry         -> onRetryConnection()
+                                            TopBarStatusAction.Retry -> onRetryConnection()
                                             TopBarStatusAction.ProxySettings -> onProxySettingsClick()
                                         }
-                                    },
+                                    }
                                 )
                             } else {
                                 Spacer(modifier = Modifier.height(0.dp))
@@ -358,14 +316,13 @@ fun ChatListTopBar(
                         val settingsContentDescription = stringResource(R.string.menu_settings)
                         if (isProxyEnabled) {
                             val isConnected =
-                                connectionStatus is ConnectionStatus.Connected ||
-                                connectionStatus is ConnectionStatus.Updating
+                                connectionStatus is ConnectionStatus.Connected || connectionStatus is ConnectionStatus.Updating
                             IconButton(onClick = onProxySettingsClick, shapes = iconButtonShapes) {
                                 Icon(
                                     imageVector = if (isConnected) Icons.Rounded.Shield else Icons.Rounded.ShieldMoon,
                                     contentDescription = stringResource(R.string.cd_proxy),
                                     modifier = Modifier.size(24.dp),
-                                    tint = if (isConnected) Color(0xFF34A853) else MaterialTheme.colorScheme.error,
+                                    tint = if (isConnected) Color(0xFF34A853) else MaterialTheme.colorScheme.error
                                 )
                             }
                         }
@@ -377,46 +334,51 @@ fun ChatListTopBar(
                             shapes = iconButtonShapes,
                             modifier = Modifier
                                 .size(40.dp)
-                                .semantics { contentDescription = settingsContentDescription },
+                                .semantics { contentDescription = settingsContentDescription }
                         ) {
                             AvatarTopAppBar(
                                 path = user?.avatarPath,
                                 fallbackPath = user?.personalAvatarPath,
                                 name = user?.firstName ?: "",
-                                size = 36.dp,
+                                size = 36.dp
                             )
                         }
                     }
                 }
 
-                // Search bar
+                // FIX 2: Search bar border — correct modifier order:
+                // clip → background → border → clickable → inner padding
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .padding(top = 4.dp, bottom = 12.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.White)
-                        .border(width = 1.dp, color = SearchBorderColor, shape = RoundedCornerShape(50))
+                        .clip(RoundedCornerShape(50))               // 1. clip shape first
+                        .background(Color.White)                    // 2. fill background inside clip
+                        .border(                                     // 3. draw border on clipped edge
+                            width = 1.dp,
+                            color = SearchBorderColor,
+                            shape = RoundedCornerShape(50)
+                        )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onSearchToggle,
+                            onClick = onSearchToggle
                         )
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Search,
                         contentDescription = null,
                         tint = SearchBorderColor,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.search_conversations_placeholder),
                         color = Color(0xFF9E9E9E),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 }
             }
@@ -427,7 +389,10 @@ fun ChatListTopBar(
 private data class TopBarStatusInfo(
     val text: String,
     val color: Color,
-    val action: TopBarStatusAction,
+    val action: TopBarStatusAction
 )
 
-private enum class TopBarStatusAction { Retry, ProxySettings }
+private enum class TopBarStatusAction {
+    Retry,
+    ProxySettings
+}
