@@ -795,12 +795,7 @@ fun ChatListContent(component: ChatListComponent) {
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                        .background(androidx.compose.material3.MaterialTheme.colorScheme.background)
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(
                         state = scrollState,
                         modifier = Modifier
