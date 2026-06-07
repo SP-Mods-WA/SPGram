@@ -69,12 +69,11 @@ import com.spmods.spgram.presentation.core.ui.ExpressiveDefaults
 import com.spmods.spgram.presentation.core.util.LocalTabletInterfaceEnabled
 import com.spmods.spgram.presentation.features.stickers.ui.view.StickerImage
 
-// Header gradient colors matching the image
-private val HeaderGradient = Brush.verticalGradient(
+// Header gradient — horizontal: green (left) → purple (right) matching the image
+private val HeaderGradient = Brush.horizontalGradient(
     colors = listOf(
-        Color(0xFFDFF2E1), // light green top
-        Color(0xFFEDE8F8), // light purple/lavender bottom
-        Color(0xFFF5F0FF), // even lighter at search bar bottom
+        Color(0xFFD6F0DC), // mint green - left
+        Color(0xFFE8E0F5), // soft lavender - right
     )
 )
 private val SearchBorderColor = Color(0xFF4CAF50) // green border
