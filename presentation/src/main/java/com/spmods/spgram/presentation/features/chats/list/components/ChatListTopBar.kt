@@ -49,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -70,9 +71,13 @@ import com.spmods.spgram.presentation.features.stickers.ui.view.StickerImage
 // Header gradient colors matching the image
 private val HeaderGradient = Brush.verticalGradient(
     colors = listOf(
-        Color(0xFFE8F5E9), // light green top
-        Color(0xFFF8F0FF), // light purple bottom
+        Color(0xFFEDF7ED), // light green top
+        Color(0xFFF3EDFC), // light purple bottom
     )
+)
+private val HeaderShape = androidx.compose.foundation.shape.RoundedCornerShape(
+    bottomStart = 20.dp,
+    bottomEnd = 20.dp
 )
 private val SearchBorderColor = Color(0xFF4CAF50) // green border
 
@@ -157,6 +162,7 @@ fun ChatListTopBar(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clip(HeaderShape)
                     .background(HeaderGradient)
                     .statusBarsPadding()
                     .then(if (isTablet) Modifier.padding(top = 6.dp) else Modifier)
@@ -340,12 +346,13 @@ fun ChatListTopBar(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
                         .border(
-                            width = 1.5.dp,
+                            width = 1.dp,
                             color = SearchBorderColor,
                             shape = RoundedCornerShape(50)
                         )
+                        .clip(RoundedCornerShape(50))
                         .clickable(
                             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                             indication = null,
@@ -374,7 +381,7 @@ fun ChatListTopBar(
                         onExpandedChange = { if (it) onSearchToggle() },
                         shape = RoundedCornerShape(50),
                         colors = SearchBarDefaults.colors(
-                            containerColor = Color.White.copy(alpha = 0.85f),
+                            containerColor = Color.White.copy(alpha = 0.95f),
                             dividerColor = Color.Transparent
                         ),
                         modifier = Modifier
@@ -386,6 +393,8 @@ fun ChatListTopBar(
                             )
                     ) {}
                 }
+
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(6.dp))
             }
         }
     }
