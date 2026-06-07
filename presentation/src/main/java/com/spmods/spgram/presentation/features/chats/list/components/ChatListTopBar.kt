@@ -50,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.GenericShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
@@ -79,12 +80,26 @@ private val HeaderGradient = Brush.horizontalGradient(
 private val SearchBorderColor = Color(0xFF4CAF50) // green border
 
 // Bottom rounded shape for the header — gives the "convex bottom" look like the image
-private val HeaderShape = RoundedCornerShape(
-    bottomStart = 28.dp,
-    bottomEnd = 28.dp
-)
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+// Concave bottom shape — curves inward at the bottom like the original image
+private val HeaderConcaveShape = GenericShape { size, _ ->
+    val w = size.width
+    val h = size.height
+    val curveDepth = 36f // how deep the concave dip goes (px) — adjust if needed
+
+    moveTo(0f, 0f)
+    lineTo(w, 0f)
+    lineTo(w, h)
+    // concave curve: right → dip down → left
+    cubicTo(
+        w * 0.75f, h + curveDepth,
+        w * 0.25f, h + curveDepth,
+        0f, h
+    )
+    close()
+}
+
+
 @Composable
 fun ChatListTopBar(
     user: UserModel?,
@@ -164,9 +179,7 @@ fun ChatListTopBar(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    // FIX 3: clip + background BEFORE statusBarsPadding
-                    // so gradient extends behind the status bar like the image
-                    .clip(HeaderShape)
+                    .clip(HeaderConcaveShape)
                     .background(HeaderGradient)
                     .statusBarsPadding()           // content only pushes down, bg fills status bar area
                     .then(if (isTablet) Modifier.padding(top = 6.dp) else Modifier)
