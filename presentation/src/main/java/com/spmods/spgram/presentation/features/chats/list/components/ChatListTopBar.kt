@@ -50,9 +50,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.GenericShape
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInRoot
@@ -79,24 +84,29 @@ private val HeaderGradient = Brush.horizontalGradient(
 )
 private val SearchBorderColor = Color(0xFF4CAF50) // green border
 
-// Bottom rounded shape for the header — gives the "convex bottom" look like the image
-
 // Concave bottom shape — curves inward at the bottom like the original image
-private val HeaderConcaveShape = GenericShape { size, _ ->
-    val w = size.width
-    val h = size.height
-    val curveDepth = 36f // how deep the concave dip goes (px) — adjust if needed
-
-    moveTo(0f, 0f)
-    lineTo(w, 0f)
-    lineTo(w, h)
-    // concave curve: right → dip down → left
-    cubicTo(
-        w * 0.75f, h + curveDepth,
-        w * 0.25f, h + curveDepth,
-        0f, h
-    )
-    close()
+private object HeaderConcaveShape : Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: LayoutDirection,
+        density: Density
+    ): Outline {
+        val w = size.width
+        val h = size.height
+        val curveDepth = 36f
+        val path = Path().apply {
+            moveTo(0f, 0f)
+            lineTo(w, 0f)
+            lineTo(w, h)
+            cubicTo(
+                w * 0.75f, h + curveDepth,
+                w * 0.25f, h + curveDepth,
+                0f, h
+            )
+            close()
+        }
+        return Outline.Generic(path)
+    }
 }
 
 
