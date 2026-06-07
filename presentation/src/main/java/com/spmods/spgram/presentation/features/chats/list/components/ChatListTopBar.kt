@@ -71,13 +71,10 @@ import com.spmods.spgram.presentation.features.stickers.ui.view.StickerImage
 // Header gradient colors matching the image
 private val HeaderGradient = Brush.verticalGradient(
     colors = listOf(
-        Color(0xFFEDF7ED), // light green top
-        Color(0xFFF3EDFC), // light purple bottom
+        Color(0xFFDFF2E1), // light green top
+        Color(0xFFEDE8F8), // light purple/lavender bottom
+        Color(0xFFF5F0FF), // even lighter at search bar bottom
     )
-)
-private val HeaderShape = androidx.compose.foundation.shape.RoundedCornerShape(
-    bottomStart = 20.dp,
-    bottomEnd = 20.dp
 )
 private val SearchBorderColor = Color(0xFF4CAF50) // green border
 
@@ -162,9 +159,8 @@ fun ChatListTopBar(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(HeaderShape)
-                    .background(HeaderGradient)
                     .statusBarsPadding()
+                    .background(HeaderGradient)
                     .then(if (isTablet) Modifier.padding(top = 6.dp) else Modifier)
             ) {
                 Row(
@@ -347,6 +343,7 @@ fun ChatListTopBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .padding(bottom = 10.dp)
                         .border(
                             width = 1.dp,
                             color = SearchBorderColor,
