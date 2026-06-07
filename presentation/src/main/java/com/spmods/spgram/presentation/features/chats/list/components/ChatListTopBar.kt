@@ -13,6 +13,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,11 @@ private val HeaderGradient = Brush.verticalGradient(
 )
 private val SearchBorderColor = Color(0xFF4CAF50) // green border
 
+// Bottom rounded shape for the header — gives the "convex bottom" look like the image
+private val HeaderShape = RoundedCornerShape(
+    bottomStart = 28.dp,
+    bottomEnd = 28.dp
+)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -160,6 +166,8 @@ fun ChatListTopBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
+                    // FIX 1: clip BEFORE background so bottom corners are properly rounded
+                    .clip(HeaderShape)
                     .background(HeaderGradient)
                     .then(if (isTablet) Modifier.padding(top = 6.dp) else Modifier)
             ) {
@@ -338,60 +346,41 @@ fun ChatListTopBar(
                     }
                 }
 
-                // Inline search bar — click triggers real search
-                Box(
+                // FIX 2: Search bar border — correct modifier order:
+                // clip → background → border → clickable → inner padding
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .padding(bottom = 10.dp)
-                        .border(
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 4.dp, bottom = 12.dp)
+                        .clip(RoundedCornerShape(50))               // 1. clip shape first
+                        .background(Color.White)                    // 2. fill background inside clip
+                        .border(                                     // 3. draw border on clipped edge
                             width = 1.dp,
                             color = SearchBorderColor,
                             shape = RoundedCornerShape(50)
                         )
-                        .clip(RoundedCornerShape(50))
                         .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = onSearchToggle
                         )
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SearchBar(
-                        inputField = {
-                            SearchBarDefaults.InputField(
-                                query = "",
-                                onQueryChange = {},
-                                onSearch = {},
-                                expanded = false,
-                                onExpandedChange = { if (it) onSearchToggle() },
-                                placeholder = { Text(stringResource(R.string.search_conversations_placeholder)) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Rounded.Search,
-                                        contentDescription = null,
-                                        tint = SearchBorderColor
-                                    )
-                                },
-                            )
-                        },
-                        expanded = false,
-                        onExpandedChange = { if (it) onSearchToggle() },
-                        shape = RoundedCornerShape(50),
-                        colors = SearchBarDefaults.colors(
-                            containerColor = Color.White.copy(alpha = 0.95f),
-                            dividerColor = Color.Transparent
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(
-                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                indication = null,
-                                onClick = onSearchToggle
-                            )
-                    ) {}
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = SearchBorderColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.search_conversations_placeholder),
+                        color = Color(0xFF9E9E9E),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
-
-                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(6.dp))
             }
         }
     }
