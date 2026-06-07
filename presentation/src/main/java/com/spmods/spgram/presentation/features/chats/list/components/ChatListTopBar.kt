@@ -84,25 +84,50 @@ private val HeaderGradient = Brush.horizontalGradient(
 )
 private val SearchBorderColor = Color(0xFF4CAF50) // green border
 
-// Concave bottom shape — curves inward at the bottom like the original image
-private object HeaderConcaveShape : Shape {
+// ── FIXED: Concave bottom shape with rounded top corners ──────────────────
+private class HeaderConcaveShape(private val cornerRadiusPx: Float) : Shape {
     override fun createOutline(
-        size: androidx.compose.ui.geometry.Size,
+        size: Size,
         layoutDirection: LayoutDirection,
         density: Density
     ): Outline {
         val w = size.width
         val h = size.height
         val curveDepth = 36f
+        val r = cornerRadiusPx
+
         val path = Path().apply {
-            moveTo(0f, 0f)
-            lineTo(w, 0f)
+            // Start at top-left after corner
+            moveTo(0f, r)
+
+            // Top-left rounded corner
+            cubicTo(
+                0f, 0f,
+                0f, 0f,
+                r, 0f
+            )
+
+            // Top edge → top-right corner start
+            lineTo(w - r, 0f)
+
+            // Top-right rounded corner
+            cubicTo(
+                w, 0f,
+                w, 0f,
+                w, r
+            )
+
+            // Right edge down to bottom-right
             lineTo(w, h)
+
+            // Concave bottom curve (right → left)
             cubicTo(
                 w * 0.75f, h + curveDepth,
                 w * 0.25f, h + curveDepth,
                 0f, h
             )
+
+            // Left edge back up to start
             close()
         }
         return Outline.Generic(path)
@@ -110,6 +135,7 @@ private object HeaderConcaveShape : Shape {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ChatListTopBar(
     user: UserModel?,
@@ -132,6 +158,13 @@ fun ChatListTopBar(
     val isTabletInterfaceEnabled = LocalTabletInterfaceEnabled.current
     val isTablet =
         adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) && isTabletInterfaceEnabled
+
+    // Build the shape here so we have access to Density via dp.toPx()
+    val cornerRadiusDp = 24.dp
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val headerShape = remember(cornerRadiusDp, density) {
+        HeaderConcaveShape(cornerRadiusPx = with(density) { cornerRadiusDp.toPx() })
+    }
 
     AnimatedContent(
         targetState = isSearchActive,
@@ -189,9 +222,9 @@ fun ChatListTopBar(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(HeaderConcaveShape)
+                    .clip(headerShape)                          // ← FIXED: rounded top corners + concave bottom
                     .background(HeaderGradient)
-                    .statusBarsPadding()           // content only pushes down, bg fills status bar area
+                    .statusBarsPadding()
                     .then(if (isTablet) Modifier.padding(top = 6.dp) else Modifier)
             ) {
                 Row(
@@ -369,16 +402,15 @@ fun ChatListTopBar(
                     }
                 }
 
-                // FIX 2: Search bar border — correct modifier order:
-                // clip → background → border → clickable → inner padding
+                // Search bar — clip → background → border → clickable → inner padding
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .padding(top = 4.dp, bottom = 12.dp)
-                        .clip(RoundedCornerShape(50))               // 1. clip shape first
-                        .background(Color.White)                    // 2. fill background inside clip
-                        .border(                                     // 3. draw border on clipped edge
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White)
+                        .border(
                             width = 1.dp,
                             color = SearchBorderColor,
                             shape = RoundedCornerShape(50)
