@@ -1,6 +1,5 @@
 package com.spmods.spgram.app.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -12,7 +11,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -62,38 +60,9 @@ fun MobileLayout(root: RootComponent) {
         isDragToBackEnabled && isSwipeBackSupported(stack.active.instance) && !isSwipeBackBlocked
     val dragProgress = if (widthPx > 0f) (dragOffsetX / widthPx).coerceIn(0f, 1f) else 0f
 
-    var selectedTab by remember { mutableStateOf(MainTab.Chats) }
-
     val activeChild = stack.active.instance
     val isOnChatsRoot by remember(activeChild) {
         derivedStateOf { activeChild is RootComponent.Child.ChatsChild }
-    }
-    val isOnSettingsRoot by remember(activeChild) {
-        derivedStateOf {
-            activeChild is RootComponent.Child.SettingsChild ||
-            activeChild is RootComponent.Child.EditProfileChild ||
-            activeChild is RootComponent.Child.SessionsChild ||
-            activeChild is RootComponent.Child.DataStorageChild ||
-            activeChild is RootComponent.Child.StorageUsageChild ||
-            activeChild is RootComponent.Child.NetworkUsageChild ||
-            activeChild is RootComponent.Child.AdBlockChild ||
-            activeChild is RootComponent.Child.PowerSavingChild ||
-            activeChild is RootComponent.Child.NotificationsChild ||
-            activeChild is RootComponent.Child.ProxyChild ||
-            activeChild is RootComponent.Child.PrivacyChild ||
-            activeChild is RootComponent.Child.AboutChild ||
-            activeChild is RootComponent.Child.StickersChild ||
-            activeChild is RootComponent.Child.DebugChild
-        }
-    }
-    val showBottomBar = isOnChatsRoot
-
-    LaunchedEffect(isOnChatsRoot, isOnSettingsRoot) {
-        when {
-            isOnChatsRoot && selectedTab != MainTab.Chats &&
-            selectedTab != MainTab.Stories && selectedTab != MainTab.Calls ->
-                selectedTab = MainTab.Chats
-        }
     }
 
     LaunchedEffect(canUseDragToBack) {
@@ -103,11 +72,8 @@ fun MobileLayout(root: RootComponent) {
         }
     }
 
-    // ── Unread count ───────────────────────────────────────────────────────
-    val chatsUnread = rememberChatsUnreadCount(stack.active.instance)
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.weight(1f)) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
 
             // ── Previous screen (swipe-back peek) ─────────────────────────
             if (dragOffsetX > 0f && previous != null) {
@@ -213,54 +179,8 @@ fun MobileLayout(root: RootComponent) {
                 }
             }
 
-            // ── Tab content overlays ───────────────────────────────────────
-            if (isOnChatsRoot) {
-                when (selectedTab) {
-                    MainTab.Chats -> { /* ChatListContent already rendered in Children stack */ }
-                    MainTab.Stories -> StoriesPlaceholderContent()
-                    MainTab.Calls -> CallsPlaceholderContent()
-                }
-            }
-        }
-
-        // ── Bottom Navigation Bar ──────────────────────────────────────────
-        AnimatedVisibility(
-            visible = showBottomBar,
-            enter = slideInVertically { it } + fadeIn(tween(200)),
-            exit = slideOutVertically { it } + fadeOut(tween(200)),
-        ) {
-            MainBottomBar(
-                selectedTab = selectedTab,
-                chatsUnread = chatsUnread,
-                onTabSelected = { tab ->
-                    when (tab) {
-                        MainTab.Chats -> {
-                            if (!isOnChatsRoot) root.onChatsClick()
-                            selectedTab = MainTab.Chats
-                        }
-                        MainTab.Stories -> {
-                            if (!isOnChatsRoot) root.onChatsClick()
-                            selectedTab = MainTab.Stories
-                        }
-                        MainTab.Calls -> {
-                            if (!isOnChatsRoot) root.onChatsClick()
-                            selectedTab = MainTab.Calls
-                        }
-                    }
-                },
-            )
         }
     }
-}
-
-// Reads unread count from ChatsChild's ChatListComponent.
-// Uses chatsState (StateFlow<ChatsState>) with collectAsState() — NOT subscribeAsState().
-@Composable
-private fun rememberChatsUnreadCount(activeInstance: RootComponent.Child): Int {
-    val chatsChild = activeInstance as? RootComponent.Child.ChatsChild
-        ?: return 0
-    val chatsState by chatsChild.component.chatsState.collectAsState()
-    return chatsState.chats.sumOf { chat -> chat.unreadCount }.coerceAtMost(99)
 }
 
 private fun isSwipeBackSupported(child: RootComponent.Child): Boolean =
