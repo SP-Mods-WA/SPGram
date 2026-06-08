@@ -290,7 +290,7 @@ fun ChannelAlbumMessageBubble(
                             MessageMetadata(
                                 msg = lastMsg,
                                 isOutgoing = lastMsg.isOutgoing,
-                                contentColor = Color(0xFF212121).copy(alpha = 0.8f)
+                                contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.8f) else Color(0xFF212121).copy(alpha = 0.8f)
                             )
                         }
                     }
@@ -356,7 +356,7 @@ fun ChannelDocumentAlbumBubble(
     )
 
     val backgroundColor = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)
-    val contentColor = Color(0xFF212121)
+    val contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121)
     val timeColor = contentColor.copy(alpha = 0.7f)
 
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
@@ -559,7 +559,7 @@ fun ChannelAudioAlbumBubble(
     )
 
     val backgroundColor = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)
-    val contentColor = Color(0xFF212121)
+    val contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121)
     val timeColor = contentColor.copy(alpha = 0.7f)
 
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
