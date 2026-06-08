@@ -70,19 +70,13 @@ import com.spmods.spgram.presentation.core.util.LocalTabletInterfaceEnabled
 import com.spmods.spgram.presentation.features.stickers.ui.view.StickerImage
 
 // Header gradient — horizontal: green (left) → purple (right) matching the image
-private val HeaderGradient = Brush.horizontalGradient(
+val HeaderGradient = Brush.horizontalGradient(
     colors = listOf(
         Color(0xFFD6F0DC), // mint green - left
         Color(0xFFE8E0F5), // soft lavender - right
     )
 )
 private val SearchBorderColor = Color(0xFF4CAF50) // green border
-
-// Bottom rounded shape for the header — gives the "convex bottom" look like the image
-private val HeaderShape = RoundedCornerShape(
-    bottomStart = 28.dp,
-    bottomEnd = 28.dp
-)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -164,11 +158,9 @@ fun ChatListTopBar(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    // FIX 3: clip + background BEFORE statusBarsPadding
-                    // so gradient extends behind the status bar like the image
-                    .clip(HeaderShape)
+                    // FIX: .clip(HeaderShape) ඉවත් කර ඇත, එවිට මෙය සාමාන්‍ය Square හැඩයක් ගනී.
                     .background(HeaderGradient)
-                    .statusBarsPadding()           // content only pushes down, bg fills status bar area
+                    .statusBarsPadding()
                     .then(if (isTablet) Modifier.padding(top = 6.dp) else Modifier)
             ) {
                 Row(
@@ -346,16 +338,14 @@ fun ChatListTopBar(
                     }
                 }
 
-                // FIX 2: Search bar border — correct modifier order:
-                // clip → background → border → clickable → inner padding
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .padding(top = 4.dp, bottom = 12.dp)
-                        .clip(RoundedCornerShape(50))               // 1. clip shape first
-                        .background(Color.White)                    // 2. fill background inside clip
-                        .border(                                     // 3. draw border on clipped edge
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White)
+                        .border(
                             width = 1.dp,
                             color = SearchBorderColor,
                             shape = RoundedCornerShape(50)
