@@ -87,7 +87,7 @@ internal fun AlbumMessageBubbleContainer(
 
     val maxWidth = remember(behavior.isChannel, isLandscape, screenWidth) {
         when {
-            behavior.isChannel -> if (isLandscape) (screenWidth * 0.7f).coerceAtMost(600.dp) else (screenWidth * 0.94f).coerceAtMost(
+            behavior.isChannel -> if (isLandscape) (screenWidth * 0.60f).coerceAtMost(600.dp) else (screenWidth * 0.85f).coerceAtMost(
                 500.dp
             )
 
