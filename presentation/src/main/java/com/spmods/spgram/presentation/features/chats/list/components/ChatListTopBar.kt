@@ -68,17 +68,24 @@ import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.ui.ExpressiveDefaults
 import com.spmods.spgram.presentation.core.util.LocalTabletInterfaceEnabled
 import com.spmods.spgram.presentation.features.stickers.ui.view.StickerImage
+import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 
-// Header gradient — horizontal: green (left) → purple (right) matching the image
-private val HeaderGradient = Brush.horizontalGradient(
+// Light mode header gradient — mint green → soft lavender
+private val HeaderGradientLight = Brush.horizontalGradient(
     colors = listOf(
         Color(0xFFD6F0DC), // mint green - left
         Color(0xFFE8E0F5), // soft lavender - right
     )
 )
-private val SearchBorderColor = Color(0xFF4CAF50) // green border
 
-// Bottom rounded shape for the header — gives the "convex bottom" look like the image
+// Dark mode header gradient — deep navy → dark purple
+private val HeaderGradientDark = Brush.horizontalGradient(
+    colors = listOf(
+        Color(0xFF1A2332), // deep dark navy - left
+        Color(0xFF1E1A2E), // dark purple - right
+    )
+)
+
 private val HeaderShape = RoundedCornerShape(
     bottomStart = 28.dp,
     bottomEnd = 28.dp
@@ -102,6 +109,12 @@ fun ChatListTopBar(
     var statusAnchorBounds by remember { mutableStateOf<Rect?>(null) }
     val iconButtonShapes = ExpressiveDefaults.iconButtonShapes()
     val motionScheme = MaterialTheme.motionScheme
+    val isDark = LocalDarkTheme.current
+    val headerGradient = if (isDark) HeaderGradientDark else HeaderGradientLight
+    val searchBorderColor = if (isDark) Color(0xFF2A7AE8) else Color(0xFF4CAF50)
+    val searchBgColor = if (isDark) Color(0xFF252D3D) else Color.White
+    val searchHintColor = if (isDark) Color(0xFF8A9BB8) else Color(0xFF9E9E9E)
+    val titleColor = if (isDark) Color(0xFF4DD0E1) else Color(0xFF25D366)
 
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val isTabletInterfaceEnabled = LocalTabletInterfaceEnabled.current
@@ -167,7 +180,7 @@ fun ChatListTopBar(
                     // FIX 3: clip + background BEFORE statusBarsPadding
                     // so gradient extends behind the status bar like the image
                     .clip(HeaderShape)
-                    .background(HeaderGradient)
+                    .background(headerGradient)
                     .statusBarsPadding()           // content only pushes down, bg fills status bar area
                     .then(if (isTablet) Modifier.padding(top = 6.dp) else Modifier)
             ) {
@@ -190,7 +203,7 @@ fun ChatListTopBar(
                                 text = stringResource(R.string.app_name_spgram),
                                 style = MaterialTheme.typography.headlineSmallEmphasized,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF25D366)
+                                color = titleColor
                             )
 
                             if (!user?.statusEmojiPath.isNullOrBlank()) {
@@ -346,18 +359,16 @@ fun ChatListTopBar(
                     }
                 }
 
-                // FIX 2: Search bar border — correct modifier order:
-                // clip → background → border → clickable → inner padding
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .padding(top = 4.dp, bottom = 12.dp)
-                        .clip(RoundedCornerShape(50))               // 1. clip shape first
-                        .background(Color.White)                    // 2. fill background inside clip
-                        .border(                                     // 3. draw border on clipped edge
+                        .clip(RoundedCornerShape(50))
+                        .background(searchBgColor)
+                        .border(
                             width = 1.dp,
-                            color = SearchBorderColor,
+                            color = searchBorderColor,
                             shape = RoundedCornerShape(50)
                         )
                         .clickable(
@@ -371,13 +382,13 @@ fun ChatListTopBar(
                     Icon(
                         imageVector = Icons.Rounded.Search,
                         contentDescription = null,
-                        tint = SearchBorderColor,
+                        tint = searchBorderColor,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.search_conversations_placeholder),
-                        color = Color(0xFF9E9E9E),
+                        color = searchHintColor,
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
