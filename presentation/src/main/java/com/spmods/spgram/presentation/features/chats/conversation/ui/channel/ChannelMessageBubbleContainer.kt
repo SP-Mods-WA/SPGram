@@ -94,9 +94,9 @@ internal fun ChannelMessageBubbleContainer(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val maxWidth = if (isLandscape) {
-        (screenWidth * 0.7f).coerceAtMost(600.dp)
+        (screenWidth * 0.60f).coerceAtMost(600.dp)
     } else {
-        (screenWidth * 0.94f).coerceAtMost(500.dp)
+        (screenWidth * 0.85f).coerceAtMost(500.dp)
     }
 
     val topSpacing = if (!senderGrouping.isSameSenderAbove) 12.dp else 2.dp
