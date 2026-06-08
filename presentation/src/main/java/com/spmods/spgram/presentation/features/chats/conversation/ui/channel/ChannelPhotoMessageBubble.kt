@@ -144,6 +144,7 @@ fun ChannelPhotoMessageBubble(
         Surface(
             shape = bubbleShape,
             color = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF),
+            contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
             tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
