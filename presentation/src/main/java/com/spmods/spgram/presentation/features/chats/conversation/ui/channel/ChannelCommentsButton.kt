@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 
 @Composable
 fun ChannelCommentsButton(
@@ -29,7 +30,7 @@ fun ChannelCommentsButton(
     val context = LocalContext.current
     Surface(
         modifier = modifier,
-        color = Color(0xFFFFFFFF),
+        color = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF),
         shape = RoundedCornerShape(
             topStart = 4.dp,
             topEnd = 4.dp,
