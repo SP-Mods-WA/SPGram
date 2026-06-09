@@ -242,7 +242,20 @@ class FileDownloadQueue(
             try {
                 val finalFile = withTimeoutOrNull(10000) { gateway.execute(TdApi.GetFile(fileId)) }
                 if (finalFile != null) {
-                    cache.fileCache[fileId] = finalFile
+                    // If file is not completed and has a temp/partial path, clear it from cache
+                    // so next download attempt starts fresh from TDLib perspective
+                    val fileToCache = if (!finalFile.local.isDownloadingCompleted &&
+                        !finalFile.local.isDownloadingActive &&
+                        finalFile.local.path.isNotEmpty()) {
+                        // Keep file object but don't let stale temp path block re-download
+                        finalFile.also {
+                            it.local.path = ""
+                            it.local.downloadedSize = 0
+                        }
+                    } else {
+                        finalFile
+                    }
+                    cache.fileCache[fileId] = fileToCache
                     if (finalFile.local.isDownloadingCompleted) {
                         notifyDownloadComplete(fileId)
                     } else if (!finalFile.local.isDownloadingActive && !hasPendingOrActiveRequest(fileId)) {
