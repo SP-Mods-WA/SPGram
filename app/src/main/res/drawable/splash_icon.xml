@@ -1,12 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="100dp"
-        android:height="100dp"
-        android:gravity="center">
-        <bitmap
-            android:src="@mipmap/splash_img"
-            android:gravity="center"
-            android:tileMode="disabled" />
-    </item>
-</layer-list>
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/spic_splash"
+    android:insetLeft="18dp"
+    android:insetTop="18dp"
+    android:insetRight="18dp"
+    android:insetBottom="18dp" />
