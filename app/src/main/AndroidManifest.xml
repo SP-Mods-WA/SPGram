@@ -41,7 +41,7 @@
         android:theme="@style/Theme.SPGram">
         <activity
                 android:name=".MainActivity"
-                android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density"
+                android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|uiMode"
                 android:enableOnBackInvokedCallback="true"
                 android:exported="true"
                 android:hardwareAccelerated="true"
