@@ -1,5 +1,7 @@
 package com.spmods.spgram.data.infra
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -27,7 +29,8 @@ class FileDownloadQueue(
     val registry: FileMessageRegistry,
     private val cache: ChatCache,
     private val scope: CoroutineScope,
-    private val dispatcherProvider: DispatcherProvider
+    private val dispatcherProvider: DispatcherProvider,
+    context: Context
 ) {
     enum class DownloadType { VIDEO, GIF, STICKER, VIDEO_NOTE, DEFAULT }
 
@@ -60,7 +63,16 @@ class FileDownloadQueue(
 
     private val fileDownloadTypes = ConcurrentHashMap<Int, DownloadType>()
     private val manualDownloadIds = ConcurrentHashMap.newKeySet<Int>()
-    private val suppressedAutoDownloadIds = ConcurrentHashMap.newKeySet<Int>()
+    private val suppressPrefs: SharedPreferences =
+        context.getSharedPreferences("spgram_cancelled_downloads", Context.MODE_PRIVATE)
+
+    // Persisted across app restarts so TDLib auto-resume is blocked for user-cancelled files.
+    // In-memory copy for fast reads; SharedPreferences is the source of truth on startup.
+    private val suppressedAutoDownloadIds: MutableSet<Int> = ConcurrentHashMap.newKeySet<Int>().also { set ->
+        suppressPrefs.getStringSet("cancelled_file_ids", emptySet())
+            ?.mapNotNull { it.toIntOrNull() }
+            ?.let { set.addAll(it) }
+    }
     private val downloadWaiters = ConcurrentHashMap<Int, CompletableDeferred<Unit>>()
     private val uploadWaiters = ConcurrentHashMap<Int, CompletableDeferred<Unit>>()
     private val lastProgressAt = ConcurrentHashMap<Int, Long>()
@@ -653,6 +665,7 @@ class FileDownloadQueue(
 
         if (suppress) {
             suppressedAutoDownloadIds.add(fileId)
+            persistSuppressed()
         }
 
         // Always clear manual flag on explicit cancel so a subsequent tap starts a fresh download
@@ -678,8 +691,15 @@ class FileDownloadQueue(
 
     fun clearSuppression(fileId: Int) {
         if (suppressedAutoDownloadIds.remove(fileId)) {
+            persistSuppressed()
             Log.d("DownloadDebug", "queue.suppression.cleared: fileId=$fileId")
         }
+    }
+
+    private fun persistSuppressed() {
+        suppressPrefs.edit()
+            .putStringSet("cancelled_file_ids", suppressedAutoDownloadIds.map { it.toString() }.toSet())
+            .apply()
     }
 
     fun waitForDownload(fileId: Int): CompletableDeferred<Unit> {
@@ -695,6 +715,9 @@ class FileDownloadQueue(
 
     fun notifyDownloadComplete(fileId: Int) {
         downloadWaiters.remove(fileId)?.complete(Unit)
+        if (suppressedAutoDownloadIds.remove(fileId)) {
+            persistSuppressed()
+        }
     }
 
     fun notifyDownloadCancelled(fileId: Int) {
