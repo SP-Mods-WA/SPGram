@@ -12,7 +12,10 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.window.layout.WindowInfoTracker
+import kotlinx.coroutines.launch
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.retainedComponent
 import org.koin.android.ext.android.inject
@@ -74,6 +77,16 @@ class MainActivity : FragmentActivity() {
         }
 
         handleIntent(intent)
+
+        // Observe nightMode changes outside Compose — guaranteed status bar update
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                root.appPreferences.nightMode.collect {
+                    isDarkTheme = resolveIsDarkTheme()
+                    applyStatusBarColors()
+                }
+            }
+        }
 
         val windowInfoTracker = WindowInfoTracker.getOrCreate(this)
 
