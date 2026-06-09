@@ -6,8 +6,14 @@
         </shape>
     </item>
     <item android:gravity="center">
-        <bitmap
-            android:src="@mipmap/splash_img"
-            android:gravity="center" />
+        <inset
+            android:insetLeft="100dp"
+            android:insetRight="100dp"
+            android:insetTop="100dp"
+            android:insetBottom="100dp">
+            <bitmap
+                android:src="@mipmap/splash_img"
+                android:gravity="center" />
+        </inset>
     </item>
 </layer-list>
