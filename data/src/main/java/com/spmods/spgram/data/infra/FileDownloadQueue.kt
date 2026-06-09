@@ -469,6 +469,17 @@ class FileDownloadQueue(
             lastProgressAt[file.id] = now
         }
 
+        // If TDLib auto-resumed a download that the user previously cancelled (e.g. after
+        // app restart), cancel it immediately. The suppression set is persisted to disk so
+        // it survives restarts.
+        if (file.local.isDownloadingActive && suppressedAutoDownloadIds.contains(file.id)) {
+            Log.d("DownloadDebug", "updateFileCache: blocking TDLib auto-resume for suppressed fileId=${file.id}")
+            scope.launch(dispatcherProvider.io) {
+                try { gateway.execute(TdApi.CancelDownloadFile(file.id, false)) } catch (_: Exception) { }
+            }
+            return
+        }
+
         if (file.local.isDownloadingCompleted) {
             manualDownloadIds.remove(file.id)
             failedRequests.remove(file.id)
