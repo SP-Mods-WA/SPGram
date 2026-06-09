@@ -451,9 +451,9 @@ class FileDownloadQueue(
                         type = type ?: DownloadType.DEFAULT
                     )
                 }
-            } else {
-                manualDownloadIds.remove(file.id)
             }
+            // Do NOT remove manualDownloadIds here — removal happens only on completion
+            // so that re-download after cancel still gets manual priority
         }
 
         if (file.remote.isUploadingCompleted) {
