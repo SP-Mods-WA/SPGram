@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowCompat
 import com.spmods.spgram.app.MainActivity
 import com.spmods.spgram.presentation.core.util.AppPreferences
 import com.spmods.spgram.presentation.core.util.NightMode
@@ -105,6 +106,16 @@ fun AppThemeContainer(
 
         NightMode.BRIGHTNESS -> {
             screenBrightness <= brightnessThreshold
+        }
+    }
+
+    val activity = context as? android.app.Activity
+    SideEffect {
+        activity?.window?.let { win ->
+            WindowCompat.getInsetsController(win, win.decorView).apply {
+                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightNavigationBars = !darkTheme
+            }
         }
     }
 
