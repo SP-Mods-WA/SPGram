@@ -242,24 +242,36 @@ class FileDownloadQueue(
             try {
                 val finalFile = withTimeoutOrNull(10000) { gateway.execute(TdApi.GetFile(fileId)) }
                 if (finalFile != null) {
-                    // If file is not completed and has a temp/partial path, clear it from cache
-                    // so next download attempt starts fresh from TDLib perspective
-                    val fileToCache = if (!finalFile.local.isDownloadingCompleted &&
-                        !finalFile.local.isDownloadingActive &&
-                        finalFile.local.path.isNotEmpty()) {
-                        // Keep file object but don't let stale temp path block re-download
-                        finalFile.also {
-                            it.local.path = ""
-                            it.local.downloadedSize = 0
-                        }
-                    } else {
-                        finalFile
-                    }
-                    cache.fileCache[fileId] = fileToCache
                     if (finalFile.local.isDownloadingCompleted) {
+                        // Fully downloaded — store as-is and notify success
+                        cache.fileCache[fileId] = finalFile
                         notifyDownloadComplete(fileId)
-                    } else if (!finalFile.local.isDownloadingActive && !hasPendingOrActiveRequest(fileId)) {
-                        notifyDownloadCancelled(fileId)
+                    } else {
+                        // Not completed (cancelled, failed, or stalled).
+                        // Build a clean copy so stale temp/partial paths are never cached
+                        // as valid paths. Mutating the original TdApi.File is unsafe because
+                        // TDLib may hold the same reference internally.
+                        val cleanLocal = TdApi.LocalFile().apply {
+                            path = ""
+                            canBeDownloaded = finalFile.local.canBeDownloaded
+                            canBeDeleted = finalFile.local.canBeDeleted
+                            isDownloadingActive = false
+                            isDownloadingCompleted = false
+                            downloadOffset = 0
+                            downloadedPrefixSize = 0
+                            downloadedSize = 0
+                        }
+                        val cleanFile = TdApi.File().apply {
+                            id = finalFile.id
+                            size = finalFile.size
+                            expectedSize = finalFile.expectedSize
+                            local = cleanLocal
+                            remote = finalFile.remote
+                        }
+                        cache.fileCache[fileId] = cleanFile
+                        if (!finalFile.local.isDownloadingActive && !hasPendingOrActiveRequest(fileId)) {
+                            notifyDownloadCancelled(fileId)
+                        }
                     }
                 } else if (!hasPendingOrActiveRequest(fileId)) {
                     notifyDownloadCancelled(fileId)
@@ -456,17 +468,36 @@ class FileDownloadQueue(
             notifyDownloadComplete(file.id)
         } else if (oldFile?.local?.isDownloadingActive == true && !file.local.isDownloadingActive) {
             val type = fileDownloadTypes[file.id]
-            if (type == DownloadType.STICKER || manualDownloadIds.contains(file.id)) {
+            if (type == DownloadType.STICKER) {
+                // Stickers always retry automatically
                 scope.launch(dispatcherProvider.default) {
                     enqueue(
                         fileId = file.id,
-                        priority = if (type == DownloadType.STICKER) 32 else calculatePriority(file.id),
-                        type = type ?: DownloadType.DEFAULT
+                        priority = 32,
+                        type = DownloadType.STICKER
                     )
                 }
+            } else if (manualDownloadIds.contains(file.id)) {
+                // For non-sticker manual downloads that become inactive without completing:
+                // only re-enqueue if they are still in the queue (i.e. not explicitly cancelled).
+                // cancelDownload() removes the id from pendingRequests/activeRequests, so
+                // hasPendingOrActiveRequest will be false for explicitly cancelled downloads.
+                scope.launch(dispatcherProvider.default) {
+                    val stillQueued = hasPendingOrActiveRequest(file.id)
+                    if (stillQueued) {
+                        enqueue(
+                            fileId = file.id,
+                            priority = calculatePriority(file.id),
+                            type = type ?: DownloadType.DEFAULT
+                        )
+                    } else {
+                        // Explicitly cancelled — remove manual flag so next tap starts fresh
+                        manualDownloadIds.remove(file.id)
+                    }
+                }
             }
-            // Do NOT remove manualDownloadIds here — removal happens only on completion
-            // so that re-download after cancel still gets manual priority
+            // Do NOT remove manualDownloadIds here when re-enqueuing — removal happens on
+            // completion or on explicit cancel (see above).
         }
 
         if (file.remote.isUploadingCompleted) {
@@ -624,6 +655,9 @@ class FileDownloadQueue(
             suppressedAutoDownloadIds.add(fileId)
         }
 
+        // Always clear manual flag on explicit cancel so a subsequent tap starts a fresh download
+        manualDownloadIds.remove(fileId)
+
         scope.launch(dispatcherProvider.io) {
             try {
                 gateway.execute(TdApi.CancelDownloadFile(fileId, false))
@@ -635,6 +669,8 @@ class FileDownloadQueue(
                 activeRequests.remove(fileId)
                 failedRequests.remove(fileId)
             }
+            lastProgressAt.remove(fileId)
+            stalledRecoveryAt.remove(fileId)
             Log.d("DownloadDebug", "queue.cancel.cleared: fileId=$fileId")
             notifyDownloadCancelled(fileId)
         }
