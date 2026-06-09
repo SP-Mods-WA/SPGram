@@ -58,11 +58,7 @@ class MainActivity : FragmentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         // Apply correct status bar icon colors immediately (light/dark)
-        val isLight = !isDarkTheme
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = isLight
-            isAppearanceLightNavigationBars = isLight
-        }
+        applyStatusBarColors()
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             window.isStatusBarContrastEnforced = false
             window.isNavigationBarContrastEnforced = false
@@ -124,6 +120,20 @@ class MainActivity : FragmentActivity() {
 
     fun updateTheme(darkTheme: Boolean) {
         isDarkTheme = darkTheme
+        applyStatusBarColors()
+    }
+
+    private fun applyStatusBarColors() {
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !isDarkTheme
+            isAppearanceLightNavigationBars = !isDarkTheme
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        isDarkTheme = resolveIsDarkTheme()
+        applyStatusBarColors()
     }
 
     private fun startNotificationService() {
