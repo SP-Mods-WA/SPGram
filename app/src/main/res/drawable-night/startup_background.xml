@@ -5,9 +5,10 @@
             <solid android:color="#FF121212" />
         </shape>
     </item>
-    <item android:gravity="center">
-        <bitmap
-            android:src="@mipmap/splash_img"
-            android:gravity="center" />
-    </item>
+
+    <item
+        android:width="72dp"
+        android:height="72dp"
+        android:drawable="@drawable/spic_splash"
+        android:gravity="center" />
 </layer-list>
