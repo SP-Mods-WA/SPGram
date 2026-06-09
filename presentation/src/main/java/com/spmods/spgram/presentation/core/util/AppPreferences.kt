@@ -94,7 +94,7 @@ class AppPreferences(
     private val _nightMode = MutableStateFlow(NightMode.entries[prefs.getInt(KEY_NIGHT_MODE, NightMode.SYSTEM.ordinal)])
     val nightMode: StateFlow<NightMode> = _nightMode
 
-    private val _isDynamicColorsEnabled = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLORS, true))
+    private val _isDynamicColorsEnabled = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLORS, false))
     val isDynamicColorsEnabled: StateFlow<Boolean> = _isDynamicColorsEnabled
 
     private val _isAmoledThemeEnabled = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_THEME, false))
@@ -1100,7 +1100,7 @@ class AppPreferences(
         _playerSeekDuration.value = 10
         _isPlayerZoomEnabled.value = true
         _nightMode.value = NightMode.SYSTEM
-        _isDynamicColorsEnabled.value = true
+        _isDynamicColorsEnabled.value = false
         _isAmoledThemeEnabled.value = false
         _isCustomThemeEnabled.value = false
         _themePrimaryColor.value = 0xFF3390EC.toInt()
