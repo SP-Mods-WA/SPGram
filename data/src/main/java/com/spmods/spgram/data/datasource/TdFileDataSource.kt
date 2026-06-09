@@ -28,7 +28,7 @@ class TdFileDataSource(
     }
 
     override suspend fun cancelDownload(fileId: Int): TdApi.Ok? {
-        fileDownloadQueue.cancelDownload(fileId, force = true)
+        fileDownloadQueue.cancelDownload(fileId, force = true, suppress = false)
         val result = gateway.execute(TdApi.CancelDownloadFile(fileId, false))
         return if (result is TdApi.Ok) result else null
     }
