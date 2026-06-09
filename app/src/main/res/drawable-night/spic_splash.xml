@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer gradient ring -->
+    <path
+        android:pathData="M54,2 A52,52,0,1,1,53.999,2 Z"
+        android:fillColor="#3B5BDB"/>
+    <path
+        android:pathData="M54,2 A52,52,0,1,1,53.999,2 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="2"
+                android:startY="2"
+                android:endX="106"
+                android:endY="106"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FF4A90E2"/>
+                <item android:offset="0.4" android:color="#FF3B5BDB"/>
+                <item android:offset="1.0" android:color="#FF9B27AF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- White highlight ring -->
+    <path
+        android:pathData="M54,10 A44,44,0,1,1,53.999,10 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#B3FFFFFF"
+        android:strokeWidth="1.2"/>
+
+    <!-- Inner dark space background circle -->
+    <path
+        android:pathData="M54,11 A43,43,0,1,1,53.999,11 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="43.2"
+                android:centerY="43.2"
+                android:gradientRadius="50"
+                android:type="radial">
+                <item android:offset="0.0" android:color="#FF1A237E"/>
+                <item android:offset="0.6" android:color="#FF1A1560"/>
+                <item android:offset="1.0" android:color="#FF4A0072"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Inner subtle ring -->
+    <path
+        android:pathData="M54,17 A37,37,0,1,1,53.999,17 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#40FFFFFF"
+        android:strokeWidth="0.8"/>
+
+    <!-- Stars (small dots) -->
+    <path android:pathData="M28,38 m-0.8,0 a0.8,0.8,0,1,0,1.6,0 a0.8,0.8,0,1,0,-1.6,0"
+        android:fillColor="#E6FFFFFF"/>
+    <path android:pathData="M75,30 m-0.6,0 a0.6,0.6,0,1,0,1.2,0 a0.6,0.6,0,1,0,-1.2,0"
+        android:fillColor="#CCFFFFFF"/>
+    <path android:pathData="M32,68 m-0.7,0 a0.7,0.7,0,1,0,1.4,0 a0.7,0.7,0,1,0,-1.4,0"
+        android:fillColor="#E6FFFFFF"/>
+    <path android:pathData="M74,74 m-0.9,0 a0.9,0.9,0,1,0,1.8,0 a0.9,0.9,0,1,0,-1.8,0"
+        android:fillColor="#CCFFFFFF"/>
+    <path android:pathData="M42,78 m-0.5,0 a0.5,0.5,0,1,0,1.0,0 a0.5,0.5,0,1,0,-1.0,0"
+        android:fillColor="#B3FFFFFF"/>
+    <path android:pathData="M67,26 m-0.6,0 a0.6,0.6,0,1,0,1.2,0 a0.6,0.6,0,1,0,-1.2,0"
+        android:fillColor="#CCFFFFFF"/>
+
+    <!-- 4-point sparkle top-left -->
+    <path
+        android:pathData="M24,28 L25,31 L28,32 L25,33 L24,36 L23,33 L20,32 L23,31 Z"
+        android:fillColor="#F2FFFFFF"/>
+
+    <!-- 4-point sparkle bottom-right -->
+    <path
+        android:pathData="M74,68 L75,71 L78,72 L75,73 L74,76 L73,73 L70,72 L73,71 Z"
+        android:fillColor="#E6FFFFFF"/>
+
+    <!-- Telegram paper plane icon (scaled and centered) -->
+    <!-- Original path translated: translate(54,54) scale(0.13) translate(-248,-256) -->
+    <!-- Pre-computed transform applied to path coordinates -->
+    <path
+        android:pathData="M54,21.7 C36.2,21.7,21.7,36.2,21.7,54 C21.7,71.8,36.2,86.3,54,86.3 C71.8,86.3,86.3,71.8,86.3,54 C86.3,36.2,71.8,21.7,54,21.7 Z M71.2,45.8 C70.7,50.9,68.6,64.3,67.5,70.5 C67.0,73.0,66.1,73.8,65.3,73.9 C63.4,74.0,62.0,72.7,60.1,71.4 C57.3,69.5,55.6,68.3,52.8,66.4 C49.7,64.3,51.8,63.0,53.5,61.2 C53.9,60.8,62.6,52.8,62.8,52.2 C62.8,52.1,62.8,51.7,62.6,51.5 C62.4,51.4,62.0,51.5,61.8,51.5 C61.4,51.6,47.7,60.6,40.9,65.1 C39.0,66.5,37.3,66.4,35.7,65.9 C34.5,65.6,31.8,64.8,29.8,64.2 C27.8,63.5,26.2,63.2,26.3,62.1 C26.4,61.2,27.7,60.2,30.2,59.2 C44.3,53.1,53.5,49.1,58.1,47.0 C67.2,43.3,69.2,42.6,70.4,42.6 C70.7,42.6,71.3,42.7,71.7,43.0 C72.0,43.2,72.2,43.6,72.2,43.9 C72.2,44.1,72.2,44.9,72.1,45.4 Z"
+        android:fillColor="#FFFFFFFF"/>
+
+</vector>
