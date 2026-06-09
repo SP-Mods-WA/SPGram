@@ -676,7 +676,8 @@ val dataModule = module {
             registry = get(),
             cache = get(),
             scope = get(),
-            dispatcherProvider = get()
+            dispatcherProvider = get(),
+            context = androidContext()
         )
     }
 
