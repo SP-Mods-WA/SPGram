@@ -5,8 +5,10 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
@@ -89,6 +91,23 @@ class MainActivity : FragmentActivity() {
 
             val windowLayoutInfo by windowInfoTracker.windowLayoutInfo(this)
                 .collectAsStateWithLifecycle(initialValue = null)
+
+            val nightMode by root.appPreferences.nightMode.collectAsStateWithLifecycle()
+
+            // Recompute darkTheme here so SideEffect can update status bar instantly
+            val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
+            val currentDark = when (nightMode) {
+                NightMode.LIGHT -> false
+                NightMode.DARK -> true
+                else -> systemDark
+            }
+
+            androidx.compose.runtime.SideEffect {
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !currentDark
+                    isAppearanceLightNavigationBars = !currentDark
+                }
+            }
 
             AppThemeContainer(root.appPreferences) {
                 CompositionLocalProvider(
