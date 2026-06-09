@@ -5,7 +5,7 @@
         android:height="200dp"
         android:gravity="center">
         <bitmap
-            android:src="@drawable/splash_img"
+            android:src="@mipmap/splash_img"
             android:gravity="center"
             android:tileMode="disabled" />
     </item>
