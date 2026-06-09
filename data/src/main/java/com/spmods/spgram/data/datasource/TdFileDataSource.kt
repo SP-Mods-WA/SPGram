@@ -28,7 +28,10 @@ class TdFileDataSource(
     }
 
     override suspend fun cancelDownload(fileId: Int): TdApi.Ok? {
-        fileDownloadQueue.cancelDownload(fileId, force = true, suppress = false)
+        // suppress=true ensures updateVisibleRange scroll re-enqueue does not restart
+        // a download the user explicitly cancelled. Suppression is cleared only when
+        // the user intentionally taps the download button again via onDownloadFile.
+        fileDownloadQueue.cancelDownload(fileId, force = true, suppress = true)
         val result = gateway.execute(TdApi.CancelDownloadFile(fileId, false))
         return if (result is TdApi.Ok) result else null
     }
