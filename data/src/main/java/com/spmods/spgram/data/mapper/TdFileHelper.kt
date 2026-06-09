@@ -24,20 +24,26 @@ class TdFileHelper(
 
     fun resolveLocalFilePath(file: TdApi.File?): String? {
         if (file == null) return null
-        val directPath = file.local.path.takeIf { isValidPath(it) }
-        if (directPath != null) return directPath
-        return cache.fileCache[file.id]?.local?.path?.takeIf { isValidPath(it) }
+        // Only return a path if TDLib confirms the download is fully complete.
+        // Checking isDownloadingCompleted is the ONLY reliable guard — temp/partial files
+        // may have no recognisable extension and File.exists() returns true for them.
+        val resolved = cache.fileCache[file.id] ?: file
+        if (resolved.local.isDownloadingCompleted && isValidPath(resolved.local.path)) {
+            return resolved.local.path
+        }
+        return null
     }
 
     fun findBestAvailablePath(mainFile: TdApi.File?, sizes: Array<TdApi.PhotoSize>? = null): String? {
-        if (mainFile != null && isValidPath(mainFile.local.path)) {
-            return mainFile.local.path
+        val updatedMain = mainFile?.let { getUpdatedFile(it) }
+        if (updatedMain != null && updatedMain.local.isDownloadingCompleted && isValidPath(updatedMain.local.path)) {
+            return updatedMain.local.path
         }
 
         if (sizes != null) {
             return sizes.sortedByDescending { it.width }
                 .map { getUpdatedFile(it.photo) }
-                .firstOrNull { isValidPath(it.local.path) }
+                .firstOrNull { it.local.isDownloadingCompleted && isValidPath(it.local.path) }
                 ?.local?.path
         }
 
@@ -45,16 +51,15 @@ class TdFileHelper(
     }
 
     fun resolveCachedPath(fileId: Int, storedPath: String?): String? {
-        val fromStored = storedPath
-            ?.takeIf { it.isNotBlank() }
-            ?.takeIf { isValidPath(it) }
-        if (fromStored != null) return fromStored
-
+        // Check cache first for the most up-to-date isDownloadingCompleted flag
         val fromCache = fileId.takeIf { it != 0 }
-            ?.let { cache.fileCache[it]?.local?.path }
-            ?.takeIf { isValidPath(it) }
+            ?.let { cache.fileCache[it] }
+            ?.takeIf { it.local.isDownloadingCompleted && isValidPath(it.local.path) }
+            ?.local?.path
         if (fromCache != null) return fromCache
 
+        // Fallback: stored path is only valid if cache confirms completion
+        // (storedPath alone is unreliable after a cancelled/partial download)
         return null
     }
 
