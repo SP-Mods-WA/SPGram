@@ -11,4 +11,5 @@ interface MessageFileApi {
         synchronous: Boolean = false
     )
     fun isFileQueued(fileId: Int): Boolean
+    fun suppressDownload(fileId: Int)
 }
