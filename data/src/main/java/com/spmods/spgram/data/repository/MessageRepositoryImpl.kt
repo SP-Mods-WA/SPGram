@@ -463,6 +463,10 @@ class MessageRepositoryImpl(
         messageRemoteDataSource.editMessageCaption(chatId, messageId, newCaption, entities)
     }
 
+    override suspend fun openMessageContent(chatId: Long, messageId: Long) {
+        messageRemoteDataSource.openMessageContent(chatId, messageId)
+    }
+
     override suspend fun markAsRead(chatId: Long, messageId: Long) {
         messageRemoteDataSource.markAsRead(chatId, messageId)
     }
