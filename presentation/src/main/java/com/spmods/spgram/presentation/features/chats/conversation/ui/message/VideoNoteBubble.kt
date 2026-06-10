@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -72,6 +73,7 @@ fun VideoNoteBubble(
     msg: MessageModel,
     isOutgoing: Boolean,
     onVideoClick: (MessageModel) -> Unit,
+    onOpenViewOnce: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
     onReplyClick: (MessageModel) -> Unit = {},
@@ -153,7 +155,9 @@ fun VideoNoteBubble(
                     .pointerInput(content.path, content.isDownloading, canRenderInlineVideo) {
                         detectTapGestures(
                             onTap = {
-                                if (canRenderInlineVideo) {
+                                if (content.isViewOnce && !content.isViewOnceOpened && !canRenderInlineVideo && !content.isDownloading) {
+                                    onOpenViewOnce(msg)
+                                } else if (canRenderInlineVideo) {
                                     isMuted = !isMuted
                                 } else if (content.isDownloading) {
                                     onCancelDownload(content.fileId)
@@ -219,7 +223,7 @@ fun VideoNoteBubble(
                                 )
                             } else {
                                 Icon(
-                                    imageVector = Icons.Default.Download,
+                                    imageVector = if (content.isViewOnce && !content.isViewOnceOpened) Icons.Default.Visibility else Icons.Default.Download,
                                     contentDescription = stringResource(R.string.cd_download),
                                     modifier = Modifier.size(48.dp),
                                     tint = Color.White.copy(alpha = 0.5f)
