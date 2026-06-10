@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.update
 import com.spmods.spgram.presentation.features.chats.conversation.ChatStore.Intent
 import com.spmods.spgram.presentation.features.chats.conversation.ChatStore.Label
 import com.spmods.spgram.presentation.features.chats.conversation.logic.handleAcceptMiniAppTOS
+import com.spmods.spgram.presentation.features.chats.conversation.logic.handleOpenViewOnce
 import com.spmods.spgram.presentation.features.chats.conversation.logic.handleAddToAdBlockWhitelist
 import com.spmods.spgram.presentation.features.chats.conversation.logic.handleAddToGifs
 import com.spmods.spgram.presentation.features.chats.conversation.logic.handleBlockUser
@@ -215,6 +216,7 @@ class ChatStoreFactory(
                     else it.copy(scrollToMessageId = null, pendingScrollCommand = null)
                 }
                 is Intent.ScrollToBottom -> component.scrollToBottomInternal()
+                is Intent.OpenViewOnce -> component.handleOpenViewOnce(intent.message)
                 is Intent.DownloadFile -> component.handleDownloadFile(intent.fileId)
                 is Intent.DownloadHighRes -> component.handleDownloadHighRes(intent.messageId)
 
