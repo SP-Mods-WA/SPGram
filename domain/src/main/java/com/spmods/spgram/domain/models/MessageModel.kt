@@ -99,7 +99,9 @@ sealed interface MessageContent {
         val downloadError: Boolean = false,
         val fileId: Int = 0,
         val minithumbnail: ByteArray? = null,
-        val hasSpoiler: Boolean = false
+        val hasSpoiler: Boolean = false,
+        val isViewOnce: Boolean = false,
+        val isViewOnceOpened: Boolean = false
     ) : MessageContent {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -160,7 +162,9 @@ sealed interface MessageContent {
         val fileId: Int = 0,
         val minithumbnail: ByteArray? = null,
         val supportsStreaming: Boolean = false,
-        val hasSpoiler: Boolean = false
+        val hasSpoiler: Boolean = false,
+        val isViewOnce: Boolean = false,
+        val isViewOnceOpened: Boolean = false
     ) : MessageContent {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -218,7 +222,9 @@ sealed interface MessageContent {
         val isDownloading: Boolean = false,
         val downloadProgress: Float = 0f,
         val downloadError: Boolean = false,
-        val fileId: Int = 0
+        val fileId: Int = 0,
+        val isViewOnce: Boolean = false,
+        val isViewOnceOpened: Boolean = false
     ) : MessageContent {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -263,7 +269,9 @@ sealed interface MessageContent {
         val isDownloading: Boolean = false,
         val downloadProgress: Float = 0f,
         val downloadError: Boolean = false,
-        val fileId: Int = 0
+        val fileId: Int = 0,
+        val isViewOnce: Boolean = false,
+        val isViewOnceOpened: Boolean = false
     ) : MessageContent
 
     data class Document(
