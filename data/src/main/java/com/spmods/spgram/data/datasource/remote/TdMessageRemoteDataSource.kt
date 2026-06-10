@@ -1234,6 +1234,12 @@ class TdMessageRemoteDataSource(
         }
     }
 
+    override suspend fun openMessageContent(chatId: Long, messageId: Long) {
+        // Tells TDLib the user has opened a view-once message.
+        // TDLib will mark it as opened and schedule self-destruction.
+        safeExecute(TdApi.OpenMessageContent(chatId, messageId))
+    }
+
     override suspend fun markAsRead(chatId: Long, messageId: Long) {
         safeExecute(TdApi.ViewMessages(chatId, longArrayOf(messageId), null, true))
     }
@@ -1697,6 +1703,7 @@ class TdMessageRemoteDataSource(
     }
 
     override fun isFileQueued(fileId: Int): Boolean = fileDownloadQueue.isFileQueued(fileId)
+    override fun suppressDownload(fileId: Int) = fileDownloadQueue.suppressDownload(fileId)
 
     private fun updateMessageWithFile(fileId: Int) {
         val entries = fileIdToMessageMap[fileId] ?: return
