@@ -530,6 +530,14 @@ class FileDownloadQueue(
 
     fun isFileQueued(fileId: Int) = pendingRequests.containsKey(fileId) || activeRequests.containsKey(fileId)
 
+    /** Suppress auto-download for a file without going through cancelDownload flow. Used for view-once content. */
+    fun suppressDownload(fileId: Int) {
+        if (fileId != 0) {
+            suppressedAutoDownloadIds.add(fileId)
+            persistSuppressed()
+        }
+    }
+
     fun getCachedFile(fileId: Int): TdApi.File? = cache.fileCache[fileId]
 
     fun getCachedPath(fileId: Int): String? =
