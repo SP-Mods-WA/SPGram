@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Stream
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -86,6 +87,7 @@ fun VideoMessageBubble(
     autoDownloadRoaming: Boolean,
     autoplayVideos: Boolean,
     onVideoClick: (MessageModel) -> Unit,
+    onOpenViewOnce: (MessageModel) -> Unit = {},
     modifier: Modifier = Modifier,
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
@@ -122,7 +124,7 @@ fun VideoMessageBubble(
     }
 
     LaunchedEffect(content.path, content.isDownloading, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
-        if (content.path.isNullOrBlank() && !content.isDownloading && !content.supportsStreaming && !isAutoDownloadSuppressed && !AutoDownloadSuppression.isSuppressed(
+        if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !content.supportsStreaming && !isAutoDownloadSuppressed && !AutoDownloadSuppression.isSuppressed(
                 content.fileId
             )
         ) {
@@ -309,15 +311,20 @@ fun VideoMessageBubble(
                     } else {
                         VideoLoadingLayer(
                             content = content,
+                            isViewOnce = content.isViewOnce && !content.isViewOnceOpened,
                             onCancelDownload = {
                                 isAutoDownloadSuppressed = true
                                 AutoDownloadSuppression.suppress(content.fileId)
                                 onCancelDownloadState(content.fileId)
                             },
                             onStartDownload = {
-                                isAutoDownloadSuppressed = false
-                                AutoDownloadSuppression.clear(content.fileId)
-                                onVideoClickState(msg)
+                                if (content.isViewOnce && !content.isViewOnceOpened) {
+                                    onOpenViewOnce(msg)
+                                } else {
+                                    isAutoDownloadSuppressed = false
+                                    AutoDownloadSuppression.clear(content.fileId)
+                                    onVideoClickState(msg)
+                                }
                             }
                         )
                     }
@@ -468,6 +475,7 @@ private fun VideoMuteToggle(
 @Composable
 private fun VideoLoadingLayer(
     content: MessageContent.Video,
+    isViewOnce: Boolean = false,
     onCancelDownload: () -> Unit,
     onStartDownload: () -> Unit
 ) {
@@ -490,7 +498,11 @@ private fun VideoLoadingLayer(
         MediaLoadingAction(
             isDownloading = content.isDownloading,
             progress = content.downloadProgress,
-            idleIcon = if (content.supportsStreaming) Icons.Rounded.Stream else Icons.Default.Download,
+            idleIcon = when {
+                isViewOnce -> Icons.Default.Visibility
+                content.supportsStreaming -> Icons.Rounded.Stream
+                else -> Icons.Default.Download
+            },
             idleContentDescription = if (content.supportsStreaming) {
                 stringResource(R.string.cd_stream)
             } else {
