@@ -108,9 +108,15 @@ internal class MessageContentMapper(
                 val isQueued = photoFile?.let { fileHelper.isFileQueued(it.id) } ?: false
                 val downloadProgress = photoFile?.let(fileHelper::computeDownloadProgress) ?: 0f
 
+                val photoIsViewOnce = content.selfDestructType != null
+                val photoOpened = photoIsViewOnce && content.selfDestructType is TdApi.MessageSelfDestructTypeImmediately
+                // For view-once photos: suppress auto-download — user must tap to open
+                if (photoIsViewOnce && photoFile != null) {
+                    fileHelper.suppressDownload(photoFile.id)
+                }
                 MessageContent.Photo(
-                    path = path,
-                    thumbnailPath = thumbnailPath,
+                    path = if (photoIsViewOnce && !photoOpened) null else path,
+                    thumbnailPath = if (photoIsViewOnce && !photoOpened) null else thumbnailPath,
                     width = photoSize?.width ?: 0,
                     height = photoSize?.height ?: 0,
                     caption = content.caption.text,
@@ -122,10 +128,12 @@ internal class MessageContentMapper(
                     ),
                     isUploading = context.isActuallyUploading && (photoFile?.remote?.isUploadingActive ?: false),
                     uploadProgress = photoFile?.let(fileHelper::computeUploadProgress) ?: 0f,
-                    isDownloading = isDownloading || isQueued,
+                    isDownloading = if (photoIsViewOnce && !photoOpened) false else (isDownloading || isQueued),
                     downloadProgress = downloadProgress,
                     fileId = photoFile?.id ?: 0,
-                    minithumbnail = content.photo.minithumbnail?.data
+                    minithumbnail = if (photoIsViewOnce && !photoOpened) null else content.photo.minithumbnail?.data,
+                    isViewOnce = photoIsViewOnce,
+                    isViewOnceOpened = photoOpened
                 )
             }
 
@@ -186,7 +194,9 @@ internal class MessageContentMapper(
                     downloadProgress = downloadProgress,
                     fileId = videoFile.id,
                     minithumbnail = video.minithumbnail?.data,
-                    supportsStreaming = video.supportsStreaming
+                    supportsStreaming = video.supportsStreaming,
+                    isViewOnce = content.selfDestructType != null,
+                    isViewOnceOpened = content.selfDestructType is TdApi.MessageSelfDestructTypeImmediately
                 )
             }
 
@@ -220,6 +230,9 @@ internal class MessageContentMapper(
                     isDownloading = isDownloading || isQueued,
                     downloadProgress = downloadProgress,
                     fileId = voiceFile.id
+                ,
+                    isViewOnce = content.selfDestructType != null,
+                    isViewOnceOpened = content.selfDestructType is TdApi.MessageSelfDestructTypeImmediately
                 )
             }
 
@@ -272,6 +285,9 @@ internal class MessageContentMapper(
                     isDownloading = isDownloading || isQueued,
                     downloadProgress = downloadProgress,
                     fileId = videoFile.id
+                ,
+                    isViewOnce = content.selfDestructType != null,
+                    isViewOnceOpened = content.selfDestructType is TdApi.MessageSelfDestructTypeImmediately
                 )
             }
 
