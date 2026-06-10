@@ -32,4 +32,8 @@ class MessageFileCoordinator(
     override fun isFileQueued(fileId: Int): Boolean {
         return fileDownloadQueue.isFileQueued(fileId)
     }
+
+    override fun suppressDownload(fileId: Int) {
+        fileDownloadQueue.suppressDownload(fileId)
+    }
 }
