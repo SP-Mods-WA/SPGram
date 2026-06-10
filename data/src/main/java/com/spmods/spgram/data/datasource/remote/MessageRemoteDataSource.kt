@@ -155,6 +155,7 @@ interface MessageRemoteDataSource {
     suspend fun closeWebApp(webAppLaunchId: Long): TdApi.Ok?
     suspend fun getPaymentForm(inputInvoice: TdApi.InputInvoice): TdApi.PaymentForm?
     suspend fun sendWebAppData(botUserId: Long, buttonText: String, data: String): TdApi.Ok?
+    suspend fun openMessageContent(chatId: Long, messageId: Long)
     suspend fun markAsRead(chatId: Long, messageId: Long)
     suspend fun markAllReactionsAsRead(chatId: Long)
     suspend fun markAllMentionsAsRead(chatId: Long)
