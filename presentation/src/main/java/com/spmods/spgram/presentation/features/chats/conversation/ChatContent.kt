@@ -617,6 +617,10 @@ fun ChatContent(
                                     }
                                 }
 
+
+                            val onOpenViewOnceStable: (MessageModel) -> Unit = remember(component) {
+                                { msg: MessageModel -> component.onOpenViewOnce(msg) }
+                            }
                             val onDocumentClickStable: (MessageModel) -> Unit = remember(component) {
                                 { msg: MessageModel ->
                                     val doc = msg.content as? MessageContent.Document
@@ -737,6 +741,7 @@ fun ChatContent(
                                 groupedMessages = groupedMessages,
                                 onPhotoDownload = onPhotoDownloadStable,
                                 onPhotoClick = onPhotoClickStable,
+                                onOpenViewOnce = onOpenViewOnceStable,
                                 onVideoClick = onVideoClickStable,
                                 onDocumentClick = onDocumentClickStable,
                                 onAudioClick = onAudioClickStable,
