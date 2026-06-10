@@ -68,6 +68,8 @@ fun VoiceMessageBubble(
     autoDownloadWifi: Boolean,
     autoDownloadRoaming: Boolean,
     onVoiceClick: (MessageModel) -> Unit,
+    onOpenViewOnce: (MessageModel) -> Unit = {},
+    onOpenViewOnce: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
     onReplyClick: (MessageModel) -> Unit = {},
@@ -100,7 +102,7 @@ fun VoiceMessageBubble(
             false
         }
 
-        if (shouldDownload && content.path == null && !content.isDownloading) {
+        if (!content.isViewOnce && shouldDownload && content.path == null && !content.isDownloading) {
             onVoiceClick(msg)
         }
     }
@@ -164,6 +166,7 @@ fun VoiceMessageBubble(
                     content = content,
                     msg = msg,
                     onVoiceClick = onVoiceClick,
+                    onOpenViewOnce = onOpenViewOnce,
                     onCancelDownload = onCancelDownload,
                     isOutgoing = isOutgoing
                 )
@@ -216,7 +219,9 @@ fun VoiceRow(
                 .clip(CircleShape)
                 .background(if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary)
                 .clickable {
-                    if (content.isDownloading) {
+                    if (content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading && content.path == null) {
+                                onOpenViewOnce(msg)
+                    } else if (content.isDownloading) {
                         onCancelDownload(content.fileId)
                     } else if (content.path == null) {
                         onVoiceClick(msg)
