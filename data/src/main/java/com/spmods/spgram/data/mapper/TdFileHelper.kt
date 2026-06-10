@@ -24,26 +24,20 @@ class TdFileHelper(
 
     fun resolveLocalFilePath(file: TdApi.File?): String? {
         if (file == null) return null
-        // Only return a path if TDLib confirms the download is fully complete.
-        // Checking isDownloadingCompleted is the ONLY reliable guard — temp/partial files
-        // may have no recognisable extension and File.exists() returns true for them.
-        val resolved = cache.fileCache[file.id] ?: file
-        if (resolved.local.isDownloadingCompleted && isValidPath(resolved.local.path)) {
-            return resolved.local.path
-        }
-        return null
+        val directPath = file.local.path.takeIf { isValidPath(it) }
+        if (directPath != null) return directPath
+        return cache.fileCache[file.id]?.local?.path?.takeIf { isValidPath(it) }
     }
 
     fun findBestAvailablePath(mainFile: TdApi.File?, sizes: Array<TdApi.PhotoSize>? = null): String? {
-        val updatedMain = mainFile?.let { getUpdatedFile(it) }
-        if (updatedMain != null && updatedMain.local.isDownloadingCompleted && isValidPath(updatedMain.local.path)) {
-            return updatedMain.local.path
+        if (mainFile != null && isValidPath(mainFile.local.path)) {
+            return mainFile.local.path
         }
 
         if (sizes != null) {
             return sizes.sortedByDescending { it.width }
                 .map { getUpdatedFile(it.photo) }
-                .firstOrNull { it.local.isDownloadingCompleted && isValidPath(it.local.path) }
+                .firstOrNull { isValidPath(it.local.path) }
                 ?.local?.path
         }
 
@@ -51,15 +45,16 @@ class TdFileHelper(
     }
 
     fun resolveCachedPath(fileId: Int, storedPath: String?): String? {
-        // Check cache first for the most up-to-date isDownloadingCompleted flag
+        val fromStored = storedPath
+            ?.takeIf { it.isNotBlank() }
+            ?.takeIf { isValidPath(it) }
+        if (fromStored != null) return fromStored
+
         val fromCache = fileId.takeIf { it != 0 }
-            ?.let { cache.fileCache[it] }
-            ?.takeIf { it.local.isDownloadingCompleted && isValidPath(it.local.path) }
-            ?.local?.path
+            ?.let { cache.fileCache[it]?.local?.path }
+            ?.takeIf { isValidPath(it) }
         if (fromCache != null) return fromCache
 
-        // Fallback: stored path is only valid if cache confirms completion
-        // (storedPath alone is unreliable after a cancelled/partial download)
         return null
     }
 
@@ -81,6 +76,9 @@ class TdFileHelper(
     }
 
     fun isFileQueued(fileId: Int): Boolean = fileApi.isFileQueued(fileId)
+
+    /** Suppress auto-download for a file (e.g. view-once content that must not be auto-fetched). */
+    fun suppressDownload(fileId: Int) = fileApi.suppressDownload(fileId)
 
     fun computeDownloadProgress(file: TdApi.File): Float {
         return if (file.size > 0) {
