@@ -445,6 +445,10 @@ class DefaultChatComponent(
 
     override fun onScrollToBottom() = store.accept(ChatStore.Intent.ScrollToBottom)
 
+    override fun onOpenViewOnce(message: MessageModel) {
+        store.accept(ChatStore.Intent.OpenViewOnce(message))
+    }
+
     override fun onDownloadFile(fileId: Int) {
         AutoDownloadSuppression.clear(fileId)
         store.accept(ChatStore.Intent.DownloadFile(fileId))
