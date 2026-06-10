@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
@@ -69,6 +70,7 @@ fun PhotoMessageBubble(
     autoDownloadWifi: Boolean,
     autoDownloadRoaming: Boolean,
     onPhotoClick: (MessageModel) -> Unit,
+    onOpenViewOnce: (MessageModel) -> Unit = {},
     onDownloadPhoto: (Int) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
@@ -100,7 +102,7 @@ fun PhotoMessageBubble(
     }
 
     LaunchedEffect(content.path, content.isDownloading, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
-        if (content.path.isNullOrBlank() && !content.isDownloading && !AutoDownloadSuppression.isSuppressed(content.fileId)) {
+        if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !AutoDownloadSuppression.isSuppressed(content.fileId)) {
             val shouldDownload = when {
                 downloadUtils.isWifiConnected() -> autoDownloadWifi
                 downloadUtils.isRoaming() -> autoDownloadRoaming
@@ -200,17 +202,20 @@ fun PhotoMessageBubble(
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {
-                                    if (content.hasSpoiler) {
-                                        isMediaSpoilerRevealed = !isMediaSpoilerRevealed
-                                    } else if (content.isDownloading) {
-                                        AutoDownloadSuppression.suppress(content.fileId)
-                                        onCancelDownload(content.fileId)
-                                    } else {
-                                        AutoDownloadSuppression.clear(content.fileId)
-                                        if (hasPath) {
-                                            onPhotoClick(msg)
-                                        } else {
-                                            onDownloadPhoto(content.fileId)
+                                    when {
+                                        content.isViewOnce && !content.isViewOnceOpened -> {
+                                            onOpenViewOnce(msg)
+                                        }
+                                        content.hasSpoiler -> {
+                                            isMediaSpoilerRevealed = !isMediaSpoilerRevealed
+                                        }
+                                        content.isDownloading -> {
+                                            AutoDownloadSuppression.suppress(content.fileId)
+                                            onCancelDownload(content.fileId)
+                                        }
+                                        else -> {
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
                                         }
                                     }
                                 },
@@ -251,7 +256,8 @@ fun PhotoMessageBubble(
                             MediaLoadingAction(
                                 isDownloading = content.isDownloading,
                                 progress = content.downloadProgress,
-                                idleIcon = Icons.Default.Download,
+                                idleIcon = if (content.isViewOnce && !content.isViewOnceOpened)
+                                    Icons.Default.Visibility else Icons.Default.Download,
                                 idleContentDescription = stringResource(R.string.cd_download),
                                 showCancelOnDownload = content.isDownloading,
                                 onCancelClick = {
@@ -259,11 +265,11 @@ fun PhotoMessageBubble(
                                     onCancelDownload(content.fileId)
                                 },
                                 onIdleClick = {
-                                    AutoDownloadSuppression.clear(content.fileId)
-                                    if (hasPath) {
-                                        onPhotoClick(msg)
+                                    if (content.isViewOnce && !content.isViewOnceOpened) {
+                                        onOpenViewOnce(msg)
                                     } else {
-                                        onDownloadPhoto(content.fileId)
+                                        AutoDownloadSuppression.clear(content.fileId)
+                                        if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
                                     }
                                 }
                             )
