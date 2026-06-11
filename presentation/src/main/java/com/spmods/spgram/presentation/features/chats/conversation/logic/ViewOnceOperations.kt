@@ -27,7 +27,7 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                 if (content.path != null) {
                     onOpenImages(
                         images = listOf(content.path),
-                        captions = listOf(content.caption),
+                        captions = listOf(content.caption as String?),
                         startIndex = 0,
                         messageId = message.id,
                         messageIds = listOf(message.id)
