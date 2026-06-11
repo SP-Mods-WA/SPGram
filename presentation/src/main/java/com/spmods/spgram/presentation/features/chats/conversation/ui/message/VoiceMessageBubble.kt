@@ -69,7 +69,6 @@ fun VoiceMessageBubble(
     autoDownloadRoaming: Boolean,
     onVoiceClick: (MessageModel) -> Unit,
     onOpenViewOnce: (MessageModel) -> Unit = {},
-    onOpenViewOnce: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
     onReplyClick: (MessageModel) -> Unit = {},
