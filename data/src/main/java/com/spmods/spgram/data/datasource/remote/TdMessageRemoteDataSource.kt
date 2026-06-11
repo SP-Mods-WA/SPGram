@@ -1703,7 +1703,7 @@ class TdMessageRemoteDataSource(
     }
 
     override fun isFileQueued(fileId: Int): Boolean = fileDownloadQueue.isFileQueued(fileId)
-    override fun suppressDownload(fileId: Int) = fileDownloadQueue.suppressDownload(fileId)
+    fun suppressDownload(fileId: Int) = fileDownloadQueue.suppressDownload(fileId)
 
     private fun updateMessageWithFile(fileId: Int) {
         val entries = fileIdToMessageMap[fileId] ?: return
