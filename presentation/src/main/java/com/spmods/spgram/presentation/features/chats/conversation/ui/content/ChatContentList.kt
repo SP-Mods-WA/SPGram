@@ -1189,7 +1189,6 @@ private fun MessageBubbleSwitcher(
                         it,
                         sanitizedItem.messages,
                         onPhotoClick,
-                        onOpenViewOnce,
                         onVideoClick
                     )
                 },
