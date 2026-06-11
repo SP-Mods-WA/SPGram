@@ -108,8 +108,8 @@ internal class MessageContentMapper(
                 val isQueued = photoFile?.let { fileHelper.isFileQueued(it.id) } ?: false
                 val downloadProgress = photoFile?.let(fileHelper::computeDownloadProgress) ?: 0f
 
-                val photoIsViewOnce = content.selfDestructType != null
-                val photoOpened = photoIsViewOnce && content.selfDestructType is TdApi.MessageSelfDestructTypeImmediately
+                val photoIsViewOnce = content.isSecret
+                val photoOpened = false // TDLib removes the photo server-side after open; locally treat as not-yet-opened
                 // For view-once photos: suppress auto-download — user must tap to open
                 if (photoIsViewOnce && photoFile != null) {
                     fileHelper.suppressDownload(photoFile.id)
@@ -195,8 +195,8 @@ internal class MessageContentMapper(
                     fileId = videoFile.id,
                     minithumbnail = video.minithumbnail?.data,
                     supportsStreaming = video.supportsStreaming,
-                    isViewOnce = content.selfDestructType != null,
-                    isViewOnceOpened = content.selfDestructType is TdApi.MessageSelfDestructTypeImmediately
+                    isViewOnce = content.isSecret,
+                    isViewOnceOpened = false
                 )
             }
 
@@ -231,8 +231,8 @@ internal class MessageContentMapper(
                     downloadProgress = downloadProgress,
                     fileId = voiceFile.id
                 ,
-                    isViewOnce = content.selfDestructType != null,
-                    isViewOnceOpened = content.selfDestructType is TdApi.MessageSelfDestructTypeImmediately
+                    isViewOnce = false, // VoiceNote has no isSecret in this TDLib version
+                    isViewOnceOpened = false
                 )
             }
 
@@ -286,8 +286,8 @@ internal class MessageContentMapper(
                     downloadProgress = downloadProgress,
                     fileId = videoFile.id
                 ,
-                    isViewOnce = content.selfDestructType != null,
-                    isViewOnceOpened = content.selfDestructType is TdApi.MessageSelfDestructTypeImmediately
+                    isViewOnce = content.isSecret,
+                    isViewOnceOpened = content.isViewed
                 )
             }
 
