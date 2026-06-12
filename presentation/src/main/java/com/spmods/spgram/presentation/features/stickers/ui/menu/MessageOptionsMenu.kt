@@ -1164,7 +1164,8 @@ private fun ReactionsRow(
     onAppearanceAnimationConsumed: () -> Unit,
     onReactionsChanged: (Int) -> Unit,
     onReaction: (String) -> Unit,
-    appPreferences: AppPreferences = koinInject()
+    appPreferences: AppPreferences = koinInject(),
+    emojiRepository: EmojiRepository = koinInject()
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -1172,11 +1173,31 @@ private fun ReactionsRow(
     val emojiStyle by appPreferences.emojiStyle.collectAsState()
     val emojiFontFamily = remember(context, emojiStyle) { getEmojiFontFamily(context, emojiStyle) }
 
+    // Build RecentEmojiModel list with emoji string first, then load stickers async
     val reactions = remember(availableReactions) {
         if (availableReactions.isNotEmpty()) {
             availableReactions.map { RecentEmojiModel(it) }
         } else {
             emptyList()
+        }
+    }
+
+    // Load animated selectAnimation sticker for each emoji reaction (original Telegram behaviour)
+    // Key: emoji string → StickerModel? (null = not yet loaded or not available)
+    var reactionStickers by remember(availableReactions) {
+        mutableStateOf<Map<String, com.spmods.spgram.domain.models.StickerModel>>(emptyMap())
+    }
+
+    LaunchedEffect(availableReactions) {
+        if (availableReactions.isEmpty()) return@LaunchedEffect
+        val loaded = mutableMapOf<String, com.spmods.spgram.domain.models.StickerModel>()
+        availableReactions.forEach { emoji ->
+            val sticker = emojiRepository.getReactionSticker(emoji)
+            if (sticker != null) {
+                loaded[emoji] = sticker
+                // Update state incrementally so each emoji shows as soon as its sticker loads
+                reactionStickers = loaded.toMap()
+            }
         }
     }
 
@@ -1224,6 +1245,10 @@ private fun ReactionsRow(
                         label = "reactionScale"
                     )
 
+                    // Prefer animated selectAnimation sticker (original Telegram behaviour);
+                    // fall back to plain text emoji if sticker not yet loaded
+                    val stickerForEmoji = reactionStickers[reaction.emoji]
+
                     Box(
                         modifier = Modifier
                             .size(42.dp)
@@ -1239,13 +1264,15 @@ private fun ReactionsRow(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        val sticker = reaction.sticker
-                        if (sticker != null) {
+                        if (stickerForEmoji != null) {
+                            // Animated .tgs / .webm sticker — same as original Telegram reaction picker
                             StickerImage(
-                                path = sticker.path,
+                                path = stickerForEmoji.path,
                                 modifier = Modifier.size(28.dp),
+                                animate = true
                             )
                         } else {
+                            // Sticker not loaded yet — show text emoji as placeholder
                             Text(
                                 text = reaction.emoji,
                                 fontSize = 24.sp,
