@@ -208,7 +208,9 @@ class MessageRepositoryImpl(
                     contentMeta = extracted.meta,
                     mediaFileId = extracted.fileId,
                     mediaPath = extracted.path,
-                    editDate = 0
+                    editDate = 0,
+                    isViewOnce = extracted.isViewOnce,
+                    isViewOnceOpened = extracted.isViewOnceOpened
                 )
             }
 
