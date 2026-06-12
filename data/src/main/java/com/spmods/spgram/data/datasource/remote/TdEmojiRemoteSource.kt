@@ -50,6 +50,15 @@ class TdEmojiRemoteSource(
         }.getOrDefault(emptyList())
     }
 
+    override suspend fun getReactionSticker(emoji: String): StickerModel? {
+        return coRunCatching {
+            val reaction = gateway.execute(TdApi.GetEmojiReaction(emoji))
+            // Use selectAnimation — this is the animated sticker shown in the reaction picker row
+            // (identical to original Telegram's reaction picker behaviour)
+            reaction.selectAnimation?.toDomain()
+        }.getOrNull()
+    }
+
     override suspend fun searchEmojis(query: String): List<String> {
         return coRunCatching {
             gateway.execute(TdApi.SearchEmojis(query, emptyArray()))
