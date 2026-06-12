@@ -26,7 +26,9 @@ internal class MessagePersistenceMapper(
         val fileId: Int = 0,
         val path: String? = null,
         val thumbnailPath: String? = null,
-        val minithumbnail: ByteArray? = null
+        val minithumbnail: ByteArray? = null,
+        val isViewOnce: Boolean = false,
+        val isViewOnceOpened: Boolean = false
     )
 
     private data class CachedReplyPreview(
@@ -92,7 +94,9 @@ internal class MessagePersistenceMapper(
             entities = entitiesEncoded,
             viewCount = msg.interactionInfo?.viewCount ?: 0,
             forwardCount = msg.interactionInfo?.forwardCount ?: 0,
-            createdAt = System.currentTimeMillis()
+            createdAt = System.currentTimeMillis(),
+            isViewOnce = content.isViewOnce,
+            isViewOnceOpened = content.isViewOnceOpened
         )
     }
 
@@ -117,7 +121,9 @@ internal class MessagePersistenceMapper(
                     fileId = fileId,
                     path = path,
                     thumbnailPath = thumbnailPath,
-                    minithumbnail = content.photo.minithumbnail?.data
+                    minithumbnail = content.photo.minithumbnail?.data,
+                    isViewOnce = content.isSecret,
+                    isViewOnceOpened = false
                 )
             }
 
@@ -139,7 +145,9 @@ internal class MessagePersistenceMapper(
                     fileId = fileId,
                     path = path,
                     thumbnailPath = content.video.thumbnail?.file?.local?.path?.takeIf { fileHelper.isValidPath(it) },
-                    minithumbnail = content.video.minithumbnail?.data
+                    minithumbnail = content.video.minithumbnail?.data,
+                    isViewOnce = content.isSecret,
+                    isViewOnceOpened = false
                 )
             }
 
@@ -162,7 +170,9 @@ internal class MessagePersistenceMapper(
                         .orEmpty()
                 ),
                 fileId = content.videoNote.video.id,
-                path = content.videoNote.video.local.path.takeIf { fileHelper.isValidPath(it) }
+                path = content.videoNote.video.local.path.takeIf { fileHelper.isValidPath(it) },
+                isViewOnce = content.isSecret,
+                isViewOnceOpened = content.isViewed
             )
 
             is TdApi.MessageSticker -> {
@@ -254,6 +264,30 @@ internal class MessagePersistenceMapper(
             is TdApi.MessageChatChangeTitle -> CachedMessageContent("service", "Changed title", null)
             is TdApi.MessageAnimatedEmoji -> CachedMessageContent("text", content.emoji, null)
             is TdApi.MessageDice -> CachedMessageContent("text", content.emoji, null)
+            is TdApi.MessageExpiredPhoto -> CachedMessageContent(
+                "expired_photo",
+                "",
+                null,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
+
+            is TdApi.MessageExpiredVideo -> CachedMessageContent(
+                "expired_video",
+                "",
+                null,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
+
+            is TdApi.MessageExpiredVideoNote -> CachedMessageContent(
+                "expired_video_note",
+                "",
+                null,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
+
             else -> CachedMessageContent("unsupported", "", null)
         }
     }
@@ -367,7 +401,9 @@ internal class MessagePersistenceMapper(
                     caption = entity.content,
                     entities = decodeEntities(entity.entities),
                     fileId = fileId,
-                    minithumbnail = entity.minithumbnail
+                    minithumbnail = entity.minithumbnail,
+                    isViewOnce = entity.isViewOnce,
+                    isViewOnceOpened = entity.isViewOnceOpened
                 )
             }
 
@@ -392,7 +428,9 @@ internal class MessagePersistenceMapper(
                     entities = decodeEntities(entity.entities),
                     fileId = fileId,
                     supportsStreaming = supportsStreaming,
-                    minithumbnail = entity.minithumbnail
+                    minithumbnail = entity.minithumbnail,
+                    isViewOnce = entity.isViewOnce,
+                    isViewOnceOpened = entity.isViewOnceOpened
                 )
             }
 
@@ -402,7 +440,9 @@ internal class MessagePersistenceMapper(
                 MessageContent.Voice(
                     path = fileHelper.resolveCachedPath(fileId, mediaPath),
                     duration = meta.getOrNull(0)?.toIntOrNull() ?: 0,
-                    fileId = fileId
+                    fileId = fileId,
+                    isViewOnce = entity.isViewOnce,
+                    isViewOnceOpened = entity.isViewOnceOpened
                 )
             }
 
@@ -415,7 +455,9 @@ internal class MessagePersistenceMapper(
                     thumbnail = storedThumbPath?.takeIf { fileHelper.isValidPath(it) },
                     duration = meta.getOrNull(0)?.toIntOrNull() ?: 0,
                     length = meta.getOrNull(1)?.toIntOrNull() ?: 0,
-                    fileId = fileId
+                    fileId = fileId,
+                    isViewOnce = entity.isViewOnce,
+                    isViewOnceOpened = entity.isViewOnceOpened
                 )
             }
 
@@ -504,6 +546,9 @@ internal class MessagePersistenceMapper(
             )
 
             "service" -> MessageContent.Service(entity.content)
+            "expired_photo" -> MessageContent.Text(stringProvider.getString("message_expired_photo"))
+            "expired_video" -> MessageContent.Text(stringProvider.getString("message_expired_video"))
+            "expired_video_note" -> MessageContent.Text(stringProvider.getString("message_expired_video"))
             else -> MessageContent.Text(entity.content)
         }
 
