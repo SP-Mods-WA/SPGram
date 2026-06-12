@@ -25,7 +25,7 @@ interface MessageDao {
     suspend fun markAsRead(chatId: Long, upToMessageId: Long)
 
     @Query(
-        "UPDATE messages SET content = :content, contentType = :contentType, contentMeta = :contentMeta, mediaFileId = :mediaFileId, mediaPath = :mediaPath, editDate = :editDate WHERE chatId = :chatId AND id = :messageId"
+        "UPDATE messages SET content = :content, contentType = :contentType, contentMeta = :contentMeta, mediaFileId = :mediaFileId, mediaPath = :mediaPath, editDate = :editDate, isViewOnce = :isViewOnce, isViewOnceOpened = :isViewOnceOpened WHERE chatId = :chatId AND id = :messageId"
     )
     suspend fun updateContent(
         chatId: Long,
@@ -35,7 +35,9 @@ interface MessageDao {
         contentMeta: String?,
         mediaFileId: Int,
         mediaPath: String?,
-        editDate: Int
+        editDate: Int,
+        isViewOnce: Boolean,
+        isViewOnceOpened: Boolean
     )
 
     @Query(
