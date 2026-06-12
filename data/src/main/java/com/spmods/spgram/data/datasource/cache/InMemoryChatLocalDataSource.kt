@@ -106,7 +106,9 @@ class InMemoryChatLocalDataSource : ChatLocalDataSource {
         contentMeta: String?,
         mediaFileId: Int,
         mediaPath: String?,
-        editDate: Int
+        editDate: Int,
+        isViewOnce: Boolean,
+        isViewOnceOpened: Boolean
     ) {
         val flow = messages[chatId] ?: return
         val current = flow.value[messageId] ?: return
@@ -117,7 +119,9 @@ class InMemoryChatLocalDataSource : ChatLocalDataSource {
                 contentMeta = contentMeta,
                 mediaFileId = mediaFileId,
                 mediaPath = mediaPath,
-                editDate = editDate
+                editDate = editDate,
+                isViewOnce = isViewOnce,
+                isViewOnceOpened = isViewOnceOpened
             ))
         }
     }
