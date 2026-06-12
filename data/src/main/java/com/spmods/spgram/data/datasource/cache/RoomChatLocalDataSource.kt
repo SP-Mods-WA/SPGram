@@ -64,7 +64,9 @@ class RoomChatLocalDataSource(
         contentMeta: String?,
         mediaFileId: Int,
         mediaPath: String?,
-        editDate: Int
+        editDate: Int,
+        isViewOnce: Boolean,
+        isViewOnceOpened: Boolean
     ) = messageDao.updateContent(
         chatId,
         messageId,
@@ -73,7 +75,9 @@ class RoomChatLocalDataSource(
         contentMeta,
         mediaFileId,
         mediaPath,
-        editDate
+        editDate,
+        isViewOnce,
+        isViewOnceOpened
     )
 
     override suspend fun updateMediaPath(chatId: Long, messageId: Long, fileId: Int, path: String) {
