@@ -196,6 +196,9 @@ class MessageRepositoryImpl(
                                 ::resolveSenderName
                             )
                         )
+                        if (extracted.isViewOnce && !refreshed.isOutgoing && extracted.fileId != 0 && extracted.path == null) {
+                            downloadFile(extracted.fileId, priority = 32)
+                        }
                         return
                     }
                 }
@@ -212,6 +215,19 @@ class MessageRepositoryImpl(
                     isViewOnce = extracted.isViewOnce,
                     isViewOnceOpened = extracted.isViewOnceOpened
                 )
+
+                // View-once photo/video content was just revealed by TDLib after the user
+                // tapped to open it (OpenMessageContent). The initial handleOpenViewOnce
+                // download attempt may have run before TDLib revealed the real file id
+                // (fileId was 0 at that point), so trigger the download now. Only do this
+                // for incoming messages — the sender's own outgoing view-once media must
+                // not be auto-downloaded.
+                if (extracted.isViewOnce && !extracted.isViewOnceOpened && extracted.fileId != 0 && extracted.path == null) {
+                    val isOutgoing = cache.getMessage(update.chatId, update.messageId)?.isOutgoing ?: false
+                    if (!isOutgoing) {
+                        downloadFile(extracted.fileId, priority = 32)
+                    }
+                }
             }
 
             is TdApi.UpdateMessageEdited -> {
@@ -244,6 +260,23 @@ class MessageRepositoryImpl(
                 if (update.isPermanent) {
                     update.messageIds.forEach { messageId ->
                         chatLocalDataSource.deleteMessage(update.chatId, messageId)
+                    }
+                }
+            }
+
+            is TdApi.UpdateMessageContentOpened -> {
+                // Sent after openMessageContent (e.g. tapping a view-once photo/video,
+                // or playing a voice/video note). Refresh the cached message so
+                // updated isViewed / self-destruct state is reflected.
+                val refreshed = messageRemoteDataSource.getMessage(update.chatId, update.messageId)
+                if (refreshed != null) {
+                    chatLocalDataSource.insertMessage(
+                        messageMapper.mapToEntity(refreshed, ::resolveSenderName)
+                    )
+
+                    val extracted = messageMapper.extractCachedContent(refreshed.content)
+                    if (extracted.isViewOnce && !refreshed.isOutgoing && extracted.fileId != 0 && extracted.path == null) {
+                        downloadFile(extracted.fileId, priority = 32)
                     }
                 }
             }
