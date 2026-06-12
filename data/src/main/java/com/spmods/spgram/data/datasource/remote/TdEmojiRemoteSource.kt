@@ -53,9 +53,27 @@ class TdEmojiRemoteSource(
     override suspend fun getReactionSticker(emoji: String): StickerModel? {
         return coRunCatching {
             val reaction = gateway.execute(TdApi.GetEmojiReaction(emoji))
-            // Use selectAnimation — this is the animated sticker shown in the reaction picker row
-            // (identical to original Telegram's reaction picker behaviour)
-            reaction.selectAnimation?.toDomain()
+
+            // Use selectAnimation — the looping animated sticker shown in the reaction picker row
+            // (identical to original Telegram reaction picker behaviour)
+            val sticker = reaction.selectAnimation ?: return@coRunCatching null
+            val file = sticker.sticker
+
+            // File already downloaded — return immediately
+            if (file.local.isDownloadingCompleted && file.local.path.isNotEmpty()) {
+                return@coRunCatching sticker.toDomain()
+            }
+
+            // File not on disk yet — download synchronously (small .tgs file, typically < 50 KB).
+            // When synchronous=true, TDLib blocks the coroutine until the download completes
+            // and returns the TdApi.File object with local.path filled in.
+            gateway.execute(
+                TdApi.DownloadFile(file.id, /* priority= */ 32, 0L, 0L, /* synchronous= */ true)
+            )
+
+            // Re-fetch reaction so the embedded sticker.sticker.local.path is up to date
+            val updated = gateway.execute(TdApi.GetEmojiReaction(emoji))
+            updated.selectAnimation?.toDomain()
         }.getOrNull()
     }
 
