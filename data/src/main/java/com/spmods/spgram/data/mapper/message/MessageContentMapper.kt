@@ -109,9 +109,12 @@ internal class MessageContentMapper(
                 val downloadProgress = photoFile?.let(fileHelper::computeDownloadProgress) ?: 0f
 
                 val photoIsViewOnce = content.isSecret
-                val photoOpened = false // TDLib removes the photo server-side after open; locally treat as not-yet-opened
+                // Once the file has been downloaded locally (user tapped to open it),
+                // treat it as opened so the photo is actually shown instead of being
+                // hidden behind the "tap to view" placeholder forever.
+                val photoOpened = photoFile?.local?.isDownloadingCompleted ?: false
                 // For view-once photos: suppress auto-download — user must tap to open
-                if (photoIsViewOnce && photoFile != null) {
+                if (photoIsViewOnce && !photoOpened && photoFile != null) {
                     fileHelper.suppressDownload(photoFile.id)
                 }
                 MessageContent.Photo(
