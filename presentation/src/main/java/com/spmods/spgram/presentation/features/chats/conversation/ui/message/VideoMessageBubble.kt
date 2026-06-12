@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.rounded.Stream
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -213,6 +217,61 @@ fun VideoMessageBubble(
                 val ratio = if (content.width > 0 && content.height > 0)
                     (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
                 else 1f
+
+                // ── VIEW-ONCE EXPIRED: video was opened and the file is gone ──────────
+                if (content.isViewOnce && content.isViewOnceOpened && !hasPath) {
+                    val isDark = LocalDarkTheme.current
+                    val bubbleBg = if (isOutgoing) (if (isDark) Color(0xFF2B5278) else Color(0xFFEEFFDE))
+                                   else (if (isDark) Color(0xFF182533) else Color(0xFFFFFFFF))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 72.dp)
+                            .background(bubbleBg)
+                            .padding(horizontal = 12.dp, vertical = 14.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(
+                                        if (isDark) Color(0xFF3D5A73) else Color(0xFFB0C8E6),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Timer,
+                                    contentDescription = null,
+                                    tint = if (isDark) Color(0xFF7FB3D3) else Color(0xFF4A8FC1),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = stringResource(R.string.message_expired_video),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (isDark) Color(0xFFFFFFFF) else Color(0xFF212121)
+                            )
+                        }
+                    }
+                    if (showMetadata) {
+                        val isDarkMeta = LocalDarkTheme.current
+                        val bubbleBgMeta = if (isOutgoing) (if (isDarkMeta) Color(0xFF2B5278) else Color(0xFFEEFFDE))
+                                           else (if (isDarkMeta) Color(0xFF182533) else Color(0xFFFFFFFF))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(bubbleBgMeta)
+                                .padding(end = 12.dp, bottom = 6.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            val timeColor = (if (isDarkMeta) Color(0xFFFFFFFF) else Color(0xFF212121)).copy(alpha = 0.7f)
+                            MessageMetadata(msg, isOutgoing, timeColor)
+                        }
+                    }
+                } else {
 
                 Box(
                     modifier = Modifier
@@ -436,6 +495,7 @@ fun VideoMessageBubble(
                         }
                     }
                 }
+                } // end else (not expired)
             }
         }
 
