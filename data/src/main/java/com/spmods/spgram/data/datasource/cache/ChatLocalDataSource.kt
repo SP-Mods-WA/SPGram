@@ -31,7 +31,9 @@ interface ChatLocalDataSource {
         contentMeta: String?,
         mediaFileId: Int,
         mediaPath: String?,
-        editDate: Int
+        editDate: Int,
+        isViewOnce: Boolean = false,
+        isViewOnceOpened: Boolean = false
     )
 
     suspend fun updateMediaPath(chatId: Long, messageId: Long, fileId: Int, path: String)
