@@ -67,6 +67,10 @@ class EmojiRepositoryImpl(
         return remote.getMessageAvailableReactions(chatId, messageId)
     }
 
+    override suspend fun getReactionSticker(emoji: String): StickerModel? {
+        return remote.getReactionSticker(emoji)
+    }
+
     private suspend fun getFallbackEmojis(): List<String> = withContext(dispatchers.default) {
         fallbackEmojisCache?.let { return@withContext it }
         EmojiLoader.getSupportedEmojis(context).also { fallbackEmojisCache = it }
