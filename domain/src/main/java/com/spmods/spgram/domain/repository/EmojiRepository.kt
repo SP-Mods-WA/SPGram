@@ -13,4 +13,12 @@ interface EmojiRepository {
     suspend fun addRecentEmoji(recentEmoji: RecentEmojiModel)
     suspend fun clearRecentEmojis()
     suspend fun getMessageAvailableReactions(chatId: Long, messageId: Long): List<String>
+
+    /**
+     * Returns the animated select-animation sticker for an emoji reaction.
+     * Uses TdApi.GetEmojiReaction → selectAnimation (the looping animated sticker
+     * shown in the reaction picker row, identical to original Telegram).
+     * Returns null if the sticker file is not yet downloaded or not available.
+     */
+    suspend fun getReactionSticker(emoji: String): StickerModel?
 }
