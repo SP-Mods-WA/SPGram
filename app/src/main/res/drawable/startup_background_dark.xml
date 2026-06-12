@@ -9,6 +9,6 @@
     <item
         android:width="72dp"
         android:height="72dp"
-        android:drawable="@drawable/spic_splash"
+        android:drawable="@dmipmap/splash_img"
         android:gravity="center" />
 </layer-list>
