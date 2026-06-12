@@ -131,6 +131,7 @@ import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageModel
 import com.spmods.spgram.domain.models.MessageViewerModel
 import com.spmods.spgram.domain.models.RecentEmojiModel
+import com.spmods.spgram.domain.models.StickerModel
 import com.spmods.spgram.domain.repository.EmojiRepository
 import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.ui.Avatar
@@ -150,6 +151,11 @@ data class MessagePackMenuOption(
     val previewPath: String? = null,
     val previewEmoji: String? = null
 )
+
+// Height of the floating reaction pill (emoji bar)
+private val REACTION_PILL_HEIGHT = 56.dp
+// Gap between reaction pill bottom and menu card top
+private val REACTION_PILL_GAP = 8.dp
 
 @Composable
 fun MessageOptionsMenu(
@@ -219,6 +225,8 @@ fun MessageOptionsMenu(
 
     val horizontalMargin = with(density) { 16.dp.toPx() }.toInt()
     val verticalPadding = with(density) { 8.dp.toPx() }.toInt()
+    val pillGapPx = with(density) { REACTION_PILL_GAP.toPx() }.toInt()
+    val pillHeightPx = with(density) { REACTION_PILL_HEIGHT.toPx() }.toInt()
 
     var menuVisible by remember { mutableStateOf(false) }
     val visibilityTransition = updateTransition(targetState = menuVisible, label = "MenuVisibility")
@@ -256,9 +264,11 @@ fun MessageOptionsMenu(
     }
 
     var menuSize by remember { mutableStateOf(IntSize.Zero) }
+    var pillSize by remember { mutableStateOf(IntSize.Zero) }
     var firstScreenWidth by remember { mutableStateOf<Int?>(null) }
     var containerOffset by remember { mutableStateOf(Offset.Zero) }
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
+
     val currentSections = remember(
         message.id,
         canWrite,
@@ -298,9 +308,9 @@ fun MessageOptionsMenu(
     var savedSections by rememberSaveable(message.id, stateSaver = MessageMenuSections.Saver) {
         mutableStateOf(currentSections)
     }
-    var hasReactionsInMessage by remember(message.id) { mutableStateOf(false) }
-    var suppressNextReactionsAppearanceAnimation by remember(message.id) { mutableStateOf(false) }
     var availableReactions by remember(message.chatId, message.id) { mutableStateOf<List<String>>(emptyList()) }
+    var suppressNextReactionsAppearanceAnimation by remember(message.id) { mutableStateOf(false) }
+    var hasReactionsInMessage by remember(message.id) { mutableStateOf(false) }
 
     LaunchedEffect(message.chatId, message.id) {
         availableReactions = emojiRepository.getMessageAvailableReactions(message.chatId, message.id)
@@ -322,15 +332,13 @@ fun MessageOptionsMenu(
         }
     }
 
+    // ── Menu card position (accounts for pill above when reactions available) ──────────
     val menuPosition by remember(
-        menuSize,
-        messageOffset,
-        messageSize,
-        clickOffset,
-        containerSize,
-        containerOffset,
-        topInset,
-        bottomInset
+        menuSize, pillSize,
+        messageOffset, messageSize, clickOffset,
+        containerSize, containerOffset,
+        topInset, bottomInset,
+        availableReactions
     ) {
         derivedStateOf {
             if (menuSize == IntSize.Zero || containerSize == IntSize.Zero) return@derivedStateOf IntOffset.Zero
@@ -340,8 +348,13 @@ fun MessageOptionsMenu(
             val maxX = containerOffset.x.toInt() + containerSize.width - menuSize.width - horizontalMargin
             x = if (maxX >= minX) x.coerceIn(minX, maxX) else minX
 
-            var y = (clickOffset.y - (menuSize.height / 2)).toInt()
-            val minY = maxOf(containerOffset.y.toInt() + verticalPadding, topInset + verticalPadding)
+            // Extra vertical space consumed by the pill above the card
+            val pillExtra = if (availableReactions.isNotEmpty() && pillSize != IntSize.Zero)
+                pillSize.height + pillGapPx else 0
+
+            var y = (clickOffset.y - ((menuSize.height + pillExtra) / 2)).toInt()
+            val minY = maxOf(containerOffset.y.toInt() + verticalPadding + pillExtra,
+                             topInset + verticalPadding + pillExtra)
             val maxY = minOf(
                 containerOffset.y.toInt() + containerSize.height - menuSize.height - verticalPadding,
                 screenHeight - bottomInset - menuSize.height - verticalPadding
@@ -352,13 +365,21 @@ fun MessageOptionsMenu(
         }
     }
 
+    // ── Reaction pill position — always just above the menu card ─────────────────────
+    val pillPosition by remember(menuPosition, menuSize, pillSize) {
+        derivedStateOf {
+            IntOffset(
+                x = menuPosition.x + (menuSize.width - pillSize.width) / 2,
+                y = menuPosition.y - pillSize.height - pillGapPx
+            )
+        }
+    }
+
     val transformOrigin by remember(menuPosition, menuSize, clickOffset, containerOffset) {
         derivedStateOf {
             if (menuSize == IntSize.Zero) return@derivedStateOf TransformOrigin.Center
-
             val relativeClickX = clickOffset.x - containerOffset.x
             val relativeClickY = clickOffset.y - containerOffset.y
-
             val pivotX = ((relativeClickX - menuPosition.x) / menuSize.width).coerceIn(0f, 1f)
             val pivotY = ((relativeClickY - menuPosition.y) / menuSize.height).coerceIn(0f, 1f)
             TransformOrigin(pivotX, pivotY)
@@ -379,11 +400,8 @@ fun MessageOptionsMenu(
     val sections = savedSections
 
     LaunchedEffect(menuPage, sections.hasMoreSection, sections.hasPackAction) {
-        if (menuPage == MenuPage.More && !sections.hasMoreSection) {
-            menuPage = MenuPage.Main
-        } else if (menuPage == MenuPage.Packs && !sections.hasPackAction) {
-            menuPage = MenuPage.Main
-        }
+        if (menuPage == MenuPage.More && !sections.hasMoreSection) menuPage = MenuPage.Main
+        else if (menuPage == MenuPage.Packs && !sections.hasPackAction) menuPage = MenuPage.Main
     }
 
     if (showDeleteSheet) {
@@ -431,64 +449,34 @@ fun MessageOptionsMenu(
                                 val topHeight = splitOffset.toFloat()
                                 val bottomHeight = messageSize.height - topHeight - gap
                                 val hasBottom = bottomHeight > 0
-
                                 val currentGap = if (hasBottom) 0f else gap
-
-                                // Top rect (Media)
-                                addRoundRect(
-                                    RoundRect(
-                                        rect = Rect(
-                                            offset = messageOffset - containerOffset,
-                                            size = Size(messageSize.width.toFloat(), topHeight)
-                                        ),
-                                        topLeft = CornerRadius(if (!isMessageOutgoing && isSameSenderAbove) s else r),
-                                        topRight = CornerRadius(if (isMessageOutgoing && isSameSenderAbove) s else r),
-                                        bottomRight = if (hasBottom) CornerRadius.Zero else CornerRadius(
-                                            if (isMessageOutgoing) s else r
-                                        ),
-                                        bottomLeft = if (hasBottom) CornerRadius.Zero else CornerRadius(
-                                            if (!isMessageOutgoing) s else r
-                                        )
-                                    )
-                                )
-
-                                // Bottom rect (Text)
+                                addRoundRect(RoundRect(
+                                    rect = Rect(offset = messageOffset - containerOffset, size = Size(messageSize.width.toFloat(), topHeight)),
+                                    topLeft = CornerRadius(if (!isMessageOutgoing && isSameSenderAbove) s else r),
+                                    topRight = CornerRadius(if (isMessageOutgoing && isSameSenderAbove) s else r),
+                                    bottomRight = if (hasBottom) CornerRadius.Zero else CornerRadius(if (isMessageOutgoing) s else r),
+                                    bottomLeft = if (hasBottom) CornerRadius.Zero else CornerRadius(if (!isMessageOutgoing) s else r)
+                                ))
                                 if (hasBottom) {
-                                    addRoundRect(
-                                        RoundRect(
-                                            rect = Rect(
-                                                offset = messageOffset - containerOffset + Offset(
-                                                    0f,
-                                                    topHeight + currentGap
-                                                ),
-                                                size = Size(
-                                                    messageSize.width.toFloat(),
-                                                    bottomHeight
-                                                )
-                                            ),
-                                            topLeft = CornerRadius.Zero,
-                                            topRight = CornerRadius.Zero,
-                                            bottomRight = CornerRadius(if (isMessageOutgoing) (if (isSameSenderBelow) s else t) else r),
-                                            bottomLeft = CornerRadius(if (!isMessageOutgoing) (if (isSameSenderBelow) s else t) else r)
-                                        )
-                                    )
-                                }
-                            } else {
-                                addRoundRect(
-                                    RoundRect(
+                                    addRoundRect(RoundRect(
                                         rect = Rect(
-                                            offset = messageOffset - containerOffset,
-                                            size = Size(
-                                                messageSize.width.toFloat(),
-                                                messageSize.height.toFloat()
-                                            )
+                                            offset = messageOffset - containerOffset + Offset(0f, topHeight + currentGap),
+                                            size = Size(messageSize.width.toFloat(), bottomHeight)
                                         ),
-                                        topLeft = CornerRadius(if (!isMessageOutgoing && isSameSenderAbove) s else r),
-                                        topRight = CornerRadius(if (isMessageOutgoing && isSameSenderAbove) s else r),
+                                        topLeft = CornerRadius.Zero,
+                                        topRight = CornerRadius.Zero,
                                         bottomRight = CornerRadius(if (isMessageOutgoing) (if (isSameSenderBelow) s else t) else r),
                                         bottomLeft = CornerRadius(if (!isMessageOutgoing) (if (isSameSenderBelow) s else t) else r)
-                                    )
-                                )
+                                    ))
+                                }
+                            } else {
+                                addRoundRect(RoundRect(
+                                    rect = Rect(offset = messageOffset - containerOffset, size = Size(messageSize.width.toFloat(), messageSize.height.toFloat())),
+                                    topLeft = CornerRadius(if (!isMessageOutgoing && isSameSenderAbove) s else r),
+                                    topRight = CornerRadius(if (isMessageOutgoing && isSameSenderAbove) s else r),
+                                    bottomRight = CornerRadius(if (isMessageOutgoing) (if (isSameSenderBelow) s else t) else r),
+                                    bottomLeft = CornerRadius(if (!isMessageOutgoing) (if (isSameSenderBelow) s else t) else r)
+                                ))
                             }
                         }
                         drawPath(path, Color.Black, blendMode = BlendMode.DstOut)
@@ -497,6 +485,46 @@ fun MessageOptionsMenu(
                 drawContent()
             }
     ) {
+        // ── FLOATING REACTION PILL — separate surface, above the menu card ──────────
+        // Original Telegram: emoji bar is its own rounded pill, NOT part of the menu card
+        if (menuPage == MenuPage.Main) {
+            AnimatedVisibility(
+                visible = availableReactions.isNotEmpty(),
+                enter = if (suppressNextReactionsAppearanceAnimation) EnterTransition.None
+                        else fadeIn(tween(150)) + scaleIn(tween(150), initialScale = 0.85f,
+                                    transformOrigin = TransformOrigin(0.5f, 1f)),
+                exit = fadeOut(tween(100)),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset { pillPosition }
+                    .graphicsLayer {
+                        this.alpha = if (containerSize == IntSize.Zero) 0f else menuAlpha
+                        scaleX = menuScale
+                        scaleY = menuScale
+                        shadowElevation = 12.dp.toPx()
+                        shape = RoundedCornerShape(50)
+                        clip = true
+                    }
+                    .onGloballyPositioned { pillSize = it.size },
+                label = "ReactionPillVisibility"
+            ) {
+                ReactionPill(
+                    message = message,
+                    availableReactions = availableReactions,
+                    onReactionsChanged = { count ->
+                        hasReactionsInMessage = count > 0
+                        if (suppressNextReactionsAppearanceAnimation) {
+                            suppressNextReactionsAppearanceAnimation = false
+                        }
+                    },
+                    onReaction = { reaction ->
+                        animateOutAndDismiss { onReaction(reaction) }
+                    }
+                )
+            }
+        }
+
+        // ── MENU CARD ────────────────────────────────────────────────────────────────
         Surface(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -609,21 +637,6 @@ fun MessageOptionsMenu(
                         shadowElevation = 0.dp
                     ) {
                     if (page == MenuPage.Main) {
-                        ReactionsRow(
-                            message = message,
-                            availableReactions = availableReactions,
-                            suppressAppearanceAnimation = suppressNextReactionsAppearanceAnimation,
-                            onAppearanceAnimationConsumed = {
-                                suppressNextReactionsAppearanceAnimation = false
-                            },
-                            onReactionsChanged = { reactionCount ->
-                                hasReactionsInMessage = reactionCount > 0
-                            },
-                            onReaction = { reaction ->
-                                animateOutAndDismiss { onReaction(reaction) }
-                            }
-                        )
-
                         InternalMenuHeaderInfo(
                             message = message,
                             showReadInfo = showReadInfo,
@@ -777,18 +790,14 @@ fun MessageOptionsMenu(
                             textColor = MaterialTheme.colorScheme.primary,
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                if (hasReactionsInMessage) {
-                                    suppressNextReactionsAppearanceAnimation = true
-                                }
+                                if (hasReactionsInMessage) suppressNextReactionsAppearanceAnimation = true
                                 menuPage = MenuPage.Main
                             }
                         )
-
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
-
                         if (sections.hasCommentsAction) {
                             InternalMenuOptionItem(
                                 icon = Icons.AutoMirrored.Rounded.Chat,
@@ -796,7 +805,6 @@ fun MessageOptionsMenu(
                                 onClick = { animateOutAndDismiss(onComments) }
                             )
                         }
-
                         if (sections.hasCopyLinkAction) {
                             InternalMenuOptionItem(
                                 icon = Icons.Rounded.Link,
@@ -804,7 +812,6 @@ fun MessageOptionsMenu(
                                 onClick = { animateOutAndDismiss(onCopyLink) }
                             )
                         }
-
                         if (sections.hasRepeatAction) {
                             InternalMenuOptionItem(
                                 icon = Icons.Rounded.PlusOne,
@@ -812,7 +819,6 @@ fun MessageOptionsMenu(
                                 onClick = { animateOutAndDismiss(onRepeat) }
                             )
                         }
-
                         if (sections.hasDownloadAction) {
                             InternalMenuOptionItem(
                                 icon = Icons.Rounded.Download,
@@ -820,7 +826,6 @@ fun MessageOptionsMenu(
                                 onClick = { animateOutAndDismiss(onSaveToDownloads) }
                             )
                         }
-
                         if (sections.hasReportAction) {
                             InternalMenuOptionItem(
                                 icon = Icons.Rounded.Report,
@@ -828,7 +833,6 @@ fun MessageOptionsMenu(
                                 onClick = { animateOutAndDismiss(onReport) }
                             )
                         }
-
                         if (sections.hasBlockAction) {
                             InternalMenuOptionItem(
                                 icon = Icons.Rounded.Block,
@@ -855,36 +859,22 @@ fun MessageOptionsMenu(
                             textColor = MaterialTheme.colorScheme.primary,
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                if (hasReactionsInMessage) {
-                                    suppressNextReactionsAppearanceAnimation = true
-                                }
+                                if (hasReactionsInMessage) suppressNextReactionsAppearanceAnimation = true
                                 menuPage = MenuPage.Main
                             }
                         )
-
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
-
                         packOptions.forEach { option ->
                             InternalMenuOptionItem(
                                 icon = Icons.Rounded.AutoAwesome,
                                 text = option.title ?: stringResource(
-                                    if (option.isCustomEmoji) {
-                                        R.string.emoji_pack_title
-                                    } else {
-                                        R.string.sticker_pack_title
-                                    }
+                                    if (option.isCustomEmoji) R.string.emoji_pack_title else R.string.sticker_pack_title
                                 ),
-                                leadingContent = {
-                                    PackPreview(option)
-                                },
-                                onClick = {
-                                    animateOutAndDismiss {
-                                        onPackClick(option.setId)
-                                    }
-                                }
+                                leadingContent = { PackPreview(option) },
+                                onClick = { animateOutAndDismiss { onPackClick(option.setId) } }
                             )
                         }
                     } else if (page == MenuPage.Cocoon) {
@@ -895,18 +885,14 @@ fun MessageOptionsMenu(
                             textColor = MaterialTheme.colorScheme.primary,
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                if (hasReactionsInMessage) {
-                                    suppressNextReactionsAppearanceAnimation = true
-                                }
+                                if (hasReactionsInMessage) suppressNextReactionsAppearanceAnimation = true
                                 menuPage = MenuPage.Main
                             }
                         )
-
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
-
                         if (sections.hasTelegramSummaryAction) {
                             InternalMenuOptionItem(
                                 icon = Icons.Rounded.AutoAwesome,
@@ -914,7 +900,6 @@ fun MessageOptionsMenu(
                                 onClick = { animateOutAndDismiss(onTelegramSummary) }
                             )
                         }
-
                         if (sections.hasTelegramTranslatorAction) {
                             InternalMenuOptionItem(
                                 icon = Icons.Rounded.Translate,
@@ -922,7 +907,6 @@ fun MessageOptionsMenu(
                                 onClick = { animateOutAndDismiss(onTelegramTranslator) }
                             )
                         }
-
                         if (sections.hasRestoreOriginalTextAction) {
                             InternalMenuOptionItem(
                                 icon = Icons.AutoMirrored.Rounded.Undo,
@@ -931,6 +915,7 @@ fun MessageOptionsMenu(
                             )
                         }
                     } else {
+                        // Viewers page
                         InternalMenuOptionItem(
                             icon = Icons.AutoMirrored.Rounded.ArrowBack,
                             text = stringResource(R.string.viewer_back),
@@ -938,30 +923,21 @@ fun MessageOptionsMenu(
                             textColor = MaterialTheme.colorScheme.primary,
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                if (hasReactionsInMessage) {
-                                    suppressNextReactionsAppearanceAnimation = true
-                                }
+                                if (hasReactionsInMessage) suppressNextReactionsAppearanceAnimation = true
                                 menuPage = MenuPage.Main
                             }
                         )
-
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
-
                         when {
                             isLoadingViewers -> {
                                 Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 24.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                                     contentAlignment = Alignment.Center
-                                ) {
-                                    LoadingIndicator()
-                                }
+                                ) { LoadingIndicator() }
                             }
-
                             viewers.isEmpty() -> {
                                 Text(
                                     text = stringResource(R.string.info_views),
@@ -970,32 +946,123 @@ fun MessageOptionsMenu(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-
                             else -> {
-                                val viewerDateFormat =
-                                    remember { SimpleDateFormat("MMM d, $timeFormat", Locale.getDefault()) }
+                                val viewerDateFormat = remember { SimpleDateFormat("MMM d, $timeFormat", Locale.getDefault()) }
                                 val scrollState = rememberScrollState()
                                 Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(max = 260.dp)
-                                        .verticalScroll(scrollState)
+                                    modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(scrollState)
                                 ) {
                                     viewers.forEach { viewer ->
                                         ViewerRow(
                                             viewer = viewer,
                                             dateFormat = viewerDateFormat,
-                                            onClick = {
-                                                animateOutAndDismiss {
-                                                    onViewerClick(viewer.user.id)
-                                                }
-                                            }
+                                            onClick = { animateOutAndDismiss { onViewerClick(viewer.user.id) } }
                                         )
                                     }
                                 }
                             }
                         }
                     }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Floating Reaction Pill ────────────────────────────────────────────────────────────
+// Separate pill-shaped Surface containing the animated emoji reaction buttons.
+// Original Telegram: this floats above the menu card as its own surface.
+@Composable
+private fun ReactionPill(
+    message: MessageModel,
+    availableReactions: List<String>,
+    onReactionsChanged: (Int) -> Unit,
+    onReaction: (String) -> Unit,
+    appPreferences: AppPreferences = koinInject(),
+    emojiRepository: EmojiRepository = koinInject()
+) {
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    val emojiStyle by appPreferences.emojiStyle.collectAsState()
+    val emojiFontFamily = remember(context, emojiStyle) { getEmojiFontFamily(context, emojiStyle) }
+
+    // Load animated stickers for each emoji
+    var reactionStickers by remember(availableReactions) {
+        mutableStateOf<Map<String, StickerModel>>(emptyMap())
+    }
+    LaunchedEffect(availableReactions) {
+        if (availableReactions.isEmpty()) return@LaunchedEffect
+        val loaded = mutableMapOf<String, StickerModel>()
+        availableReactions.forEach { emoji ->
+            val sticker = emojiRepository.getReactionSticker(emoji)
+            if (sticker != null) {
+                loaded[emoji] = sticker
+                reactionStickers = loaded.toMap()
+            }
+        }
+    }
+
+    LaunchedEffect(availableReactions.size) {
+        onReactionsChanged(availableReactions.size)
+    }
+
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        tonalElevation = 6.dp,
+        shadowElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            availableReactions.forEach { emoji ->
+                val isChosen = message.reactions.any { it.isChosen && it.emoji == emoji }
+
+                val backgroundColor by animateColorAsState(
+                    targetValue = if (isChosen) MaterialTheme.colorScheme.primaryContainer
+                                  else Color.Transparent,
+                    animationSpec = spring(stiffness = Spring.StiffnessLow),
+                    label = "pillReactionBg_$emoji"
+                )
+                val scale by animateFloatAsState(
+                    targetValue = if (isChosen) 1.12f else 1f,
+                    animationSpec = spring(dampingRatio = 0.45f, stiffness = 380f),
+                    label = "pillReactionScale_$emoji"
+                )
+
+                val stickerForEmoji = reactionStickers[emoji]
+
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .graphicsLayer { scaleX = scale; scaleY = scale }
+                        .clip(CircleShape)
+                        .background(backgroundColor)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onReaction(emoji)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (stickerForEmoji != null) {
+                        // Animated .tgs sticker — same as original Telegram
+                        StickerImage(
+                            path = stickerForEmoji.path,
+                            modifier = Modifier.size(28.dp),
+                            animate = true
+                        )
+                    } else {
+                        // Placeholder until sticker loads
+                        Text(
+                            text = emoji,
+                            fontSize = 22.sp,
+                            fontFamily = emojiFontFamily
+                        )
                     }
                 }
             }
@@ -1154,141 +1221,6 @@ private enum class MenuPage {
     Cocoon,
     Packs,
     Viewers
-}
-
-@Composable
-private fun ReactionsRow(
-    message: MessageModel,
-    availableReactions: List<String>,
-    suppressAppearanceAnimation: Boolean,
-    onAppearanceAnimationConsumed: () -> Unit,
-    onReactionsChanged: (Int) -> Unit,
-    onReaction: (String) -> Unit,
-    appPreferences: AppPreferences = koinInject(),
-    emojiRepository: EmojiRepository = koinInject()
-) {
-    val haptic = LocalHapticFeedback.current
-
-    val context = LocalContext.current
-    val emojiStyle by appPreferences.emojiStyle.collectAsState()
-    val emojiFontFamily = remember(context, emojiStyle) { getEmojiFontFamily(context, emojiStyle) }
-
-    // Build RecentEmojiModel list with emoji string first, then load stickers async
-    val reactions = remember(availableReactions) {
-        if (availableReactions.isNotEmpty()) {
-            availableReactions.map { RecentEmojiModel(it) }
-        } else {
-            emptyList()
-        }
-    }
-
-    // Load animated selectAnimation sticker for each emoji reaction (original Telegram behaviour)
-    // Key: emoji string → StickerModel? (null = not yet loaded or not available)
-    var reactionStickers by remember(availableReactions) {
-        mutableStateOf<Map<String, com.spmods.spgram.domain.models.StickerModel>>(emptyMap())
-    }
-
-    LaunchedEffect(availableReactions) {
-        if (availableReactions.isEmpty()) return@LaunchedEffect
-        val loaded = mutableMapOf<String, com.spmods.spgram.domain.models.StickerModel>()
-        availableReactions.forEach { emoji ->
-            val sticker = emojiRepository.getReactionSticker(emoji)
-            if (sticker != null) {
-                loaded[emoji] = sticker
-                // Update state incrementally so each emoji shows as soon as its sticker loads
-                reactionStickers = loaded.toMap()
-            }
-        }
-    }
-
-    LaunchedEffect(reactions.size) {
-        onReactionsChanged(reactions.size)
-    }
-
-    LaunchedEffect(suppressAppearanceAnimation, reactions.isNotEmpty()) {
-        if (suppressAppearanceAnimation && reactions.isNotEmpty()) {
-            onAppearanceAnimationConsumed()
-        }
-    }
-
-    AnimatedVisibility(
-        visible = reactions.isNotEmpty(),
-        enter = if (suppressAppearanceAnimation) {
-            EnterTransition.None
-        } else {
-            fadeIn(animationSpec = tween(150, easing = LinearOutSlowInEasing))
-        },
-        exit = fadeOut(animationSpec = tween(100, easing = FastOutLinearInEasing)),
-        label = "ReactionsRowVisibility"
-    ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .padding(vertical = 4.dp)
-                    .padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                reactions.forEach { reaction ->
-                    val isChosen = message.reactions.any { it.isChosen && it.emoji == reaction.emoji }
-
-                    val backgroundColor by animateColorAsState(
-                        targetValue = if (isChosen) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        animationSpec = spring(stiffness = Spring.StiffnessLow),
-                        label = "reactionBg"
-                    )
-
-                    val scale by animateFloatAsState(
-                        targetValue = if (isChosen) 1.06f else 1f,
-                        animationSpec = tween(durationMillis = 160, easing = LinearOutSlowInEasing),
-                        label = "reactionScale"
-                    )
-
-                    // Prefer animated selectAnimation sticker (original Telegram behaviour);
-                    // fall back to plain text emoji if sticker not yet loaded
-                    val stickerForEmoji = reactionStickers[reaction.emoji]
-
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                            }
-                            .clip(CircleShape)
-                            .background(backgroundColor)
-                            .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onReaction(reaction.emoji)
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (stickerForEmoji != null) {
-                            // Animated .tgs / .webm sticker — same as original Telegram reaction picker
-                            StickerImage(
-                                path = stickerForEmoji.path,
-                                modifier = Modifier.size(28.dp),
-                                animate = true
-                            )
-                        } else {
-                            // Sticker not loaded yet — show text emoji as placeholder
-                            Text(
-                                text = reaction.emoji,
-                                fontSize = 24.sp,
-                                fontFamily = emojiFontFamily
-                            )
-                        }
-                    }
-                }
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-        }
-    }
 }
 
 @Composable
