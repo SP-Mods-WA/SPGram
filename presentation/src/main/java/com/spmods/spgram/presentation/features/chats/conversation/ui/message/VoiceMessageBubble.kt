@@ -197,6 +197,7 @@ fun VoiceRow(
     content: MessageContent.Voice,
     msg: MessageModel,
     onVoiceClick: (MessageModel) -> Unit,
+    onOpenViewOnce: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit,
     isOutgoing: Boolean
 ) {
