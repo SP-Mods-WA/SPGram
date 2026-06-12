@@ -9,6 +9,6 @@
     <item
         android:width="72dp"
         android:height="72dp"
-        android:drawable="@mipmap/splash_img"
+        android:drawable="@mipmap/ic_launcher"
         android:gravity="center" />
 </layer-list>
