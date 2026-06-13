@@ -84,7 +84,7 @@ interface ChatComponent {
         sendOptions: MessageSendOptions = MessageSendOptions()
     )
 
-    fun onSendVoice(path: String, duration: Int, waveform: ByteArray)
+    fun onSendVoice(path: String, duration: Int, waveform: ByteArray, selfDestructImmediately: Boolean = false)
     fun onRefreshScheduledMessages()
     fun onSendScheduledNow(message: MessageModel)
     fun loadMore()
