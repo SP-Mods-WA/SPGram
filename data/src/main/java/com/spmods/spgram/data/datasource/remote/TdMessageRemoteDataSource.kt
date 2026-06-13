@@ -592,6 +592,9 @@ class TdMessageRemoteDataSource(
         val content = TdApi.InputMessagePhoto().apply {
             this.photo = TdApi.InputFileLocal(photoPath)
             this.caption = TdApi.FormattedText(caption, captionEntities.toTdTextEntities(caption))
+            if (sendOptions.selfDestructImmediately) {
+                this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
+            }
         }
         val replyTo = if (replyToMsgId != null && replyToMsgId != 0L) TdApi.InputMessageReplyToMessage(replyToMsgId, null, 0, "") else null
         val topicId = resolveTopicId(chatId, threadId)
@@ -625,6 +628,9 @@ class TdMessageRemoteDataSource(
         val content = TdApi.InputMessageVideo().apply {
             this.video = TdApi.InputFileLocal(videoPath)
             this.caption = TdApi.FormattedText(caption, captionEntities.toTdTextEntities(caption))
+            if (sendOptions.selfDestructImmediately) {
+                this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
+            }
         }
         val replyTo = if (replyToMsgId != null && replyToMsgId != 0L) TdApi.InputMessageReplyToMessage(replyToMsgId, null, 0, "") else null
         val topicId = resolveTopicId(chatId, threadId)
@@ -832,10 +838,16 @@ class TdMessageRemoteDataSource(
                 if (isVideo) TdApi.InputMessageVideo().apply {
                     this.video = TdApi.InputFileLocal(path)
                     this.caption = cap
+                    if (sendOptions.selfDestructImmediately) {
+                        this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
+                    }
                 }
                 else TdApi.InputMessagePhoto().apply {
                     this.photo = TdApi.InputFileLocal(path)
                     this.caption = cap
+                    if (sendOptions.selfDestructImmediately) {
+                        this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
+                    }
                 }
             }
         }.toTypedArray()
