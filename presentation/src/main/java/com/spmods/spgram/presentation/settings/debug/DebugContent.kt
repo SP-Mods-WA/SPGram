@@ -87,10 +87,10 @@ fun DebugContent(component: DebugComponent) {
                 horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Forum,
+                    imageVector = Icons.Rounded.Favorite,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
-                    tint = Color(0xFF2AABEE)
+                    tint = Color(0xFFFF6D66)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
