@@ -14,7 +14,7 @@ import kotlin.math.log10
 
 @Composable
 fun rememberVoiceRecorder(
-    onRecordingFinished: (String, Int, ByteArray) -> Unit,
+    onRecordingFinished: (String, Int, ByteArray, Boolean) -> Unit,
     onPermissionDenied: () -> Unit = {}
 ): VoiceRecorderState {
     val context = LocalContext.current
@@ -48,6 +48,8 @@ class VoiceRecorderState(private val context: Context) {
         private set
     var isLocked by mutableStateOf(false)
         private set
+    var isViewOnce by mutableStateOf(false)
+        private set
     var durationMillis by mutableLongStateOf(0L)
         private set
     var amplitude by mutableFloatStateOf(0f)
@@ -59,8 +61,14 @@ class VoiceRecorderState(private val context: Context) {
     private var currentFile: File? = null
     private var startTime = 0L
 
-    var onRecordingFinished: ((String, Int, ByteArray) -> Unit)? = null
+    var onRecordingFinished: ((String, Int, ByteArray, Boolean) -> Unit)? = null
     var onPermissionDenied: (() -> Unit)? = null
+
+    fun toggleViewOnce() {
+        if (isLocked) {
+            isViewOnce = !isViewOnce
+        }
+    }
 
     @Suppress("DEPRECATION")
     fun startRecording() {
@@ -112,6 +120,7 @@ class VoiceRecorderState(private val context: Context) {
             startTime = System.currentTimeMillis()
             isRecording = true
             isLocked = false
+            isViewOnce = false
             durationMillis = 0
         } catch (e: Exception) {
             e.printStackTrace()
@@ -147,18 +156,20 @@ class VoiceRecorderState(private val context: Context) {
         if (!isRecording) return
 
         val capturedDurationMillis = durationMillis
+        val capturedIsViewOnce = isViewOnce
         val wasRecording = isRecording
         val file = currentFile
 
         releaseResources()
         isRecording = false
         isLocked = false
+        isViewOnce = false
         currentFile = null
 
         if (wasRecording && !cancel && file != null) {
             val durationSec = (capturedDurationMillis / 1000).toInt()
             if (durationSec >= 1) {
-                onRecordingFinished?.invoke(file.absolutePath, durationSec, waveform.toByteArray())
+                onRecordingFinished?.invoke(file.absolutePath, durationSec, waveform.toByteArray(), capturedIsViewOnce)
             } else {
                 file.delete()
             }
