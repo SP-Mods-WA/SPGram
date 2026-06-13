@@ -109,9 +109,14 @@ internal class MessageContentMapper(
                 val downloadProgress = photoFile?.let(fileHelper::computeDownloadProgress) ?: 0f
 
                 val photoIsViewOnce = content.isSecret
-                val photoOpened = false // TDLib removes the photo server-side after open; locally treat as not-yet-opened
+                // selfDestructIn == 0.0 and selfDestructType != null means the timer has fired
+                // (i.e., the user already opened it and it self-destructed). TDLib keeps the
+                // MessagePhoto shell with isSecret=true so we can show "Photo expired".
+                val photoOpened = photoIsViewOnce &&
+                    msg.selfDestructType != null &&
+                    msg.selfDestructIn == 0.0
                 // For view-once photos: suppress auto-download — user must tap to open
-                if (photoIsViewOnce && photoFile != null) {
+                if (photoIsViewOnce && !photoOpened && photoFile != null) {
                     fileHelper.suppressDownload(photoFile.id)
                 }
                 MessageContent.Photo(
@@ -196,7 +201,9 @@ internal class MessageContentMapper(
                     minithumbnail = video.minithumbnail?.data,
                     supportsStreaming = video.supportsStreaming,
                     isViewOnce = content.isSecret,
-                    isViewOnceOpened = false
+                    isViewOnceOpened = content.isSecret &&
+                        msg.selfDestructType != null &&
+                        msg.selfDestructIn == 0.0
                 )
             }
 
@@ -231,8 +238,9 @@ internal class MessageContentMapper(
                     downloadProgress = downloadProgress,
                     fileId = voiceFile.id
                 ,
-                    isViewOnce = false, // VoiceNote has no isSecret in this TDLib version
-                    isViewOnceOpened = false
+                    isViewOnce = msg.selfDestructType != null,
+                    isViewOnceOpened = msg.selfDestructType != null &&
+                        msg.selfDestructIn == 0.0
                 )
             }
 
@@ -600,8 +608,65 @@ internal class MessageContentMapper(
             }
 
             is TdApi.MessageStory -> MessageContent.Text(stringProvider.getString("chat_mapper_story"))
-            is TdApi.MessageExpiredPhoto -> MessageContent.Text(stringProvider.getString("message_expired_photo"))
-            is TdApi.MessageExpiredVideo -> MessageContent.Text(stringProvider.getString("message_expired_video"))
+            is TdApi.MessageExpiredPhoto -> MessageContent.Photo(
+                path = null,
+                thumbnailPath = null,
+                width = 0,
+                height = 0,
+                caption = "",
+                entities = emptyList(),
+                isUploading = false,
+                uploadProgress = 0f,
+                isDownloading = false,
+                downloadProgress = 0f,
+                fileId = 0,
+                minithumbnail = null,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
+            is TdApi.MessageExpiredVideo -> MessageContent.Video(
+                path = null,
+                thumbnailPath = null,
+                width = 0,
+                height = 0,
+                duration = 0,
+                caption = "",
+                entities = emptyList(),
+                isUploading = false,
+                uploadProgress = 0f,
+                isDownloading = false,
+                downloadProgress = 0f,
+                fileId = 0,
+                minithumbnail = null,
+                supportsStreaming = false,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
+            is TdApi.MessageExpiredVoiceNote -> MessageContent.Voice(
+                path = null,
+                duration = 0,
+                waveform = byteArrayOf(),
+                isUploading = false,
+                uploadProgress = 0f,
+                isDownloading = false,
+                downloadProgress = 0f,
+                fileId = 0,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
+            is TdApi.MessageExpiredVideoNote -> MessageContent.VideoNote(
+                path = null,
+                thumbnail = null,
+                duration = 0,
+                length = 0,
+                isUploading = false,
+                uploadProgress = 0f,
+                isDownloading = false,
+                downloadProgress = 0f,
+                fileId = 0,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
             else -> serviceMessageFormatter.format(content, context)
                 ?: MessageContent.Text("ℹ️ Unsupported message type: ${content.javaClass.simpleName}")
         }
