@@ -4,6 +4,8 @@ import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -43,6 +45,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.res.stringResource
@@ -53,6 +56,7 @@ import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageModel
 import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.util.IDownloadUtils
+import com.spmods.spgram.presentation.features.chats.conversation.AutoDownloadSuppression
 import com.spmods.spgram.presentation.features.chats.conversation.ui.LocalVoicePlaybackController
 
 @Composable
@@ -92,6 +96,12 @@ fun VoiceMessageBubble(
         autoDownloadWifi,
         autoDownloadRoaming
     ) {
+        // Suppress auto-download for view-once voices — user must tap to open
+        if (content.isViewOnce && content.fileId != 0) {
+            AutoDownloadSuppression.suppress(content.fileId)
+            return@LaunchedEffect
+        }
+
         val shouldDownload = if (autoDownloadFiles) {
             when {
                 downloadUtils.isRoaming() -> autoDownloadRoaming
@@ -214,71 +224,78 @@ fun VoiceRow(
             .fillMaxWidth()
             .padding(bottom = 4.dp)
     ) {
+        // Wrap in an outer Box so we can overlay the view-once "①" badge
         Box(modifier = Modifier.size(48.dp)) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clip(CircleShape)
-                .background(if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary)
-                .clickable {
-                    if (content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading && content.path == null) {
-                                onOpenViewOnce(msg)
-                    } else if (content.isDownloading) {
-                        onCancelDownload(content.fileId)
-                    } else if (content.path == null) {
-                        onVoiceClick(msg)
-                    } else {
-                        voicePlaybackController.togglePlayPause(msg.id, content.path)
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            if (content.isDownloading || content.isUploading) {
-                CircularWavyProgressIndicator(
-                    progress = { if (content.isDownloading) content.downloadProgress else content.uploadProgress },
-                    modifier = Modifier.size(28.dp),
-                    color = if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
-                    trackColor = (if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary).copy(
-                        alpha = 0.2f
-                    ),
-                )
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.cancel_button),
-                    tint = if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(16.dp)
-                )
-            } else {
-                val icon = when {
-                    content.path == null -> Icons.Default.Download
-                    playerState.isPlaying -> Icons.Default.Pause
-                    else -> Icons.Default.PlayArrow
-                }
-                Icon(
-                    imageVector = icon,
-                    contentDescription = if (playerState.isPlaying) "Pause" else "Play",
-                    tint = if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-        if (content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading) {
             Box(
                 modifier = Modifier
-                    .size(18.dp)
-                    .align(Alignment.BottomEnd)
-                    .background(MaterialTheme.colorScheme.surface, CircleShape),
+                    .matchParentSize()
+                    .clip(CircleShape)
+                    .background(if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary)
+                    .clickable {
+                        if (content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading && content.path == null) {
+                            onOpenViewOnce(msg)
+                        } else if (content.isDownloading) {
+                            onCancelDownload(content.fileId)
+                        } else if (content.path == null) {
+                            onVoiceClick(msg)
+                        } else {
+                            voicePlaybackController.togglePlayPause(msg.id, content.path)
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Timer,
-                    contentDescription = null,
-                    tint = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(12.dp)
-                )
+                if (content.isDownloading || content.isUploading) {
+                    CircularWavyProgressIndicator(
+                        progress = { if (content.isDownloading) content.downloadProgress else content.uploadProgress },
+                        modifier = Modifier.size(28.dp),
+                        color = if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else MaterialTheme.colorScheme.onPrimary,
+                        trackColor = (if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else MaterialTheme.colorScheme.onPrimary).copy(alpha = 0.2f),
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.cancel_button),
+                        tint = if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                } else {
+                    // For view-once (not opened, not downloaded) → show Download arrow
+                    // For view-once (not opened, path exists) → show PlayArrow (will be opened on tap)
+                    val icon = when {
+                        content.isViewOnce && !content.isViewOnceOpened && content.path == null -> Icons.Default.Download
+                        content.path == null -> Icons.Default.Download
+                        playerState.isPlaying -> Icons.Default.Pause
+                        else -> Icons.Default.PlayArrow
+                    }
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = if (playerState.isPlaying) "Pause" else "Play",
+                        tint = if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            // View-once badge: small "1" indicator at bottom-right of the circle button,
+            // shown when this is a view-once voice message that hasn't been opened yet
+            if (content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading && !content.isUploading) {
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .align(Alignment.BottomEnd)
+                        .background(MaterialTheme.colorScheme.surface, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Timer,
+                        contentDescription = null,
+                        tint = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
             }
         }
-        } // end outer Box
+
+        Spacer(modifier = Modifier.width(12.dp))
 
         Column(
             modifier = Modifier.weight(1f)
@@ -288,7 +305,23 @@ fun VoiceRow(
                 progress = playerState.progress,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(36.dp),
+                    .height(36.dp)
+                    .pointerInput(msg.id, content.path) {
+                        if (content.path == null) return@pointerInput
+                        // Tap to seek
+                        detectTapGestures { offset ->
+                            val fraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                            voicePlaybackController.seekTo(msg.id, fraction)
+                        }
+                    }
+                    .pointerInput(msg.id, content.path) {
+                        if (content.path == null) return@pointerInput
+                        // Drag to scrub
+                        detectDragGestures { change, _ ->
+                            val fraction = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                            voicePlaybackController.seekTo(msg.id, fraction)
+                        }
+                    },
                 activeColor = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
                 inactiveColor = (if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant).copy(
                     alpha = 0.3f
