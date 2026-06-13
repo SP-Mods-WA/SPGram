@@ -66,7 +66,7 @@ interface ChatStore : Store<ChatStore.Intent, ChatComponent.State, ChatStore.Lab
             val sendOptions: MessageSendOptions = MessageSendOptions()
         ) : Intent()
 
-        data class SendVoice(val path: String, val duration: Int, val waveform: ByteArray) : Intent()
+        data class SendVoice(val path: String, val duration: Int, val waveform: ByteArray, val isViewOnce: Boolean = false) : Intent()
         object RefreshScheduledMessages : Intent()
         data class SendScheduledNow(val message: MessageModel) : Intent()
         object LoadMore : Intent()
