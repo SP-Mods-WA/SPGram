@@ -71,7 +71,7 @@ interface MessageRepository :
     suspend fun closeChat(chatId: Long)
 
     suspend fun sendVideoNote(chatId: Long, videoPath: String, duration: Int, length: Int)
-    suspend fun sendVoiceNote(chatId: Long, voicePath: String, duration: Int, waveform: ByteArray)
+    suspend fun sendVoiceNote(chatId: Long, voicePath: String, duration: Int, waveform: ByteArray, selfDestructImmediately: Boolean = false)
 
     suspend fun getMessagesOlder(
         chatId: Long,
