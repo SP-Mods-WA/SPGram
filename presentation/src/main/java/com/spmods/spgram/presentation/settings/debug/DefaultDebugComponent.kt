@@ -61,7 +61,7 @@ class DefaultDebugComponent(
     }
 
     override fun onShowSponsorSheetClicked() {
-        externalNavigator.openUrl("https://boosty.to/spgram")
+        externalNavigator.openUrl("https://t.me/SPModsSandun")
     }
 
     override fun onForceSponsorSyncClicked() {
