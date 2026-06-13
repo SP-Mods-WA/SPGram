@@ -39,6 +39,7 @@ import com.spmods.spgram.presentation.core.util.coRunCatching
 import com.spmods.spgram.presentation.features.chats.conversation.ChatComponent
 import com.spmods.spgram.presentation.features.stickers.ui.menu.MessageOptionsMenu
 import com.spmods.spgram.presentation.features.stickers.ui.menu.MessagePackMenuOption
+import com.spmods.spgram.presentation.features.stickers.ui.menu.ReactionPickerSheet
 import java.util.Locale
 
 @Composable
@@ -254,6 +255,9 @@ fun ChatMessageOptionsMenu(
             selectedMessage
         }
     }
+    var reactionPickerReactions by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showReactionPicker by remember { mutableStateOf(false) }
+
     MessageOptionsMenu(
         message = menuMessage.copy(readDate = messageWithReadDate.readDate),
         canWrite = state.canWrite,
@@ -356,6 +360,10 @@ fun ChatMessageOptionsMenu(
         onReaction = { reaction ->
             component.onSendReaction(selectedMessage.id, reaction)
             onDismiss()
+        },
+        onShowAllReactions = { _, _, reactions ->
+            reactionPickerReactions = reactions
+            showReactionPicker = true
         },
         onComments = {
             component.onCommentsClick(selectedMessage.id)
@@ -460,9 +468,24 @@ fun ChatMessageOptionsMenu(
         },
         onDismiss = onDismiss,
     )
-}
 
-private suspend fun resolveMessagePackOptions(
+    // Full reaction picker sheet — shown when ▾ is tapped in the pill (original Telegram behaviour)
+    if (showReactionPicker) {
+        val chosenReactions = remember(selectedMessage.reactions) {
+            selectedMessage.reactions.filter { it.isChosen }.map { it.emoji }.toSet()
+        }
+        ReactionPickerSheet(
+            availableReactions = reactionPickerReactions,
+            chosenReactions = chosenReactions,
+            onReaction = { reaction ->
+                component.onSendReaction(selectedMessage.id, reaction)
+                showReactionPicker = false
+                onDismiss()
+            },
+            onDismiss = { showReactionPicker = false }
+        )
+    }
+}
     message: MessageModel,
     stickerRepository: StickerRepository,
     customEmojiStickerSets: List<StickerSetModel>
