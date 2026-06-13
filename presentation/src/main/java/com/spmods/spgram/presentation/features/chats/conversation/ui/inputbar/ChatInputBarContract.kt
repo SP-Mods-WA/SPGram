@@ -54,7 +54,7 @@ data class ChatInputBarActions(
     val onGifClick: (GifModel) -> Unit = {},
     val onAttachClick: () -> Unit = {},
     val onCameraClick: () -> Unit = {},
-    val onSendVoice: (String, Int, ByteArray) -> Unit = { _, _, _ -> },
+    val onSendVoice: (String, Int, ByteArray, Boolean) -> Unit = { _, _, _, _ -> },
     val onCancelReply: () -> Unit = {},
     val onCancelEdit: () -> Unit = {},
     val onSaveEdit: (String, List<MessageEntity>) -> Unit = { _, _ -> },
