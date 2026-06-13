@@ -7,6 +7,10 @@
     <string name="action_send_view_once">Send as view once</string>
     <string name="message_expired_video_note">Video message expired</string>
 <string name="message_expired_voice_note">Voice message expired</string>
+        <string name="spmods_channel_title">Join SPMods Channel</string>
+    <string name="spmods_channel_description">Join our official Telegram channel to stay up to date with the latest updates and new features, and to report any bugs directly to us.</string>
+    <string name="spmods_channel_join_button">Join Channel</string>
+    <string name="spmods_channel_maybe_later">Maybe later</string>
 
     <string name="scan_qr_title">Scan QR</string>
     <string name="devices_title">Devices</string>
