@@ -299,7 +299,7 @@ fun ProfileInfoSection(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Send,
+                    imageVector = Icons.Rounded.Forum,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
                     tint = Color(0xFF2AABEE)
