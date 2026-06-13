@@ -472,7 +472,7 @@ fun ChatMessageOptionsMenu(
     // Full reaction picker sheet — shown when ▾ is tapped in the pill (original Telegram behaviour)
     if (showReactionPicker) {
         val chosenReactions = remember(selectedMessage.reactions) {
-            selectedMessage.reactions.filter { it.isChosen }.map { it.emoji }.toSet()
+            selectedMessage.reactions.filter { it.isChosen }.mapNotNull { it.emoji }.toSet()
         }
         ReactionPickerSheet(
             availableReactions = reactionPickerReactions,
@@ -486,6 +486,8 @@ fun ChatMessageOptionsMenu(
         )
     }
 }
+
+private suspend fun resolveMessagePackOptions(
     message: MessageModel,
     stickerRepository: StickerRepository,
     customEmojiStickerSets: List<StickerSetModel>
