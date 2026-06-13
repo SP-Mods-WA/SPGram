@@ -362,9 +362,12 @@ fun ChatMessageOptionsMenu(
             onDismiss()
         },
         onShowAllReactions = { _, _, reactions ->
+            // Set reactions first, then show picker
+            // Menu overlay stays mounted so sheet can render on top
             reactionPickerReactions = reactions
             showReactionPicker = true
         },
+        hideForPicker = showReactionPicker,
         onComments = {
             component.onCommentsClick(selectedMessage.id)
             onDismiss()
