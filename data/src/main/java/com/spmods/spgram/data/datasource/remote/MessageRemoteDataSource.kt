@@ -134,7 +134,7 @@ interface MessageRemoteDataSource {
         sendOptions: MessageSendOptions
     ): TdApi.Messages?
     suspend fun sendVideoNote(chatId: Long, videoPath: String, duration: Int, length: Int): TdApi.Message?
-    suspend fun sendVoiceNote(chatId: Long, voicePath: String, duration: Int, waveform: ByteArray): TdApi.Message?
+    suspend fun sendVoiceNote(chatId: Long, voicePath: String, duration: Int, waveform: ByteArray, selfDestructImmediately: Boolean = false): TdApi.Message?
     suspend fun forwardMessages(toChatId: Long, fromChatId: Long, messageIds: LongArray, removeCaption: Boolean, sendCopy: Boolean): TdApi.Messages?
     suspend fun deleteMessages(chatId: Long, messageIds: LongArray, revoke: Boolean): TdApi.Ok?
     suspend fun editMessageText(chatId: Long, messageId: Long, text: String, entities: List<MessageEntity>): TdApi.Message?
