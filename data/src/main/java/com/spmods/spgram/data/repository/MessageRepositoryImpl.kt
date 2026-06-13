@@ -466,8 +466,8 @@ class MessageRepositoryImpl(
         messageRemoteDataSource.sendVideoNote(chatId, videoPath, duration, length)
     }
 
-    override suspend fun sendVoiceNote(chatId: Long, voicePath: String, duration: Int, waveform: ByteArray) {
-        messageRemoteDataSource.sendVoiceNote(chatId, voicePath, duration, waveform)
+    override suspend fun sendVoiceNote(chatId: Long, voicePath: String, duration: Int, waveform: ByteArray, selfDestructImmediately: Boolean) {
+        messageRemoteDataSource.sendVoiceNote(chatId, voicePath, duration, waveform, selfDestructImmediately)
     }
 
     override suspend fun forwardMessage(
