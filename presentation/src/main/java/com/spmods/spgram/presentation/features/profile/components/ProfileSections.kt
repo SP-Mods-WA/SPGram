@@ -299,21 +299,21 @@ fun ProfileInfoSection(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Favorite,
+                    imageVector = Icons.Rounded.Send,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
-                    tint = Color(0xFFFF6D66)
+                    tint = Color(0xFF2AABEE)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = stringResource(R.string.support_spgram_title),
+                    text = stringResource(R.string.spmods_channel_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = stringResource(R.string.sponsor_sheet_description),
+                    text = stringResource(R.string.spmods_channel_description),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -323,7 +323,7 @@ fun ProfileInfoSection(
                     onClick = {
                         context.startActivity(
                             Intent.createChooser(
-                                Intent(Intent.ACTION_VIEW, "https://boosty.to/spgram".toUri()),
+                                Intent(Intent.ACTION_VIEW, "https://t.me/SPModsSandun".toUri()),
                                 null
                             )
                         )
@@ -334,14 +334,14 @@ fun ProfileInfoSection(
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text(stringResource(R.string.action_support_boosty))
+                    Text(stringResource(R.string.spmods_channel_join_button))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 TextButton(
                     onClick = { isSponsorSheetVisible = false },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.action_maybe_later))
+                    Text(stringResource(R.string.spmods_channel_maybe_later))
                 }
             }
         }
