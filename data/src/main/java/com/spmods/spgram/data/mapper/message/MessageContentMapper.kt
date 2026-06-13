@@ -622,6 +622,8 @@ internal class MessageContentMapper(
             is TdApi.MessageStory -> MessageContent.Text(stringProvider.getString("chat_mapper_story"))
             is TdApi.MessageExpiredPhoto -> MessageContent.Text(stringProvider.getString("message_expired_photo"))
             is TdApi.MessageExpiredVideo -> MessageContent.Text(stringProvider.getString("message_expired_video"))
+            is TdApi.MessageExpiredVideoNote -> MessageContent.Text(stringProvider.getString("message_expired_video_note"))
+            is TdApi.MessageExpiredVoiceNote -> MessageContent.Text(stringProvider.getString("message_expired_voice_note"))
             else -> serviceMessageFormatter.format(content, context)
                 ?: MessageContent.Text("ℹ️ Unsupported message type: ${content.javaClass.simpleName}")
         }
