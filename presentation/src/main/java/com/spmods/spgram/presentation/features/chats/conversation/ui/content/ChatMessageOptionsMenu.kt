@@ -485,7 +485,10 @@ fun ChatMessageOptionsMenu(
                 showReactionPicker = false
                 onDismiss()
             },
-            onDismiss = { showReactionPicker = false }
+            onDismiss = {
+                showReactionPicker = false
+                onDismiss()
+            }
         )
     }
 }
