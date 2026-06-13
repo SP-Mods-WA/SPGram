@@ -863,6 +863,10 @@ fun ChatInputBar(
                             showSendOptionsSheet = false
                             sendWithOptions(MessageSendOptions(sendAsDocument = true))
                         },
+                        onSendViewOnce = {
+                            showSendOptionsSheet = false
+                            sendWithOptions(MessageSendOptions(selfDestructImmediately = true))
+                        },
                         onCameraClick = {
                             hideKeyboardAndClearFocus()
                             actions.onCameraClick()
