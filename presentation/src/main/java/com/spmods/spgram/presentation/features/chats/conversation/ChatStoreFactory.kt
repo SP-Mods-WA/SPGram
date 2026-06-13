@@ -144,7 +144,7 @@ class ChatStoreFactory(
                     sendOptions = intent.sendOptions
                 )
 
-                is Intent.SendVoice -> component.handleSendVoice(intent.path, intent.duration, intent.waveform)
+                is Intent.SendVoice -> component.handleSendVoice(intent.path, intent.duration, intent.waveform, intent.isViewOnce)
                 is Intent.RefreshScheduledMessages -> component.loadScheduledMessages()
                 is Intent.SendScheduledNow -> component.handleSendScheduledNow(intent.message)
                 is Intent.LoadMore -> component.loadMoreMessages()
