@@ -223,6 +223,7 @@ sealed interface MessageContent {
         val downloadProgress: Float = 0f,
         val downloadError: Boolean = false,
         val fileId: Int = 0,
+        val isListened: Boolean = false,
         val isViewOnce: Boolean = false,
         val isViewOnceOpened: Boolean = false
     ) : MessageContent {
@@ -239,6 +240,7 @@ sealed interface MessageContent {
             if (downloadProgress != other.downloadProgress) return false
             if (downloadError != other.downloadError) return false
             if (fileId != other.fileId) return false
+            if (isListened != other.isListened) return false
             if (path != other.path) return false
             if (!(waveform contentEquals other.waveform)) return false
 
@@ -253,6 +255,7 @@ sealed interface MessageContent {
             result = 31 * result + downloadProgress.hashCode()
             result = 31 * result + downloadError.hashCode()
             result = 31 * result + fileId
+            result = 31 * result + isListened.hashCode()
             result = 31 * result + (path?.hashCode() ?: 0)
             result = 31 * result + (waveform?.contentHashCode() ?: 0)
             return result
