@@ -383,8 +383,8 @@ class DefaultChatComponent(
         sendOptions: MessageSendOptions
     ) = store.accept(ChatStore.Intent.SendAlbum(paths, caption, captionEntities, sendOptions))
 
-    override fun onSendVoice(path: String, duration: Int, waveform: ByteArray) =
-        store.accept(ChatStore.Intent.SendVoice(path, duration, waveform))
+    override fun onSendVoice(path: String, duration: Int, waveform: ByteArray, selfDestructImmediately: Boolean) =
+        store.accept(ChatStore.Intent.SendVoice(path, duration, waveform, selfDestructImmediately))
 
     override fun onRefreshScheduledMessages() =
         store.accept(ChatStore.Intent.RefreshScheduledMessages)
