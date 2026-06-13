@@ -288,6 +288,14 @@ internal class MessagePersistenceMapper(
                 isViewOnceOpened = true
             )
 
+            is TdApi.MessageExpiredVoiceNote -> CachedMessageContent(
+                "expired_voice",
+                "",
+                null,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
+
             else -> CachedMessageContent("unsupported", "", null)
         }
     }
@@ -546,9 +554,53 @@ internal class MessagePersistenceMapper(
             )
 
             "service" -> MessageContent.Service(entity.content)
-            "expired_photo" -> MessageContent.Text(stringProvider.getString("message_expired_photo"))
-            "expired_video" -> MessageContent.Text(stringProvider.getString("message_expired_video"))
-            "expired_video_note" -> MessageContent.Text(stringProvider.getString("message_expired_video"))
+
+            "expired_photo" -> MessageContent.Photo(
+                path = null,
+                thumbnailPath = null,
+                width = 0,
+                height = 0,
+                caption = "",
+                entities = emptyList(),
+                fileId = 0,
+                minithumbnail = null,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
+
+            "expired_video" -> MessageContent.Video(
+                path = null,
+                thumbnailPath = null,
+                width = 0,
+                height = 0,
+                duration = 0,
+                caption = "",
+                entities = emptyList(),
+                fileId = 0,
+                minithumbnail = null,
+                supportsStreaming = false,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
+
+            "expired_voice" -> MessageContent.Voice(
+                path = null,
+                duration = 0,
+                fileId = 0,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
+
+            "expired_video_note" -> MessageContent.VideoNote(
+                path = null,
+                thumbnail = null,
+                duration = 0,
+                length = 0,
+                fileId = 0,
+                isViewOnce = true,
+                isViewOnceOpened = true
+            )
+
             else -> MessageContent.Text(entity.content)
         }
 
