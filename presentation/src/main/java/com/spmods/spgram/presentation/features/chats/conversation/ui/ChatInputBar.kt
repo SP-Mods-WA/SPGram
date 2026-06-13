@@ -316,9 +316,9 @@ fun ChatInputBar(
     ) { }
 
     val voiceRecorder = rememberVoiceRecorder(
-        onRecordingFinished = { path, duration, waveform ->
+        onRecordingFinished = { path, duration, waveform, isViewOnce ->
             if (!canSendVoice || isSlowModeActive) return@rememberVoiceRecorder
-            actions.onSendVoice(path, duration, waveform)
+            actions.onSendVoice(path, duration, waveform, isViewOnce)
             activateSlowModeCooldown()
         },
         onPermissionDenied = {
