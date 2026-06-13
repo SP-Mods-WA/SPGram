@@ -235,7 +235,6 @@ fun AudioRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 4.dp)
-            .clickable { onAudioClick(msg) }
     ) {
         Box(
             modifier = Modifier
