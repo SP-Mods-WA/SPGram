@@ -109,7 +109,11 @@ internal class MessageContentMapper(
                 val downloadProgress = photoFile?.let(fileHelper::computeDownloadProgress) ?: 0f
 
                 val photoIsViewOnce = content.isSecret
-                val photoOpened = false // TDLib removes the photo server-side after open; locally treat as not-yet-opened
+                // TDLib removes the photo server-side after the user opens it and sends
+                // MessageExpiredPhoto. We never have a locally-opened state to persist, so
+                // isViewOnceOpened stays false for live messages (expired ones hit the
+                // MessageExpiredPhoto branch above this when block).
+                val photoOpened = false
                 // For view-once photos: suppress auto-download — user must tap to open
                 if (photoIsViewOnce && photoFile != null) {
                     fileHelper.suppressDownload(photoFile.id)
@@ -132,6 +136,7 @@ internal class MessageContentMapper(
                     downloadProgress = downloadProgress,
                     fileId = photoFile?.id ?: 0,
                     minithumbnail = if (photoIsViewOnce && !photoOpened) null else content.photo.minithumbnail?.data,
+                    hasSpoiler = content.hasSpoiler,
                     isViewOnce = photoIsViewOnce,
                     isViewOnceOpened = photoOpened
                 )
@@ -175,9 +180,15 @@ internal class MessageContentMapper(
                 val isQueued = fileHelper.isFileQueued(videoFile.id)
                 val downloadProgress = fileHelper.computeDownloadProgress(videoFile)
 
+                val videoIsViewOnce = content.isSecret
+                // For view-once videos: suppress auto-download — user must tap to open
+                if (videoIsViewOnce && !fileHelper.isFileQueued(videoFile.id)) {
+                    fileHelper.suppressDownload(videoFile.id)
+                }
+
                 MessageContent.Video(
-                    path = path,
-                    thumbnailPath = thumbnailPath,
+                    path = if (videoIsViewOnce) null else path,
+                    thumbnailPath = if (videoIsViewOnce) null else thumbnailPath,
                     width = video.width,
                     height = video.height,
                     duration = video.duration,
@@ -190,12 +201,13 @@ internal class MessageContentMapper(
                     ),
                     isUploading = context.isActuallyUploading && videoFile.remote.isUploadingActive,
                     uploadProgress = fileHelper.computeUploadProgress(videoFile),
-                    isDownloading = isDownloading || isQueued,
+                    isDownloading = if (videoIsViewOnce) false else (isDownloading || isQueued),
                     downloadProgress = downloadProgress,
                     fileId = videoFile.id,
-                    minithumbnail = video.minithumbnail?.data,
+                    minithumbnail = if (videoIsViewOnce) null else video.minithumbnail?.data,
                     supportsStreaming = video.supportsStreaming,
-                    isViewOnce = content.isSecret,
+                    hasSpoiler = content.hasSpoiler,
+                    isViewOnce = videoIsViewOnce,
                     isViewOnceOpened = false
                 )
             }
@@ -229,9 +241,9 @@ internal class MessageContentMapper(
                     uploadProgress = fileHelper.computeUploadProgress(voiceFile),
                     isDownloading = isDownloading || isQueued,
                     downloadProgress = downloadProgress,
-                    fileId = voiceFile.id
-                ,
-                    isViewOnce = msg.selfDestructType != null,
+                    fileId = voiceFile.id,
+                    isListened = content.isListened,
+                    isViewOnce = false, // MessageVoiceNote has no isSecret in this TDLib version
                     isViewOnceOpened = false
                 )
             }
@@ -276,18 +288,20 @@ internal class MessageContentMapper(
                 val downloadProgress = fileHelper.computeDownloadProgress(videoFile)
 
                 MessageContent.VideoNote(
-                    path = videoPath,
-                    thumbnail = thumbPath,
+                    path = if (content.isSecret) null else videoPath,
+                    thumbnail = if (content.isSecret) null else thumbPath,
                     duration = note.duration,
                     length = note.length,
                     isUploading = isUploading,
                     uploadProgress = uploadProgress,
-                    isDownloading = isDownloading || isQueued,
+                    isDownloading = if (content.isSecret) false else (isDownloading || isQueued),
                     downloadProgress = downloadProgress,
-                    fileId = videoFile.id
-                ,
+                    fileId = videoFile.id,
+                    // isViewed = "at least one recipient viewed" (group read status), NOT "local user opened".
+                    // For view-once video notes the local user has not opened it yet at map time,
+                    // so isViewOnceOpened starts false; the UI updates it after the user taps open.
                     isViewOnce = content.isSecret,
-                    isViewOnceOpened = content.isViewed
+                    isViewOnceOpened = false
                 )
             }
 
@@ -369,8 +383,13 @@ internal class MessageContentMapper(
                 val isQueued = fileHelper.isFileQueued(animationFile.id)
                 val downloadProgress = fileHelper.computeDownloadProgress(animationFile)
 
+                val gifIsViewOnce = content.isSecret
+                if (gifIsViewOnce && animationFile.id != 0) {
+                    fileHelper.suppressDownload(animationFile.id)
+                }
+
                 MessageContent.Gif(
-                    path = path,
+                    path = if (gifIsViewOnce) null else path,
                     width = animation.width,
                     height = animation.height,
                     caption = content.caption.text,
@@ -382,10 +401,11 @@ internal class MessageContentMapper(
                     ),
                     isUploading = context.isActuallyUploading && animationFile.remote.isUploadingActive,
                     uploadProgress = fileHelper.computeUploadProgress(animationFile),
-                    isDownloading = isDownloading || isQueued,
+                    isDownloading = if (gifIsViewOnce) false else (isDownloading || isQueued),
                     downloadProgress = downloadProgress,
                     fileId = animationFile.id,
-                    minithumbnail = animation.minithumbnail?.data
+                    minithumbnail = if (gifIsViewOnce) null else animation.minithumbnail?.data,
+                    hasSpoiler = content.hasSpoiler
                 )
             }
 
@@ -600,30 +620,8 @@ internal class MessageContentMapper(
             }
 
             is TdApi.MessageStory -> MessageContent.Text(stringProvider.getString("chat_mapper_story"))
-            is TdApi.MessageExpiredPhoto -> MessageContent.Photo(
-                path = null, thumbnailPath = null, width = 0, height = 0,
-                caption = "", entities = emptyList(), isUploading = false, uploadProgress = 0f,
-                isDownloading = false, downloadProgress = 0f, fileId = 0, minithumbnail = null,
-                isViewOnce = true, isViewOnceOpened = true
-            )
-            is TdApi.MessageExpiredVideo -> MessageContent.Video(
-                path = null, thumbnailPath = null, width = 0, height = 0, duration = 0,
-                caption = "", entities = emptyList(), isUploading = false, uploadProgress = 0f,
-                isDownloading = false, downloadProgress = 0f, fileId = 0, minithumbnail = null,
-                supportsStreaming = false, isViewOnce = true, isViewOnceOpened = true
-            )
-            is TdApi.MessageExpiredVoiceNote -> MessageContent.Voice(
-                path = null, duration = 0, waveform = byteArrayOf(),
-                isUploading = false, uploadProgress = 0f,
-                isDownloading = false, downloadProgress = 0f, fileId = 0,
-                isViewOnce = true, isViewOnceOpened = true
-            )
-            is TdApi.MessageExpiredVideoNote -> MessageContent.VideoNote(
-                path = null, thumbnail = null, duration = 0, length = 0,
-                isUploading = false, uploadProgress = 0f,
-                isDownloading = false, downloadProgress = 0f, fileId = 0,
-                isViewOnce = true, isViewOnceOpened = true
-            )
+            is TdApi.MessageExpiredPhoto -> MessageContent.Text(stringProvider.getString("message_expired_photo"))
+            is TdApi.MessageExpiredVideo -> MessageContent.Text(stringProvider.getString("message_expired_video"))
             else -> serviceMessageFormatter.format(content, context)
                 ?: MessageContent.Text("ℹ️ Unsupported message type: ${content.javaClass.simpleName}")
         }
