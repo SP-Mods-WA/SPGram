@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +42,7 @@ fun RecordingUI(
     voiceRecorderState: VoiceRecorderState,
     onStop: () -> Unit,
     onCancel: () -> Unit,
+    onToggleViewOnce: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val slideToCancelAlpha by animateFloatAsState(
@@ -160,6 +163,38 @@ fun RecordingUI(
                         .padding(horizontal = 12.dp)
                 )
             }
+        }
+
+        if (voiceRecorderState.isLocked) {
+            IconButton(
+                onClick = onToggleViewOnce,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (voiceRecorderState.isViewOnce) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            Color.Transparent
+                        }
+                    )
+            ) {
+                Icon(
+                    imageVector = if (voiceRecorderState.isViewOnce) {
+                        Icons.Outlined.Visibility
+                    } else {
+                        Icons.Outlined.VisibilityOff
+                    },
+                    contentDescription = stringResource(R.string.action_send_view_once),
+                    tint = if (voiceRecorderState.isViewOnce) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
         }
 
         AnimatedContent(
