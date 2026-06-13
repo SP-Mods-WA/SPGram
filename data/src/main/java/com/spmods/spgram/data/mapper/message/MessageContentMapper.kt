@@ -215,10 +215,11 @@ internal class MessageContentMapper(
             is TdApi.MessageVoiceNote -> {
                 val voice = content.voiceNote
                 val voiceFile = fileHelper.getUpdatedFile(voice.voice)
-                val path = fileHelper.resolveLocalFilePath(voiceFile)
+                val voiceIsViewOnce = msg.selfDestructType is TdApi.MessageSelfDestructTypeImmediately
+                val path = if (voiceIsViewOnce) null else fileHelper.resolveLocalFilePath(voiceFile)
                 fileHelper.registerCachedFile(voiceFile.id, context.chatId, context.messageId)
 
-                if (path == null && context.networkAutoDownload) {
+                if (path == null && context.networkAutoDownload && !voiceIsViewOnce) {
                     fileHelper.enqueueDownload(
                         voiceFile.id,
                         1,
@@ -239,11 +240,14 @@ internal class MessageContentMapper(
                     waveform = voice.waveform,
                     isUploading = context.isActuallyUploading && voiceFile.remote.isUploadingActive,
                     uploadProgress = fileHelper.computeUploadProgress(voiceFile),
-                    isDownloading = isDownloading || isQueued,
+                    isDownloading = if (voiceIsViewOnce) false else (isDownloading || isQueued),
                     downloadProgress = downloadProgress,
                     fileId = voiceFile.id,
                     isListened = content.isListened,
-                    isViewOnce = false, // MessageVoiceNote has no isSecret in this TDLib version
+                    // MessageVoiceNote has no isSecret field (unlike MessagePhoto/MessageVideo/
+                    // MessageVideoNote), so the only signal for view-once voice notes is the
+                    // self-destruct type carried on the parent TdApi.Message itself.
+                    isViewOnce = voiceIsViewOnce,
                     isViewOnceOpened = false
                 )
             }
