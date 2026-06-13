@@ -895,12 +895,16 @@ class TdMessageRemoteDataSource(
         chatId: Long,
         voicePath: String,
         duration: Int,
-        waveform: ByteArray
+        waveform: ByteArray,
+        selfDestructImmediately: Boolean
     ): TdApi.Message? {
         val content = TdApi.InputMessageVoiceNote().apply {
             this.voiceNote = TdApi.InputFileLocal(voicePath)
             this.duration = duration
             this.waveform = waveform
+            if (selfDestructImmediately) {
+                this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
+            }
         }
         val req = TdApi.SendMessage().apply {
             this.chatId = chatId
