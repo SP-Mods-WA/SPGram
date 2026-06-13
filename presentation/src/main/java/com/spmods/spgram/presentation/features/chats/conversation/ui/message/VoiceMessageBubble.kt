@@ -214,78 +214,71 @@ fun VoiceRow(
             .fillMaxWidth()
             .padding(bottom = 4.dp)
     ) {
-        // Wrap in an outer Box so we can overlay the view-once "①" badge
         Box(modifier = Modifier.size(48.dp)) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(CircleShape)
-                    .background(if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary)
-                    .clickable {
-                        if (content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading && content.path == null) {
-                            onOpenViewOnce(msg)
-                        } else if (content.isDownloading) {
-                            onCancelDownload(content.fileId)
-                        } else if (content.path == null) {
-                            onVoiceClick(msg)
-                        } else {
-                            voicePlaybackController.togglePlayPause(msg.id, content.path)
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                if (content.isDownloading || content.isUploading) {
-                    CircularWavyProgressIndicator(
-                        progress = { if (content.isDownloading) content.downloadProgress else content.uploadProgress },
-                        modifier = Modifier.size(28.dp),
-                        color = if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else MaterialTheme.colorScheme.onPrimary,
-                        trackColor = (if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else MaterialTheme.colorScheme.onPrimary).copy(alpha = 0.2f),
-                    )
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.cancel_button),
-                        tint = if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                } else {
-                    // For view-once (not opened, not downloaded) → show Download arrow
-                    // For view-once (not opened, path exists) → show PlayArrow (will be opened on tap)
-                    val icon = when {
-                        content.isViewOnce && !content.isViewOnceOpened && content.path == null -> Icons.Default.Download
-                        content.path == null -> Icons.Default.Download
-                        playerState.isPlaying -> Icons.Default.Pause
-                        else -> Icons.Default.PlayArrow
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(CircleShape)
+                .background(if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary)
+                .clickable {
+                    if (content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading && content.path == null) {
+                                onOpenViewOnce(msg)
+                    } else if (content.isDownloading) {
+                        onCancelDownload(content.fileId)
+                    } else if (content.path == null) {
+                        onVoiceClick(msg)
+                    } else {
+                        voicePlaybackController.togglePlayPause(msg.id, content.path)
                     }
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = if (playerState.isPlaying) "Pause" else "Play",
-                        tint = if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            if (content.isDownloading || content.isUploading) {
+                CircularWavyProgressIndicator(
+                    progress = { if (content.isDownloading) content.downloadProgress else content.uploadProgress },
+                    modifier = Modifier.size(28.dp),
+                    color = if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
+                    trackColor = (if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary).copy(
+                        alpha = 0.2f
+                    ),
+                )
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.cancel_button),
+                    tint = if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+            } else {
+                val icon = when {
+                    content.path == null -> Icons.Default.Download
+                    playerState.isPlaying -> Icons.Default.Pause
+                    else -> Icons.Default.PlayArrow
                 }
-            }
-
-            // View-once badge: small "1" indicator at bottom-right of the circle button,
-            // shown when this is a view-once voice message that hasn't been opened yet
-            if (content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading && !content.isUploading) {
-                Box(
-                    modifier = Modifier
-                        .size(18.dp)
-                        .align(Alignment.BottomEnd)
-                        .background(MaterialTheme.colorScheme.surface, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Timer,
-                        contentDescription = null,
-                        tint = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
+                Icon(
+                    imageVector = icon,
+                    contentDescription = if (playerState.isPlaying) "Pause" else "Play",
+                    tint = if (isOutgoing) if (isOutgoing) (if (LocalDarkTheme.current) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF)) else MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
-
-        Spacer(modifier = Modifier.width(12.dp))
+        if (content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading) {
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .align(Alignment.BottomEnd)
+                    .background(MaterialTheme.colorScheme.surface, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Timer,
+                    contentDescription = null,
+                    tint = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+        }
+        } // end outer Box
 
         Column(
             modifier = Modifier.weight(1f)
