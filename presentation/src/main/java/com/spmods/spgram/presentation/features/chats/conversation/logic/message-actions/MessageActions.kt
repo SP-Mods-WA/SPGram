@@ -377,9 +377,9 @@ internal fun DefaultChatComponent.handleVideoRecorded(file: File) {
     }
 }
 
-internal fun DefaultChatComponent.handleSendVoice(path: String, duration: Int, waveform: ByteArray) {
+internal fun DefaultChatComponent.handleSendVoice(path: String, duration: Int, waveform: ByteArray, selfDestructImmediately: Boolean = false) {
     scope.launch {
-        repositoryMessage.sendVoiceNote(chatId, path, duration, waveform)
+        repositoryMessage.sendVoiceNote(chatId, path, duration, waveform, selfDestructImmediately)
         if (shouldAutoScrollAfterSend(_state.value.isAtBottom)) {
             onScrollToBottom()
         }
