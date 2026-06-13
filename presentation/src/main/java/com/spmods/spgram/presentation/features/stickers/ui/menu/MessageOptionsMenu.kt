@@ -201,6 +201,7 @@ fun MessageOptionsMenu(
     onSaveToDownloads: () -> Unit = {},
     onReaction: (String) -> Unit = {},
     onShowAllReactions: (chatId: Long, messageId: Long, availableReactions: List<String>) -> Unit = { _, _, _ -> },
+    hideForPicker: Boolean = false,
     onComments: () -> Unit = {},
     onTelegramSummary: () -> Unit = {},
     onTelegramTranslator: () -> Unit = {},
@@ -368,11 +369,18 @@ fun MessageOptionsMenu(
     }
 
     // Pill sits directly above menu card, horizontally centered on it
-    val pillPosition by remember(menuPosition, menuSize, pillSize) {
+    // Clamped within screen horizontal bounds so it never clips off screen
+    val pillPosition by remember(menuPosition, menuSize, pillSize, containerSize, containerOffset) {
         derivedStateOf {
             val pillGapPx = with(density) { PILL_MENU_GAP.toPx() }.toInt()
+            val rawX = menuPosition.x + (menuSize.width - pillSize.width) / 2
+            // Clamp horizontally so pill stays fully on screen
+            val marginPx = with(density) { 8.dp.toPx() }.toInt()
+            val minX = marginPx - containerOffset.x.toInt()
+            val maxX = containerSize.width - pillSize.width - marginPx - containerOffset.x.toInt()
+            val clampedX = if (maxX > minX) rawX.coerceIn(minX, maxX) else rawX
             IntOffset(
-                x = menuPosition.x + (menuSize.width - pillSize.width) / 2,
+                x = clampedX,
                 y = menuPosition.y - pillSize.height - pillGapPx
             )
         }
@@ -423,6 +431,7 @@ fun MessageOptionsMenu(
         modifier = Modifier
             .fillMaxSize()
             .zIndex(100f)
+            .graphicsLayer { alpha = if (hideForPicker) 0f else 1f }
             .onGloballyPositioned { coordinates ->
                 containerOffset = coordinates.positionInWindow()
                 containerSize = coordinates.size
@@ -527,9 +536,10 @@ fun MessageOptionsMenu(
                             animateOutAndDismiss { onReaction(reaction) }
                         },
                         onShowAll = {
-                            animateOutAndDismiss {
-                                onShowAllReactions(message.chatId, message.id, availableReactions)
-                            }
+                            // Do NOT dismiss menu here — caller (ChatMessageOptionsMenu) owns
+                            // the showReactionPicker state and will show the sheet while
+                            // keeping the composable alive. Menu will dismiss after reaction chosen.
+                            onShowAllReactions(message.chatId, message.id, availableReactions)
                         }
                     )
                 }
@@ -1017,11 +1027,12 @@ private fun EmojiReactionBar(
     val emojiStyle by appPreferences.emojiStyle.collectAsState()
     val emojiFontFamily = remember(context, emojiStyle) { getEmojiFontFamily(context, emojiStyle) }
 
-    // Max emoji shown in collapsed pill (matches original Telegram)
-    val PILL_MAX = 7
+    // Max emoji shown in collapsed pill before showing ▾ dropdown
+    // Set to 6 so the ▾ button is always visible (original Telegram shows ~7 with dropdown)
+    val PILL_MAX = 6
 
-    // collapsed = pill only; ▾ click → onShowAll (full picker overlay, like original Telegram)
-    val hasMore = availableReactions.size > PILL_MAX
+    // Always show dropdown button if there are any reactions (matches original Telegram)
+    val hasMore = availableReactions.isNotEmpty()
 
     // Load animated stickers for ALL reactions upfront
     var reactionStickers by remember(availableReactions) {
