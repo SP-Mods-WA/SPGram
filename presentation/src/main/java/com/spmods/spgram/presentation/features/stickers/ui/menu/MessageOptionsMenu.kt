@@ -22,6 +22,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -145,6 +146,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+// Gap between pill bottom and menu card top (includes bubble connector height)
+private val PILL_MENU_GAP = 4.dp
+
 data class MessagePackMenuOption(
     val setId: Long,
     val title: String? = null,
@@ -196,6 +200,7 @@ fun MessageOptionsMenu(
     onCopy: () -> Unit,
     onSaveToDownloads: () -> Unit = {},
     onReaction: (String) -> Unit = {},
+    onShowAllReactions: (chatId: Long, messageId: Long, availableReactions: List<String>) -> Unit = { _, _, _ -> },
     onComments: () -> Unit = {},
     onTelegramSummary: () -> Unit = {},
     onTelegramTranslator: () -> Unit = {},
@@ -261,6 +266,7 @@ fun MessageOptionsMenu(
     }
 
     var menuSize by remember { mutableStateOf(IntSize.Zero) }
+    var pillSize by remember { mutableStateOf(IntSize.Zero) }
     var firstScreenWidth by remember { mutableStateOf<Int?>(null) }
     var containerOffset by remember { mutableStateOf(Offset.Zero) }
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
@@ -330,21 +336,27 @@ fun MessageOptionsMenu(
 
     // ── Menu card position (accounts for pill above when reactions available) ──────────
     val menuPosition by remember(
-        menuSize,
+        menuSize, pillSize,
         messageOffset, messageSize, clickOffset,
         containerSize, containerOffset,
-        topInset, bottomInset
+        topInset, bottomInset,
+        availableReactions
     ) {
         derivedStateOf {
             if (menuSize == IntSize.Zero || containerSize == IntSize.Zero) return@derivedStateOf IntOffset.Zero
+
+            val pillGapPx = with(density) { PILL_MENU_GAP.toPx() }.toInt()
+            val pillTotalH = if (availableReactions.isNotEmpty() && pillSize != IntSize.Zero)
+                pillSize.height + pillGapPx else 0
 
             var x = (clickOffset.x - (menuSize.width / 2)).toInt()
             val minX = containerOffset.x.toInt() + horizontalMargin
             val maxX = containerOffset.x.toInt() + containerSize.width - menuSize.width - horizontalMargin
             x = if (maxX >= minX) x.coerceIn(minX, maxX) else minX
 
-            var y = (clickOffset.y - (menuSize.height / 2)).toInt()
-            val minY = maxOf(containerOffset.y.toInt() + verticalPadding, topInset + verticalPadding)
+            var y = (clickOffset.y - ((menuSize.height + pillTotalH) / 2)).toInt()
+            val minY = maxOf(containerOffset.y.toInt() + verticalPadding + pillTotalH,
+                             topInset + verticalPadding + pillTotalH)
             val maxY = minOf(
                 containerOffset.y.toInt() + containerSize.height - menuSize.height - verticalPadding,
                 screenHeight - bottomInset - menuSize.height - verticalPadding
@@ -352,6 +364,17 @@ fun MessageOptionsMenu(
             y = if (maxY >= minY) y.coerceIn(minY, maxY) else minY
 
             IntOffset(x - containerOffset.x.toInt(), y - containerOffset.y.toInt())
+        }
+    }
+
+    // Pill sits directly above menu card, horizontally centered on it
+    val pillPosition by remember(menuPosition, menuSize, pillSize) {
+        derivedStateOf {
+            val pillGapPx = with(density) { PILL_MENU_GAP.toPx() }.toInt()
+            IntOffset(
+                x = menuPosition.x + (menuSize.width - pillSize.width) / 2,
+                y = menuPosition.y - pillSize.height - pillGapPx
+            )
         }
     }
 
@@ -465,6 +488,68 @@ fun MessageOptionsMenu(
                 drawContent()
             }
     ) {
+        // ── FLOATING REACTION PILL ───────────────────────────────────────────────────
+        // Original Telegram: separate pill Surface above menu card, with small
+        // bubble connector triangle pointing down toward the menu card
+        if (menuPage == MenuPage.Main && availableReactions.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset { pillPosition }
+                    .graphicsLayer {
+                        alpha = if (containerSize == IntSize.Zero) 0f else menuAlpha
+                        scaleX = menuScale
+                        scaleY = menuScale
+                        shadowElevation = 8.dp.toPx()
+                        shape = RoundedCornerShape(50)
+                        clip = false
+                    }
+                    .onGloballyPositioned { pillSize = it.size }
+            ) {
+                // Pill surface
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    tonalElevation = 6.dp,
+                    shadowElevation = 6.dp
+                ) {
+                    EmojiReactionBar(
+                        message = message,
+                        availableReactions = availableReactions,
+                        suppressAppearanceAnimation = suppressNextReactionsAppearanceAnimation,
+                        onAppearanceAnimationConsumed = {
+                            suppressNextReactionsAppearanceAnimation = false
+                        },
+                        onReactionsChanged = { count ->
+                            hasReactionsInMessage = count > 0
+                        },
+                        onReaction = { reaction ->
+                            animateOutAndDismiss { onReaction(reaction) }
+                        },
+                        onShowAll = {
+                            animateOutAndDismiss {
+                                onShowAllReactions(message.chatId, message.id, availableReactions)
+                            }
+                        }
+                    )
+                }
+
+                // Small bubble connector dot (original Telegram style)
+                // A small circle at bottom-center of pill pointing toward menu card
+                Canvas(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .offset(y = 6.dp)
+                        .size(10.dp, 8.dp)
+                ) {
+                    val color = androidx.compose.ui.graphics.Color(
+                        red = 0.93f, green = 0.93f, blue = 0.94f, alpha = menuAlpha
+                    )
+                    drawOval(color = color)
+                }
+            }
+        }
+
         // ── MENU CARD ────────────────────────────────────────────────────────────────
         Surface(
             modifier = Modifier
@@ -578,30 +663,6 @@ fun MessageOptionsMenu(
                         shadowElevation = 0.dp
                     ) {
                     if (page == MenuPage.Main) {
-                        // ── EMOJI REACTION BAR — inside menu card, top section ──────
-                        // Original Telegram: emoji bar is the top row of the menu card,
-                        // same width as card, max 8 emoji visible (no scroll), ~36dp each
-                        if (availableReactions.isNotEmpty()) {
-                            EmojiReactionBar(
-                                message = message,
-                                availableReactions = availableReactions,
-                                suppressAppearanceAnimation = suppressNextReactionsAppearanceAnimation,
-                                onAppearanceAnimationConsumed = {
-                                    suppressNextReactionsAppearanceAnimation = false
-                                },
-                                onReactionsChanged = { count ->
-                                    hasReactionsInMessage = count > 0
-                                },
-                                onReaction = { reaction ->
-                                    animateOutAndDismiss { onReaction(reaction) }
-                                }
-                            )
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 8.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                            )
-                        }
-
                         InternalMenuHeaderInfo(
                             message = message,
                             showReadInfo = showReadInfo,
@@ -947,6 +1008,7 @@ private fun EmojiReactionBar(
     onAppearanceAnimationConsumed: () -> Unit,
     onReactionsChanged: (Int) -> Unit,
     onReaction: (String) -> Unit,
+    onShowAll: () -> Unit,
     appPreferences: AppPreferences = koinInject(),
     emojiRepository: EmojiRepository = koinInject()
 ) {
@@ -958,8 +1020,7 @@ private fun EmojiReactionBar(
     // Max emoji shown in collapsed pill (matches original Telegram)
     val PILL_MAX = 7
 
-    // collapsed = pill row; expanded = full grid
-    var expanded by remember { mutableStateOf(false) }
+    // collapsed = pill only; ▾ click → onShowAll (full picker overlay, like original Telegram)
     val hasMore = availableReactions.size > PILL_MAX
 
     // Load animated stickers for ALL reactions upfront
@@ -986,91 +1047,53 @@ private fun EmojiReactionBar(
         if (suppressAppearanceAnimation) onAppearanceAnimationConsumed()
     }
 
-    AnimatedContent(
-        targetState = expanded,
-        transitionSpec = {
-            fadeIn(tween(160)) togetherWith fadeOut(tween(100))
-        },
-        label = "ReactionBarState"
-    ) { isExpanded ->
-        if (!isExpanded) {
-            // ── COLLAPSED PILL ────────────────────────────────────────────────
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                availableReactions.take(PILL_MAX).forEach { emoji ->
-                    EmojiButton(
-                        emoji = emoji,
-                        sticker = reactionStickers[emoji],
-                        isChosen = message.reactions.any { it.isChosen && it.emoji == emoji },
-                        size = 36.dp,
-                        stickerSize = 26.dp,
-                        fontSize = 20.sp,
-                        emojiFontFamily = emojiFontFamily,
-                        onReaction = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onReaction(emoji) }
-                    )
-                }
-
-                // ▾ Dropdown button — only shown when more emoji available
-                if (hasMore) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                            .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                expanded = true
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.ExpandMore,
-                            contentDescription = "More reactions",
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
-                    }
-                }
+    AnimatedVisibility(
+        visible = availableReactions.isNotEmpty(),
+        enter = if (suppressAppearanceAnimation) EnterTransition.None
+                else fadeIn(tween(140, easing = LinearOutSlowInEasing)),
+        exit = fadeOut(tween(100)),
+        label = "EmojiBarVisibility"
+    ) {
+        // ── COLLAPSED PILL (always) ──────────────────────────────────────────
+        // 7 emoji + ▾ button. ▾ opens full reaction picker overlay (original Telegram).
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            availableReactions.take(PILL_MAX).forEach { emoji ->
+                EmojiButton(
+                    emoji = emoji,
+                    sticker = reactionStickers[emoji],
+                    isChosen = message.reactions.any { it.isChosen && it.emoji == emoji },
+                    size = 38.dp,
+                    stickerSize = 26.dp,
+                    fontSize = 22.sp,
+                    emojiFontFamily = emojiFontFamily,
+                    onReaction = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onReaction(emoji) }
+                )
             }
-        } else {
-            // ── EXPANDED GRID ─────────────────────────────────────────────────
-            // 8 emoji per row, all available reactions shown
-            val cols = 8
-            val rows = availableReactions.chunked(cols)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                rows.forEach { rowEmojis ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        rowEmojis.forEach { emoji ->
-                            EmojiButton(
-                                emoji = emoji,
-                                sticker = reactionStickers[emoji],
-                                isChosen = message.reactions.any { it.isChosen && it.emoji == emoji },
-                                size = 36.dp,
-                                stickerSize = 26.dp,
-                                fontSize = 20.sp,
-                                emojiFontFamily = emojiFontFamily,
-                                onReaction = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onReaction(emoji) }
-                            )
-                        }
-                        // Fill remaining slots in last row so SpaceEvenly stays consistent
-                        repeat(cols - rowEmojis.size) {
-                            Spacer(modifier = Modifier.size(36.dp))
-                        }
-                    }
+
+            // ▾ dropdown — opens full reaction picker (same as original Telegram)
+            if (hasMore) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onShowAll()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ExpandMore,
+                        contentDescription = "More reactions",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
                 }
             }
         }
