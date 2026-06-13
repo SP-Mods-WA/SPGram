@@ -4,6 +4,7 @@
     <string name="confirmation_message">Do you really want to authorize this device?</string>
     <string name="confirm_auth_action">Yes, sign in</string>
     <string name="cancel_action">Cancel</string>
+    <string name="action_send_view_once">Send as view once</string>
 
     <string name="scan_qr_title">Scan QR</string>
     <string name="devices_title">Devices</string>
