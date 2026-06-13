@@ -458,6 +458,7 @@ private fun ComposerInputSlot(
                     voiceRecorderState = voiceRecorder,
                     onStop = { onVoiceStop(false) },
                     onCancel = { onVoiceStop(true) },
+                    onToggleViewOnce = { voiceRecorder.toggleViewOnce() },
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
