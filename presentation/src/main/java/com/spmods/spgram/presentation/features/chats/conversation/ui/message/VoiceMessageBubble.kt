@@ -240,14 +240,15 @@ fun VoiceRow(
                     .clickable {
                         when {
                             content.isViewOnce && !content.isViewOnceOpened && content.path != null -> {
-                                // Already downloaded — open immediately
+                                // Downloaded — notify TDLib then play inline
                                 onOpenViewOnce(msg)
+                                voicePlaybackController.togglePlayPause(msg.id, content.path)
                             }
                             content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
-                                // Still downloading — do nothing, player will appear when ready
+                                // Still downloading — do nothing, bubble recomposes when ready
                             }
                             content.isViewOnce && !content.isViewOnceOpened -> {
-                                // Not yet downloading (edge case) — trigger
+                                // Edge case: not yet downloading — trigger download
                                 onOpenViewOnce(msg)
                             }
                             content.isDownloading -> {
