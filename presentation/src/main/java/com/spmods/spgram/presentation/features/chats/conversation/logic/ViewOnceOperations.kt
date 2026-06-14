@@ -1,57 +1,85 @@
 package com.spmods.spgram.presentation.features.chats.conversation.logic
 
 import android.util.Log
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageModel
 import com.spmods.spgram.presentation.features.chats.conversation.DefaultChatComponent
 
 /**
- * Handles tapping a view-once (self-destructing) message.
+ * Handles tapping a view-once (self-destructing) Photo or Video message.
  *
- * Files are auto-downloaded on arrival. We read the LATEST message from _state
- * so we never use a stale snapshot that has path=null after download completed.
+ * Flow:
+ * 1. Call openMessageContent() — TDLib reveals the real fileId and kicks off download.
+ * 2. Wait (up to 30s) for _state to contain a non-null path for this message.
+ * 3. Open the viewer once the path arrives.
  *
- * Voice: playback is triggered directly from VoiceMessageBubble (UI layer has
- * access to VoicePlaybackController). This function only handles Photo/Video
- * opening + the TDLib openMessageContent notify for all types.
+ * Voice: handled entirely in VoiceMessageBubble (UI layer owns VoicePlaybackController).
+ * VideoNote: inline player recomposes automatically once path arrives — nothing to do here.
  */
 internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
     scope.launch {
-        // Always use the freshest version from current state
-        val latest = _state.value.messages.find { it.id == message.id } ?: message
-
         try {
-            repositoryMessage.openMessageContent(chatId, latest.id)
+            repositoryMessage.openMessageContent(chatId, message.id)
         } catch (e: Throwable) {
-            Log.e("ViewOnce", "openMessageContent failed: msgId=${latest.id}", e)
+            Log.e("ViewOnce", "openMessageContent failed: msgId=${message.id}", e)
         }
 
-        when (val content = latest.content) {
+        when (message.content) {
             is MessageContent.Photo -> {
-                val path = content.path
+                // Wait for _state to have a non-null path (download completes after TDLib reveals fileId)
+                val path = withTimeoutOrNull(30_000) {
+                    _state
+                        .filter { state ->
+                            val content = state.messages
+                                .find { it.id == message.id }
+                                ?.content as? MessageContent.Photo
+                            !content?.path.isNullOrBlank()
+                        }
+                        .first()
+                        .messages
+                        .find { it.id == message.id }
+                        .let { (it?.content as? MessageContent.Photo)?.path }
+                }
                 if (path != null) {
+                    val caption = (_state.value.messages.find { it.id == message.id }
+                        ?.content as? MessageContent.Photo)?.caption
                     onOpenImages(
                         images = listOf(path),
-                        captions = listOf(content.caption.takeIf { it.isNotBlank() }),
+                        captions = listOf(caption?.takeIf { it.isNotBlank() }),
                         startIndex = 0,
-                        messageId = latest.id,
-                        messageIds = listOf(latest.id)
+                        messageId = message.id,
+                        messageIds = listOf(message.id)
                     )
                 } else {
-                    Log.w("ViewOnce", "Photo tapped but path still null — download in progress")
+                    Log.e("ViewOnce", "Photo path never arrived within timeout msgId=${message.id}")
                 }
             }
             is MessageContent.Video -> {
-                val path = content.path
+                val path = withTimeoutOrNull(30_000) {
+                    _state
+                        .filter { state ->
+                            val content = state.messages
+                                .find { it.id == message.id }
+                                ?.content as? MessageContent.Video
+                            !content?.path.isNullOrBlank()
+                        }
+                        .first()
+                        .messages
+                        .find { it.id == message.id }
+                        .let { (it?.content as? MessageContent.Video)?.path }
+                }
                 if (path != null) {
-                    onOpenVideo(path = path, messageId = latest.id, caption = content.caption)
+                    val caption = (_state.value.messages.find { it.id == message.id }
+                        ?.content as? MessageContent.Video)?.caption
+                    onOpenVideo(path = path, messageId = message.id, caption = caption)
                 } else {
-                    Log.w("ViewOnce", "Video tapped but path still null — download in progress")
+                    Log.e("ViewOnce", "Video path never arrived within timeout msgId=${message.id}")
                 }
             }
-            // Voice: VoiceMessageBubble calls togglePlayPause directly after onOpenViewOnce.
-            // VideoNote: inline player recomposes automatically once path arrives.
             else -> Unit
         }
     }
