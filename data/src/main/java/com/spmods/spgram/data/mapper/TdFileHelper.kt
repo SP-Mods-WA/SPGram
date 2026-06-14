@@ -7,7 +7,6 @@ import com.spmods.spgram.data.chats.ChatCache
 import com.spmods.spgram.data.datasource.remote.MessageFileApi
 import com.spmods.spgram.data.datasource.remote.TdMessageRemoteDataSource
 import com.spmods.spgram.domain.repository.AppPreferencesProvider
-import java.util.concurrent.ConcurrentHashMap
 
 class TdFileHelper(
     private val connectivityManager: ConnectivityManager,
@@ -82,22 +81,6 @@ class TdFileHelper(
 
     /** Suppress auto-download for a file (e.g. view-once content that must not be auto-fetched). */
     fun suppressDownload(fileId: Int) = fileApi.suppressDownload(fileId)
-
-    private val openedViewOnceFileIds = ConcurrentHashMap.newKeySet<Int>()
-
-    /** Mark a view-once file as opened by the local user so the mapper stops suppressing it. */
-    fun markViewOnceOpened(fileId: Int) {
-        if (fileId != 0) openedViewOnceFileIds.add(fileId)
-    }
-
-    /** Returns true if the local user has already tapped open this view-once file. */
-    fun isViewOnceOpened(fileId: Int): Boolean =
-        fileId != 0 && openedViewOnceFileIds.contains(fileId)
-
-    /** Clear suppression for a view-once file so download can proceed after user opens it. */
-    fun clearViewOnceSuppression(fileId: Int) {
-        if (fileId != 0) fileApi.clearSuppression(fileId)
-    }
 
     fun computeDownloadProgress(file: TdApi.File): Float {
         return if (file.size > 0) {
