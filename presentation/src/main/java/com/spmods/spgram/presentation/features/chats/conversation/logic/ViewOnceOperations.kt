@@ -4,6 +4,7 @@ import android.util.Log
 import kotlinx.coroutines.launch
 import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageModel
+import com.spmods.spgram.presentation.features.chats.conversation.AutoDownloadSuppression
 import com.spmods.spgram.presentation.features.chats.conversation.DefaultChatComponent
 
 /**
@@ -46,8 +47,15 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                 }
             }
             is MessageContent.Voice -> {
+                Log.d(
+                    "ViewOnce",
+                    "Voice tapped: msgId=${message.id} fileId=${content.fileId} " +
+                        "path=${content.path} isDownloading=${content.isDownloading} " +
+                        "isViewOnce=${content.isViewOnce} isViewOnceOpened=${content.isViewOnceOpened}"
+                )
                 // Voice view-once: just trigger download; inline player handles playback
                 if (content.path == null && content.fileId != 0) {
+                    AutoDownloadSuppression.clear(content.fileId)
                     repositoryMessage.downloadFile(content.fileId, priority = 32)
                 }
             }
