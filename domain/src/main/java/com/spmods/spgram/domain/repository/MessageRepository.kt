@@ -61,6 +61,7 @@ interface MessageRepository :
     val pinnedMessageFlow: Flow<Long>
     val mediaUpdateFlow: Flow<Unit>
     suspend fun getHighResFileId(chatId: Long, messageId: Long): Int?
+    fun registerFileForMessage(fileId: Int, chatId: Long, messageId: Long)
     suspend fun getProfileMedia(
         chatId: Long,
         filter: ProfileMediaFilter,
