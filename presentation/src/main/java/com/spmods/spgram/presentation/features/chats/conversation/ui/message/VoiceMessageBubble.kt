@@ -238,14 +238,27 @@ fun VoiceRow(
                     .clip(CircleShape)
                     .background(if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary)
                     .clickable {
-                        if (content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading && content.path == null) {
-                            onOpenViewOnce(msg)
-                        } else if (content.isDownloading) {
-                            onCancelDownload(content.fileId)
-                        } else if (content.path == null) {
-                            onVoiceClick(msg)
-                        } else {
-                            voicePlaybackController.togglePlayPause(msg.id, content.path)
+                        when {
+                            content.isViewOnce && !content.isViewOnceOpened && content.path != null -> {
+                                // Already downloaded — open immediately
+                                onOpenViewOnce(msg)
+                            }
+                            content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
+                                // Still downloading — do nothing, player will appear when ready
+                            }
+                            content.isViewOnce && !content.isViewOnceOpened -> {
+                                // Not yet downloading (edge case) — trigger
+                                onOpenViewOnce(msg)
+                            }
+                            content.isDownloading -> {
+                                onCancelDownload(content.fileId)
+                            }
+                            content.path == null -> {
+                                onVoiceClick(msg)
+                            }
+                            else -> {
+                                voicePlaybackController.togglePlayPause(msg.id, content.path)
+                            }
                         }
                     },
                 contentAlignment = Alignment.Center
