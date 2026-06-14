@@ -12,4 +12,5 @@ interface MessageFileApi {
     )
     fun isFileQueued(fileId: Int): Boolean
     fun suppressDownload(fileId: Int)
+    fun clearSuppression(fileId: Int)
 }
