@@ -241,5 +241,4 @@ interface MessageRepository :
 
     fun clearMessages(chatId: Long)
     fun clearAllCache()
-    fun markViewOnceFileOpened(fileId: Int)
 }
