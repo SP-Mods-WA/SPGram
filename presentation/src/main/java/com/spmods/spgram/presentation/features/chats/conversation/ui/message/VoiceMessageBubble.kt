@@ -88,6 +88,12 @@ fun VoiceMessageBubble(
     val smallCorner = 6.dp
     val tailCorner = 2.dp
 
+    LaunchedEffect(content.path, content.fileId) {
+        if (!content.path.isNullOrBlank()) {
+            AutoDownloadSuppression.clear(content.fileId)
+        }
+    }
+
     LaunchedEffect(
         content.path,
         content.isDownloading,
