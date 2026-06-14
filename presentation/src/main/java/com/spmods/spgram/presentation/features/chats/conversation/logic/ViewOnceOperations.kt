@@ -17,6 +17,19 @@ import com.spmods.spgram.presentation.features.chats.conversation.DefaultChatCom
  */
 internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
     scope.launch {
+        // Mark as opened immediately so that any recomposition triggered by
+        // openMessageContent does not re-suppress the file via the mapper.
+        val fileId = when (val content = message.content) {
+            is MessageContent.Photo -> content.fileId
+            is MessageContent.Video -> content.fileId
+            is MessageContent.Voice -> content.fileId
+            is MessageContent.VideoNote -> content.fileId
+            else -> 0
+        }
+        if (fileId != 0) {
+            repositoryMessage.markViewOnceFileOpened(fileId)
+        }
+
         try {
             repositoryMessage.openMessageContent(chatId, message.id)
         } catch (e: Throwable) {
@@ -34,8 +47,6 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                         messageIds = listOf(message.id)
                     )
                 } else if (content.fileId != 0) {
-                    // Not downloaded yet — trigger download; UI will open viewer
-                    // automatically when content.path becomes non-null via message update
                     repositoryMessage.registerFileForMessage(content.fileId, chatId, message.id)
                     repositoryMessage.downloadFile(content.fileId, priority = 32)
                 }
@@ -55,19 +66,13 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                         "path=${content.path} isDownloading=${content.isDownloading} " +
                         "isViewOnce=${content.isViewOnce} isViewOnceOpened=${content.isViewOnceOpened}"
                 )
-                // Voice view-once: just trigger download; inline player handles playback
                 if (content.path == null && content.fileId != 0) {
                     AutoDownloadSuppression.clear(content.fileId)
-                    // The fileId -> message registry is in-memory only and may have been
-                    // populated by a different mapping pass (or lost across a process
-                    // restart since the message arrived). Re-register before downloading
-                    // so the completed-file update is routed back to this message.
                     repositoryMessage.registerFileForMessage(content.fileId, chatId, message.id)
                     repositoryMessage.downloadFile(content.fileId, priority = 32)
                 }
             }
             is MessageContent.VideoNote -> {
-                // VideoNote view-once: just trigger download; inline player handles playback
                 if (content.path == null && content.fileId != 0) {
                     repositoryMessage.registerFileForMessage(content.fileId, chatId, message.id)
                     repositoryMessage.downloadFile(content.fileId, priority = 32)
