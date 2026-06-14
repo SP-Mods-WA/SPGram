@@ -1528,6 +1528,11 @@ class MessageRepositoryImpl(
         }
     }
 
+    override fun markViewOnceFileOpened(fileId: Int) {
+        fileHelper.markViewOnceOpened(fileId)
+        fileHelper.clearViewOnceSuppression(fileId)
+    }
+
     private fun persistRemoteMessages(chatId: Long, remoteMessages: List<MessageModel>) {
         scope.launch(dispatcherProvider.io) {
             val entities = remoteMessages.mapNotNull { model ->
