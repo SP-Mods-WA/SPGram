@@ -36,4 +36,8 @@ class MessageFileCoordinator(
     override fun suppressDownload(fileId: Int) {
         fileDownloadQueue.suppressDownload(fileId)
     }
+
+    override fun clearSuppression(fileId: Int) {
+        fileDownloadQueue.clearSuppression(fileId)
+    }
 }
