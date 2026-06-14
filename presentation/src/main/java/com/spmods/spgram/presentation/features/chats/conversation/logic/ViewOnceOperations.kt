@@ -36,6 +36,7 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                 } else if (content.fileId != 0) {
                     // Not downloaded yet — trigger download; UI will open viewer
                     // automatically when content.path becomes non-null via message update
+                    repositoryMessage.registerFileForMessage(content.fileId, chatId, message.id)
                     repositoryMessage.downloadFile(content.fileId, priority = 32)
                 }
             }
@@ -43,6 +44,7 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                 if (content.path != null) {
                     onOpenVideo(path = content.path, messageId = message.id, caption = content.caption)
                 } else if (content.fileId != 0) {
+                    repositoryMessage.registerFileForMessage(content.fileId, chatId, message.id)
                     repositoryMessage.downloadFile(content.fileId, priority = 32)
                 }
             }
@@ -56,12 +58,18 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                 // Voice view-once: just trigger download; inline player handles playback
                 if (content.path == null && content.fileId != 0) {
                     AutoDownloadSuppression.clear(content.fileId)
+                    // The fileId -> message registry is in-memory only and may have been
+                    // populated by a different mapping pass (or lost across a process
+                    // restart since the message arrived). Re-register before downloading
+                    // so the completed-file update is routed back to this message.
+                    repositoryMessage.registerFileForMessage(content.fileId, chatId, message.id)
                     repositoryMessage.downloadFile(content.fileId, priority = 32)
                 }
             }
             is MessageContent.VideoNote -> {
                 // VideoNote view-once: just trigger download; inline player handles playback
                 if (content.path == null && content.fileId != 0) {
+                    repositoryMessage.registerFileForMessage(content.fileId, chatId, message.id)
                     repositoryMessage.downloadFile(content.fileId, priority = 32)
                 }
             }
