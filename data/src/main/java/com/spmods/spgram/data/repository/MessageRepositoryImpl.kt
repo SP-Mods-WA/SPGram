@@ -216,13 +216,9 @@ class MessageRepositoryImpl(
                     isViewOnceOpened = extracted.isViewOnceOpened
                 )
 
-                // View-once photo/video content was just revealed by TDLib after the user
-                // tapped to open it (OpenMessageContent). The initial handleOpenViewOnce
-                // download attempt may have run before TDLib revealed the real file id
-                // (fileId was 0 at that point), so trigger the download now. Only do this
-                // for incoming messages — the sender's own outgoing view-once media must
-                // not be auto-downloaded.
-                if (extracted.isViewOnce && !extracted.isViewOnceOpened && extracted.fileId != 0 && extracted.path == null) {
+                // Safety net: if TDLib reveals a view-once file id that wasn't available
+                // at initial map time (fileId was 0), kick off the download now.
+                if (extracted.isViewOnce && extracted.fileId != 0 && extracted.path == null) {
                     val isOutgoing = cache.getMessage(update.chatId, update.messageId)?.isOutgoing ?: false
                     if (!isOutgoing) {
                         downloadFile(extracted.fileId, priority = 32)
