@@ -1488,6 +1488,10 @@ class MessageRepositoryImpl(
         }
     }
 
+    override fun registerFileForMessage(fileId: Int, chatId: Long, messageId: Long) {
+        messageRemoteDataSource.registerFileForMessage(fileId, chatId, messageId)
+    }
+
     override suspend fun getHighResFileId(chatId: Long, messageId: Long): Int? {
         return try {
             val result = gateway.execute(TdApi.GetMessage(chatId, messageId))
