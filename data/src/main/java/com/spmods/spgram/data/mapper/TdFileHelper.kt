@@ -82,6 +82,9 @@ class TdFileHelper(
     /** Suppress auto-download for a file (e.g. view-once content that must not be auto-fetched). */
     fun suppressDownload(fileId: Int) = fileApi.suppressDownload(fileId)
 
+    /** Clear a previously-set suppression so the file can be downloaded. */
+    fun clearSuppression(fileId: Int) = fileApi.clearSuppression(fileId)
+
     fun computeDownloadProgress(file: TdApi.File): Float {
         return if (file.size > 0) {
             file.local.downloadedSize.toFloat() / file.size.toFloat()
