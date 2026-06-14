@@ -109,14 +109,15 @@ internal class MessageContentMapper(
                 val downloadProgress = photoFile?.let(fileHelper::computeDownloadProgress) ?: 0f
 
                 val photoIsViewOnce = content.isSecret
-                // TDLib removes the photo server-side after the user opens it and sends
-                // MessageExpiredPhoto. We never have a locally-opened state to persist, so
-                // isViewOnceOpened stays false for live messages (expired ones hit the
-                // MessageExpiredPhoto branch above this when block).
-                val photoOpened = false
-                // For view-once photos: suppress auto-download — user must tap to open
+                val photoOpened = fileHelper.isViewOnceOpened(photoFile?.id ?: 0)
+                // For view-once photos: suppress auto-download — user must tap to open.
+                // Once opened, clear suppression so the download can proceed.
                 if (photoIsViewOnce && photoFile != null) {
-                    fileHelper.suppressDownload(photoFile.id)
+                    if (photoOpened) {
+                        fileHelper.clearViewOnceSuppression(photoFile.id)
+                    } else {
+                        fileHelper.suppressDownload(photoFile.id)
+                    }
                 }
                 MessageContent.Photo(
                     path = if (photoIsViewOnce && !photoOpened) null else path,
@@ -181,14 +182,20 @@ internal class MessageContentMapper(
                 val downloadProgress = fileHelper.computeDownloadProgress(videoFile)
 
                 val videoIsViewOnce = content.isSecret
-                // For view-once videos: suppress auto-download — user must tap to open
-                if (videoIsViewOnce && !fileHelper.isFileQueued(videoFile.id)) {
-                    fileHelper.suppressDownload(videoFile.id)
+                val videoOpened = fileHelper.isViewOnceOpened(videoFile.id)
+                // For view-once videos: suppress auto-download — user must tap to open.
+                // Once opened, clear suppression so the download can proceed.
+                if (videoIsViewOnce) {
+                    if (videoOpened) {
+                        fileHelper.clearViewOnceSuppression(videoFile.id)
+                    } else if (!fileHelper.isFileQueued(videoFile.id)) {
+                        fileHelper.suppressDownload(videoFile.id)
+                    }
                 }
 
                 MessageContent.Video(
-                    path = if (videoIsViewOnce) null else path,
-                    thumbnailPath = if (videoIsViewOnce) null else thumbnailPath,
+                    path = if (videoIsViewOnce && !videoOpened) null else path,
+                    thumbnailPath = if (videoIsViewOnce && !videoOpened) null else thumbnailPath,
                     width = video.width,
                     height = video.height,
                     duration = video.duration,
@@ -201,14 +208,14 @@ internal class MessageContentMapper(
                     ),
                     isUploading = context.isActuallyUploading && videoFile.remote.isUploadingActive,
                     uploadProgress = fileHelper.computeUploadProgress(videoFile),
-                    isDownloading = if (videoIsViewOnce) false else (isDownloading || isQueued),
+                    isDownloading = if (videoIsViewOnce && !videoOpened) false else (isDownloading || isQueued),
                     downloadProgress = downloadProgress,
                     fileId = videoFile.id,
-                    minithumbnail = if (videoIsViewOnce) null else video.minithumbnail?.data,
+                    minithumbnail = if (videoIsViewOnce && !videoOpened) null else video.minithumbnail?.data,
                     supportsStreaming = video.supportsStreaming,
                     hasSpoiler = content.hasSpoiler,
                     isViewOnce = videoIsViewOnce,
-                    isViewOnceOpened = false
+                    isViewOnceOpened = videoOpened
                 )
             }
 
@@ -216,11 +223,11 @@ internal class MessageContentMapper(
                 val voice = content.voiceNote
                 val voiceFile = fileHelper.getUpdatedFile(voice.voice)
                 val voiceIsViewOnce = msg.selfDestructType is TdApi.MessageSelfDestructTypeImmediately
-                val path = if (voiceIsViewOnce) null else fileHelper.resolveLocalFilePath(voiceFile)
+                val voiceOpened = fileHelper.isViewOnceOpened(voiceFile.id)
+                val path = if (voiceIsViewOnce && !voiceOpened) null else fileHelper.resolveLocalFilePath(voiceFile)
                 fileHelper.registerCachedFile(voiceFile.id, context.chatId, context.messageId)
 
-                if (path == null && context.networkAutoDownload && !voiceIsViewOnce) {
-                    fileHelper.enqueueDownload(
+                if (path == null && context.networkAutoDownload && !voiceIsViewOnce) {                    fileHelper.enqueueDownload(
                         voiceFile.id,
                         1,
                         TdMessageRemoteDataSource.DownloadType.DEFAULT,
@@ -240,7 +247,7 @@ internal class MessageContentMapper(
                     waveform = voice.waveform,
                     isUploading = context.isActuallyUploading && voiceFile.remote.isUploadingActive,
                     uploadProgress = fileHelper.computeUploadProgress(voiceFile),
-                    isDownloading = if (voiceIsViewOnce) false else (isDownloading || isQueued),
+                    isDownloading = if (voiceIsViewOnce && !voiceOpened) false else (isDownloading || isQueued),
                     downloadProgress = downloadProgress,
                     fileId = voiceFile.id,
                     isListened = content.isListened,
@@ -248,7 +255,7 @@ internal class MessageContentMapper(
                     // MessageVideoNote), so the only signal for view-once voice notes is the
                     // self-destruct type carried on the parent TdApi.Message itself.
                     isViewOnce = voiceIsViewOnce,
-                    isViewOnceOpened = false
+                    isViewOnceOpened = voiceOpened
                 )
             }
 
@@ -291,21 +298,21 @@ internal class MessageContentMapper(
                 val isQueued = fileHelper.isFileQueued(videoFile.id)
                 val downloadProgress = fileHelper.computeDownloadProgress(videoFile)
 
+                val videoNoteIsViewOnce = content.isSecret
+                val videoNoteOpened = fileHelper.isViewOnceOpened(videoFile.id)
+
                 MessageContent.VideoNote(
-                    path = if (content.isSecret) null else videoPath,
-                    thumbnail = if (content.isSecret) null else thumbPath,
+                    path = if (videoNoteIsViewOnce && !videoNoteOpened) null else videoPath,
+                    thumbnail = if (videoNoteIsViewOnce && !videoNoteOpened) null else thumbPath,
                     duration = note.duration,
                     length = note.length,
                     isUploading = isUploading,
                     uploadProgress = uploadProgress,
-                    isDownloading = if (content.isSecret) false else (isDownloading || isQueued),
+                    isDownloading = if (videoNoteIsViewOnce && !videoNoteOpened) false else (isDownloading || isQueued),
                     downloadProgress = downloadProgress,
                     fileId = videoFile.id,
-                    // isViewed = "at least one recipient viewed" (group read status), NOT "local user opened".
-                    // For view-once video notes the local user has not opened it yet at map time,
-                    // so isViewOnceOpened starts false; the UI updates it after the user taps open.
-                    isViewOnce = content.isSecret,
-                    isViewOnceOpened = false
+                    isViewOnce = videoNoteIsViewOnce,
+                    isViewOnceOpened = videoNoteOpened
                 )
             }
 
