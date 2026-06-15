@@ -186,11 +186,11 @@ fun AboutContent(component: AboutComponent) {
 
                 SettingsItem(
                     icon = Icons.Rounded.Public,
-                    title = stringResource(R.string.github_title),
-                    subtitle = stringResource(R.string.github_subtitle),
+                    title = "Official Website",
+                    subtitle = "Download latest version",
                     iconBackgroundColor = Color(0xFF24292E),
                     position = ItemPosition.MIDDLE,
-                    onClick = { uriHandler.openUri("https://github.com/spgram-android/spgram") }
+                    onClick = { uriHandler.openUri("https://www.spmods.download") }
                 )
 
                 SettingsItem(
@@ -232,7 +232,7 @@ fun AboutContent(component: AboutComponent) {
                     subtitle = stringResource(R.string.telegram_chat_subtitle),
                     iconBackgroundColor = Color(0xFF0088CC),
                     position = ItemPosition.TOP,
-                    onClick = { uriHandler.openUri("https://t.me/spgram_discuss") }
+                    onClick = { uriHandler.openUri("https://t.me/SPModsSandun") }
                 )
                 SettingsItem(
                     icon = Icons.Rounded.Announcement,
@@ -240,7 +240,7 @@ fun AboutContent(component: AboutComponent) {
                     subtitle = stringResource(R.string.telegram_channel_subtitle),
                     iconBackgroundColor = Color(0xFF0088CC),
                     position = ItemPosition.MIDDLE,
-                    onClick = { uriHandler.openUri("https://t.me/spgram_android") }
+                    onClick = { uriHandler.openUri("https://t.me/SPModsSandun2") }
                 )
                 SettingsItem(
                     icon = Icons.Rounded.Favorite,
@@ -248,7 +248,7 @@ fun AboutContent(component: AboutComponent) {
                     subtitle = stringResource(R.string.support_spgram_subtitle),
                     iconBackgroundColor = Color(0xFFFF5F2C),
                     position = ItemPosition.BOTTOM,
-                    onClick = { uriHandler.openUri("https://boosty.to/spgram") }
+                    onClick = { uriHandler.openUri("https://t.me/boost/SPModsSandun") }
                 )
             }
 
@@ -264,50 +264,50 @@ fun AboutContent(component: AboutComponent) {
                 )
                 SettingsItem(
                     icon = Icons.Rounded.Person,
-                    title = "gdlbo",
-                    subtitle = stringResource(R.string.role_developer),
+                    title = "Sandun Piumal",
+                    subtitle = "Owner & Developer",
                     iconBackgroundColor = Color(0xFF607D8B),
                     position = ItemPosition.TOP,
-                    onClick = { uriHandler.openUri("https://t.me/gdlbo") }
+                    onClick = { uriHandler.openUri("https://t.me/SPModsSandun") }
                 )
                 SettingsItem(
                     icon = Icons.Rounded.Person,
-                    title = "Rozetka_img",
-                    subtitle = stringResource(R.string.role_developer),
+                    title = "Kavishka (DHMods)",
+                    subtitle = "Official Media Partner",
                     iconBackgroundColor = Color(0xFF607D8B),
                     position = ItemPosition.MIDDLE,
-                    onClick = { uriHandler.openUri("https://t.me/Rozetka_img") }
+                    onClick = { uriHandler.openUri("https://youtube.com/@datahackerz?si=RZMUFdeD1Sx1oMzR") }
                 )
                 SettingsItem(
                     icon = Icons.Rounded.Person,
-                    title = "aliveoutside",
-                    subtitle = stringResource(R.string.role_developer),
+                    title = "Deshan Satheesha",
+                    subtitle = "Admin & Tester",
                     iconBackgroundColor = Color(0xFF607D8B),
                     position = ItemPosition.MIDDLE,
-                    onClick = { uriHandler.openUri("https://t.me/toxyxd") }
+                    onClick = { uriHandler.openUri("https://t.me/SPModsSandun") }
                 )
                 SettingsItem(
                     icon = Icons.Rounded.Person,
-                    title = "recodius",
-                    subtitle = stringResource(R.string.role_developer),
+                    title = "Pasindu Supun",
+                    subtitle = "Admin & Tester",
                     iconBackgroundColor = Color(0xFF607D8B),
                     position = ItemPosition.MIDDLE,
-                    onClick = { uriHandler.openUri("https://t.me/recodius") }
-                )
+                    onClick = { uriHandler.openUri("https://t.me/SPModsSandun") }
+                )               
                 SettingsItem(
                     icon = Icons.Rounded.Brush,
-                    title = "the8055u",
-                    subtitle = stringResource(R.string.role_designer),
+                    title = "Thinuka Heshan",
+                    subtitle = "Admin & Tester",
                     iconBackgroundColor = Color(0xFF607D8B),
                     position = ItemPosition.BOTTOM,
-                    onClick = { uriHandler.openUri("https://t.me/the8055u") }
+                    onClick = { uriHandler.openUri("https://t.me/SPModsSandun") }
                 )
             }
 
             item {
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
-                    text = stringResource(R.string.spgram_description),
+                    text = "",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
