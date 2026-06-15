@@ -94,6 +94,14 @@ fun PhotoMessageBubble(
         namespacedCacheKey("chat_photo:${content.fileId}", stablePath)
     }
 
+    // Lock aspect ratio from first valid dimensions to prevent bubble size jumps
+    // during download state changes (isDownloading/progress recompositions).
+    val stableAspectRatio = remember(msg.id, content.fileId) {
+        if (content.width > 0 && content.height > 0)
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
+        else if (content.isViewOnce) 0.75f else 1f
+    }
+
     LaunchedEffect(content.path, content.fileId) {
         if (!content.path.isNullOrBlank()) {
             stablePath = content.path
@@ -189,14 +197,7 @@ fun PhotoMessageBubble(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 160.dp, max = 320.dp)
-                        .aspectRatio(
-                            if (content.width > 0 && content.height > 0)
-                                (content.width.toFloat() / content.height.toFloat()).coerceIn(
-                                    0.5f,
-                                    2f
-                                )
-                            else if (content.isViewOnce) 0.75f else 1f
-                        )
+                        .aspectRatio(stableAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                         .pointerInput(Unit) {
