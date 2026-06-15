@@ -62,10 +62,10 @@ internal class MessageContentMapper(
 
             is TdApi.MessagePhoto -> {
                 val sizes = content.photo.sizes
-                val photoSize = sizes.find { it.type == "x" }
-                    ?: sizes.find { it.type == "m" }
-                    ?: sizes.getOrNull(sizes.size / 2)
-                    ?: sizes.lastOrNull()
+                // Select highest quality available: prefer y (1280px) > x (800px) > largest by area
+                val preferredTypes = listOf("y", "x", "w", "a", "b", "c", "d")
+                val photoSize = preferredTypes.firstNotNullOfOrNull { t -> sizes.find { it.type == t } }
+                    ?: sizes.maxByOrNull { it.width * it.height }
                 val thumbnailSize = sizes.find { it.type == "m" }
                     ?: sizes.find { it.type == "s" }
                     ?: sizes.firstOrNull()
