@@ -204,7 +204,6 @@ fun ChannelVideoMessageBubble(
                 }
 
                 val mediaRatio = stableAspectRatio
-                else 1f
 
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val mediaHeight = (maxWidth / mediaRatio).coerceIn(160.dp, 320.dp)
