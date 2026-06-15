@@ -221,8 +221,7 @@ fun VideoMessageBubble(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 160.dp, max = 360.dp)
-                        .aspectRatio(ratio)
+                        .aspectRatio(ratio.coerceIn(0.5f, 2f))
                         .clipToBounds()
                         .onGloballyPositioned {
                             layoutTracker.videoPosition = it.positionInWindow()
