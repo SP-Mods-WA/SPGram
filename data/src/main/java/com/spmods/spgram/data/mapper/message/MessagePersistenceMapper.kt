@@ -123,7 +123,7 @@ internal class MessagePersistenceMapper(
                     thumbnailPath = thumbnailPath,
                     minithumbnail = content.photo.minithumbnail?.data,
                     isViewOnce = content.isSecret,
-                    isViewOnceOpened = content.isViewed
+                    isViewOnceOpened = false
                 )
             }
 
@@ -147,7 +147,7 @@ internal class MessagePersistenceMapper(
                     thumbnailPath = content.video.thumbnail?.file?.local?.path?.takeIf { fileHelper.isValidPath(it) },
                     minithumbnail = content.video.minithumbnail?.data,
                     isViewOnce = content.isSecret,
-                    isViewOnceOpened = content.isViewed
+                    isViewOnceOpened = false
                 )
             }
 
