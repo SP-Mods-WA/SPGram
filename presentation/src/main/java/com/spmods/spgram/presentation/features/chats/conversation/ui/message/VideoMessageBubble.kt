@@ -217,7 +217,6 @@ fun VideoMessageBubble(
                 }
 
                 val ratio = stableAspectRatio
-                else if (content.isViewOnce) 0.75f else 1f
 
                 Box(
                     modifier = Modifier
