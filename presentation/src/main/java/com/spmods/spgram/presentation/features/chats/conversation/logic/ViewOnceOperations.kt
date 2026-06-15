@@ -1,6 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.conversation.logic
 
 import android.util.Log
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageModel
@@ -25,6 +26,29 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
             repositoryMessage.openMessageContent(chatId, latest.id)
         } catch (e: Throwable) {
             Log.e("ViewOnce", "openMessageContent failed: msgId=${latest.id}", e)
+        }
+
+        // Immediately mark as opened in local state so the UI stops showing the
+        // "View" button without waiting for the TDLib UpdateMessageContentOpened
+        // round-trip. TDLib will send the authoritative update shortly after, but
+        // this prevents the button from remaining tappable in the meantime.
+        _state.update { state ->
+            state.copy(
+                messages = state.messages.map { msg ->
+                    if (msg.id != latest.id) return@map msg
+                    when (val content = msg.content) {
+                        is MessageContent.Photo ->
+                            msg.copy(content = content.copy(isViewOnceOpened = true))
+                        is MessageContent.Video ->
+                            msg.copy(content = content.copy(isViewOnceOpened = true))
+                        is MessageContent.Voice ->
+                            msg.copy(content = content.copy(isViewOnceOpened = true))
+                        is MessageContent.VideoNote ->
+                            msg.copy(content = content.copy(isViewOnceOpened = true))
+                        else -> msg
+                    }
+                }
+            )
         }
 
         when (val content = latest.content) {
