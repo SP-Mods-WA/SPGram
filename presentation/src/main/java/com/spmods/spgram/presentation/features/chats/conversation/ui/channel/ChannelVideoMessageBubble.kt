@@ -135,6 +135,12 @@ fun ChannelVideoMessageBubble(
         content.minithumbnail?.let { namespacedCacheKey("channel_video_mini:${content.fileId}", it) }
     }
     var isAutoDownloadSuppressed by remember(msg.id) { mutableStateOf(false) }
+
+    val stableAspectRatio = remember(msg.id, content.fileId) {
+        if (content.width > 0 && content.height > 0)
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
+        else 1f
+    }
     val hasCaption = content.caption.isNotEmpty()
 
     LaunchedEffect(content.path) {
@@ -197,8 +203,7 @@ fun ChannelVideoMessageBubble(
                     }
                 }
 
-                val mediaRatio = if (content.width > 0 && content.height > 0)
-                    (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
+                val mediaRatio = stableAspectRatio
                 else 1f
 
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
