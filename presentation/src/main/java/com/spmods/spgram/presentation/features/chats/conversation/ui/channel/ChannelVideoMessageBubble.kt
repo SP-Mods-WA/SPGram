@@ -491,4 +491,4 @@ fun ChannelVideoMessageBubble(
             )
         }
     }
-}
+
