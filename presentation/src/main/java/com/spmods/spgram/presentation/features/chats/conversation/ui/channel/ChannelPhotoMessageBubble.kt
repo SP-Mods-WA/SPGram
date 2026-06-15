@@ -113,6 +113,14 @@ fun ChannelPhotoMessageBubble(
     }
     var isAutoDownloadSuppressed by remember(msg.id) { mutableStateOf(false) }
 
+    // Lock aspect ratio from first valid dimensions to prevent bubble size jumps
+    // during download state changes (isDownloading/progress recompositions).
+    val stableAspectRatio = remember(msg.id, content.fileId) {
+        if (content.width > 0 && content.height > 0)
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
+        else 1f
+    }
+
     LaunchedEffect(content.path) {
         if (!content.path.isNullOrBlank()) {
             stablePath = content.path
@@ -171,9 +179,7 @@ fun ChannelPhotoMessageBubble(
                     }
                 }
 
-                val mediaRatio = if (content.width > 0 && content.height > 0) {
-                    (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
-                } else 1f
+                val mediaRatio = stableAspectRatio
 
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val mediaHeight = (maxWidth / mediaRatio).coerceIn(160.dp, 320.dp)
