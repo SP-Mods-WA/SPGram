@@ -115,6 +115,12 @@ fun VideoMessageBubble(
     }
     var isAutoDownloadSuppressed by remember(msg.id, content.fileId) { mutableStateOf(false) }
 
+    val stableAspectRatio = remember(msg.id, content.fileId) {
+        if (content.width > 0 && content.height > 0)
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
+        else 1f
+    }
+
     LaunchedEffect(content.path, content.fileId) {
         if (!content.path.isNullOrBlank()) {
             stablePath = content.path
@@ -210,8 +216,7 @@ fun VideoMessageBubble(
                     }
                 }
 
-                val ratio = if (content.width > 0 && content.height > 0)
-                    (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
+                val ratio = stableAspectRatio
                 else if (content.isViewOnce) 0.75f else 1f
 
                 Box(
