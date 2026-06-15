@@ -295,7 +295,7 @@ fun AboutContent(component: AboutComponent) {
                     onClick = { uriHandler.openUri("https://t.me/SPModsSandun") }
                 )               
                 SettingsItem(
-                    icon = Icons.Rounded.Brush,
+                    icon = Icons.Rounded.Person,
                     title = "Thinuka Heshan",
                     subtitle = "Admin & Tester",
                     iconBackgroundColor = Color(0xFF607D8B),
