@@ -1396,8 +1396,32 @@ class TdMessageRemoteDataSource(
                     val poll = (update.newContent as TdApi.MessagePoll).poll
                     pollRepository.mapPollIdToMessage(poll.id, update.chatId, update.messageId)
                 }
-                cache.removeMessage(update.chatId, update.messageId)
-                refreshMessageDebounced(update.chatId, update.messageId)
+
+                // For expired view-once content TDLib deletes the message server-side, so
+                // getMessage() returns null and refreshMessageDebounced silently drops the
+                // update. Build the expired model directly from the cached message so the
+                // UI can show the "Photo/Video/Voice expired" bubble immediately.
+                val isExpiredViewOnce = update.newContent is TdApi.MessageExpiredPhoto ||
+                    update.newContent is TdApi.MessageExpiredVideo ||
+                    update.newContent is TdApi.MessageExpiredVideoNote ||
+                    update.newContent is TdApi.MessageExpiredVoiceNote
+
+                if (isExpiredViewOnce) {
+                    val cached = cache.getMessage(update.chatId, update.messageId)
+                    cache.removeMessage(update.chatId, update.messageId)
+                    if (cached != null) {
+                        scope.launch(dispatcherProvider.io) {
+                            // Patch the cached message with the expired content so the mapper
+                            // produces the correct "expired" MessageContent type.
+                            cached.content = update.newContent
+                            val model = mapMessageToModel(cached)
+                            messageEditedFlow.emit(model)
+                        }
+                    }
+                } else {
+                    cache.removeMessage(update.chatId, update.messageId)
+                    refreshMessageDebounced(update.chatId, update.messageId)
+                }
             }
             is TdApi.UpdateMessageEdited -> {
                 cache.removeMessage(update.chatId, update.messageId)
