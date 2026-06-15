@@ -111,10 +111,10 @@ internal class MessageContentMapper(
                 val photoIsViewOnce = content.isSecret
                 // Auto-download view-once photos immediately so they are ready to open.
                 // TDLib destroys them server-side after openMessageContent(), so we save
-                // locally first. isViewOnceOpened is read from TDLib's isViewed field so
-                // the "View" button disappears immediately after the message is opened.
-                val photoOpened = content.isViewed
-                if (photoIsViewOnce && photoFile != null && path == null && !isDownloading && !isQueued && !photoOpened) {
+                // locally first. isViewOnceOpened starts false; ViewOnceOperations updates
+                // local state immediately after the user taps open.
+                val photoOpened = false
+                if (photoIsViewOnce && photoFile != null && path == null && !isDownloading && !isQueued) {
                     fileHelper.clearSuppression(photoFile.id)
                     fileHelper.enqueueDownload(
                         photoFile.id, 32,
@@ -209,7 +209,7 @@ internal class MessageContentMapper(
                     supportsStreaming = video.supportsStreaming,
                     hasSpoiler = content.hasSpoiler,
                     isViewOnce = videoIsViewOnce,
-                    isViewOnceOpened = content.isViewed
+                    isViewOnceOpened = false
                 )
             }
 
