@@ -111,9 +111,10 @@ internal class MessageContentMapper(
                 val photoIsViewOnce = content.isSecret
                 // Auto-download view-once photos immediately so they are ready to open.
                 // TDLib destroys them server-side after openMessageContent(), so we save
-                // locally first. isViewOnceOpened starts false; the viewer sets it on open.
-                val photoOpened = false
-                if (photoIsViewOnce && photoFile != null && path == null && !isDownloading && !isQueued) {
+                // locally first. isViewOnceOpened is read from TDLib's isViewed field so
+                // the "View" button disappears immediately after the message is opened.
+                val photoOpened = content.isViewed
+                if (photoIsViewOnce && photoFile != null && path == null && !isDownloading && !isQueued && !photoOpened) {
                     fileHelper.clearSuppression(photoFile.id)
                     fileHelper.enqueueDownload(
                         photoFile.id, 32,
@@ -208,7 +209,7 @@ internal class MessageContentMapper(
                     supportsStreaming = video.supportsStreaming,
                     hasSpoiler = content.hasSpoiler,
                     isViewOnce = videoIsViewOnce,
-                    isViewOnceOpened = false
+                    isViewOnceOpened = content.isViewed
                 )
             }
 
@@ -245,7 +246,7 @@ internal class MessageContentMapper(
                     fileId = voiceFile.id,
                     isListened = content.isListened,
                     isViewOnce = voiceIsViewOnce,
-                    isViewOnceOpened = false
+                    isViewOnceOpened = if (voiceIsViewOnce) content.isListened else false
                 )
             }
 
@@ -313,7 +314,7 @@ internal class MessageContentMapper(
                     downloadProgress = downloadProgress,
                     fileId = videoFile.id,
                     isViewOnce = videoNoteIsViewOnce,
-                    isViewOnceOpened = false
+                    isViewOnceOpened = content.isViewed
                 )
             }
 
