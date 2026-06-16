@@ -1,6 +1,8 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -138,6 +141,15 @@ fun PhotoMessageBubble(
         bottomStart = bottomStart
     )
 
+    // View-once bubble glow border brush
+    val viewOnceBorderBrush = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF9B5FC0), // purple
+            Color(0xFF6B4FBF), // mid purple
+            Color(0xFF4A6FD4)  // blue
+        )
+    )
+
     var imagePosition by remember { mutableStateOf(Offset.Zero) }
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
     var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
@@ -148,7 +160,19 @@ fun PhotoMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
+            // Add glow border only for view-once unopened
+            modifier = if (content.isViewOnce && !content.isViewOnceOpened && !hasPath) {
+                Modifier.border(
+                    width = 1.5.dp,
+                    brush = viewOnceBorderBrush,
+                    shape = bubbleShape
+                )
+            } else Modifier,
+            color = run {
+                val d = LocalDarkTheme.current
+                if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE))
+                else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF))
+            },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
             Column(modifier = Modifier.widthIn(max = 340.dp)) {
@@ -156,7 +180,13 @@ fun PhotoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
+                            .background(
+                                run {
+                                    val d = LocalDarkTheme.current
+                                    if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE))
+                                    else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF))
+                                }
+                            )
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp)
                             .zIndex(1f)
                     ) {
@@ -168,7 +198,13 @@ fun PhotoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
+                            .background(
+                                run {
+                                    val d = LocalDarkTheme.current
+                                    if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE))
+                                    else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF))
+                                }
+                            )
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -180,7 +216,13 @@ fun PhotoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
+                            .background(
+                                run {
+                                    val d = LocalDarkTheme.current
+                                    if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE))
+                                    else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF))
+                                }
+                            )
                             .padding(horizontal = 4.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -223,14 +265,45 @@ fun PhotoMessageBubble(
                             )
                         }
                 ) {
-                    // --- Background layer ---
+                    // ============================================================
+                    // BACKGROUND LAYER
+                    // ============================================================
                     if (content.isViewOnce && !hasPath) {
-                        // Solid color — guaranteed to cover everything, no thumbnail leak
+                        // --- Telegram-style galaxy background ---
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color(0xFF6B8FA5))
+                                .background(
+                                    brush = Brush.radialGradient(
+                                        colorStops = arrayOf(
+                                            0.0f to Color(0xFFAD6FD8), // bright purple (right-top)
+                                            0.35f to Color(0xFF7B5FC0), // mid purple
+                                            0.55f to Color(0xFF4A6FD4), // blue-purple
+                                            0.75f to Color(0xFF2B5FC0), // blue
+                                            1.0f to Color(0xFF1A3A9F)  // deep blue (left-bottom)
+                                        ),
+                                        center = Offset(Float.POSITIVE_INFINITY, 0f),
+                                        radius = 1400f
+                                    )
+                                )
                         )
+
+                        // --- Stars ---
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val random = java.util.Random(98765L)
+                            repeat(160) {
+                                val x = random.nextFloat() * size.width
+                                val y = random.nextFloat() * size.height
+                                val r = random.nextFloat() * 2.3f + 0.3f
+                                val alpha = random.nextFloat() * 0.7f + 0.3f
+                                drawCircle(
+                                    color = Color.White.copy(alpha = alpha),
+                                    radius = r,
+                                    center = Offset(x, y)
+                                )
+                            }
+                        }
+
                     } else if (!hasPath) {
                         MediaLoadingBackground(
                             previewData = content.minithumbnail,
@@ -238,7 +311,9 @@ fun PhotoMessageBubble(
                         )
                     }
 
-                    // --- Actual image (after download) ---
+                    // ============================================================
+                    // ACTUAL IMAGE (after download)
+                    // ============================================================
                     if (hasPath) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -257,7 +332,9 @@ fun PhotoMessageBubble(
                         )
                     }
 
-                    // --- Download action (non-view-once only) ---
+                    // ============================================================
+                    // DOWNLOAD ACTION (non-view-once only)
+                    // ============================================================
                     if (!hasPath && !content.isViewOnce) {
                         MediaLoadingAction(
                             isDownloading = content.isDownloading,
@@ -276,31 +353,51 @@ fun PhotoMessageBubble(
                         )
                     }
 
-                    // --- View once overlay: scrim + flame icon ---
+                    // ============================================================
+                    // VIEW ONCE OVERLAY: dark circle + flame icon (Telegram style)
+                    // ============================================================
                     if (content.isViewOnce && !content.isViewOnceOpened) {
                         Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.15f)),
+                            modifier = Modifier.matchParentSize(),
                             contentAlignment = Alignment.Center
                         ) {
+                            // Outer soft glow ring
                             Box(
                                 modifier = Modifier
-                                    .size(64.dp)
-                                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                                    .size(88.dp)
+                                    .background(
+                                        brush = Brush.radialGradient(
+                                            colors = listOf(
+                                                Color.Black.copy(alpha = 0.25f),
+                                                Color.Transparent
+                                            )
+                                        ),
+                                        shape = CircleShape
+                                    )
+                            )
+                            // Dark circle background
+                            Box(
+                                modifier = Modifier
+                                    .size(68.dp)
+                                    .background(
+                                        Color.Black.copy(alpha = 0.38f),
+                                        CircleShape
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Whatshot,
                                     contentDescription = null,
                                     tint = Color.White,
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(34.dp)
                                 )
                             }
                         }
                     }
 
-                    // --- Upload progress ---
+                    // ============================================================
+                    // UPLOAD PROGRESS
+                    // ============================================================
                     if (content.isUploading) {
                         Box(
                             modifier = Modifier
@@ -320,14 +417,18 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // --- hasSpoiler overlay (unchanged) ---
+                    // ============================================================
+                    // SPOILER OVERLAY
+                    // ============================================================
                     if (content.hasSpoiler) {
                         SpoilerWrapper(isRevealed = isMediaSpoilerRevealed) {
                             Box(modifier = Modifier.fillMaxSize())
                         }
                     }
 
-                    // --- Metadata overlay ---
+                    // ============================================================
+                    // METADATA OVERLAY (no caption)
+                    // ============================================================
                     if (content.caption.isEmpty() && showMetadata) {
                         Box(
                             modifier = Modifier
@@ -344,13 +445,25 @@ fun PhotoMessageBubble(
                     }
                 }
 
+                // ============================================================
+                // CAPTION SECTION
+                // ============================================================
                 if (content.caption.isNotEmpty()) {
-                    val timeColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(alpha = 0.7f)
+                    val timeColor = if (LocalDarkTheme.current)
+                        Color(0xFFFFFFFF).copy(alpha = 0.7f)
+                    else
+                        Color(0xFF212121).copy(alpha = 0.7f)
 
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
+                            .background(
+                                run {
+                                    val d = LocalDarkTheme.current
+                                    if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE))
+                                    else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF))
+                                }
+                            )
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp)
                             .zIndex(1f)
                     ) {
