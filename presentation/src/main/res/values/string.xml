@@ -11,6 +11,7 @@
     <string name="spmods_channel_description">Join our official Telegram channel to stay up to date with the latest updates and new features, and to report any bugs directly to us.</string>
     <string name="spmods_channel_join_button">Join Channel</string>
     <string name="spmods_channel_maybe_later">Maybe later</string>
+        <string name="photo_expired">Photo has expired</string>
 
     <string name="scan_qr_title">Scan QR</string>
     <string name="devices_title">Devices</string>
