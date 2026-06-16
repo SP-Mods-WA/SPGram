@@ -100,9 +100,10 @@ fun PhotoMessageBubble(
     }
 
     val stableAspectRatio = remember(msg.id, content.fileId) {
-        if (content.width > 0 && content.height > 0)
+        if (content.isViewOnce && !content.isViewOnceOpened) 1f // square always for unopened view-once
+        else if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
-        else if (content.isViewOnce) 0.75f else 1f
+        else 1f
     }
 
     LaunchedEffect(content.path, content.fileId) {
@@ -237,7 +238,12 @@ fun PhotoMessageBubble(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 160.dp, max = 320.dp)
+                        .then(
+                            if (content.isViewOnce && !content.isViewOnceOpened)
+                                Modifier.size(220.dp) // fixed square size for view-once
+                            else
+                                Modifier.heightIn(min = 160.dp, max = 320.dp)
+                        )
                         .aspectRatio(stableAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
