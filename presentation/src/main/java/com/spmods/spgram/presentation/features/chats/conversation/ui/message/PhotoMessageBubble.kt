@@ -247,7 +247,7 @@ fun PhotoMessageBubble(
                         .aspectRatio(stableAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
-                        .pointerInput(Unit) {
+                        .pointerInput(hasPath, content.isViewOnceOpened, content.isViewOnce) {
                             detectTapGestures(
                                 onTap = {
                                     when {
