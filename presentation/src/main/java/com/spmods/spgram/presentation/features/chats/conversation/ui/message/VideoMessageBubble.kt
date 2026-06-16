@@ -221,9 +221,9 @@ fun VideoMessageBubble(
 
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
     Modifier
-        .fillMaxWidth()
-        .aspectRatio(1f)              // ✅ 16:9 -> 1:1 (square)
-        .heightIn(max = 280.dp)       // ✅ max height එක දාමු!
+        // fillMaxWidth වෙනුවට ස්ථාවර Size එකක් දෙනවා, 
+        // එතකොට Content එක shrink වෙන්නේ නැහැ
+        .size(160.dp) 
         .clipToBounds()
         .onGloballyPositioned {
             layoutTracker.videoPosition = it.positionInWindow()
@@ -238,6 +238,7 @@ fun VideoMessageBubble(
             layoutTracker.videoPosition = it.positionInWindow()
         }
 }
+
 
                 Box(modifier = boxModifier) {
                     if ((hasPath || content.supportsStreaming) && content.isViewOnce && !content.isViewOnceOpened) {
