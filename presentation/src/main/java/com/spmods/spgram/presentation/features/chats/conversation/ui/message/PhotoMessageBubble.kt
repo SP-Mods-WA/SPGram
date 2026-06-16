@@ -13,18 +13,15 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -143,7 +140,8 @@ fun PhotoMessageBubble(
 
     var imagePosition by remember { mutableStateOf(Offset.Zero) }
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
-    var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
+    // View once photos always show as spoiler (never revealed); hasSpoiler photos start hidden
+    var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler && !content.isViewOnce) }
 
     Column(
         modifier = modifier.width(IntrinsicSize.Max),
@@ -207,11 +205,8 @@ fun PhotoMessageBubble(
                             detectTapGestures(
                                 onTap = {
                                     when {
-                                        content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading -> {
+                                        content.isViewOnce && !content.isViewOnceOpened && content.path == null -> {
                                             onOpenViewOnce(msg)
-                                        }
-                                        content.isViewOnce && content.isViewOnceOpened -> {
-                                            // expired — do nothing
                                         }
                                         content.hasSpoiler -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
@@ -230,120 +225,6 @@ fun PhotoMessageBubble(
                             )
                         }
                 ) {
-                    // ── View Once: expired ────────────────────────────────────
-                    if (content.isViewOnce && content.isViewOnceOpened) {
-                        // Greyed-out blurred background
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            MediaLoadingBackground(
-                                previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop
-                            )
-                            // Grey desaturate overlay
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color(0xFF9E9E9E).copy(alpha = 0.55f))
-                            )
-                            // "Photo has expired" pill label
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(bottom = 12.dp)
-                                    .background(
-                                        Color.Black.copy(alpha = 0.48f),
-                                        RoundedCornerShape(16.dp)
-                                    )
-                                    .padding(horizontal = 14.dp, vertical = 6.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.photo_expired),
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                            // Time metadata overlay (bottom-right)
-                            if (content.caption.isEmpty() && showMetadata) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(6.dp)
-                                        .background(
-                                            Color.Black.copy(alpha = 0.45f),
-                                            RoundedCornerShape(12.dp)
-                                        )
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    MessageMetadata(msg, isOutgoing, Color.White)
-                                }
-                            }
-                        }
-                    }
-                    // ── View Once: not yet opened ─────────────────────────────
-                    else if (content.isViewOnce && !content.isViewOnceOpened) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // Blurred thumbnail
-                            MediaLoadingBackground(
-                                previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop
-                            )
-                            // Semi-transparent dark overlay
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Black.copy(alpha = 0.30f))
-                            )
-                            // Centre tap-to-open circle with eye icon
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        Color.Black.copy(alpha = 0.45f),
-                                    CircleShape
-                                    )
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Visibility,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.padding(4.dp)
-                                )
-                            }
-
-                            if (content.isDownloading) {
-                                CircularWavyProgressIndicator(
-                                    progress = { content.downloadProgress },
-                                    color = Color.White,
-                                    trackColor = Color.White.copy(alpha = 0.3f),
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                            }
-
-                            // Time metadata overlay (bottom-right)
-                            if (content.caption.isEmpty() && showMetadata) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(6.dp)
-                                        .background(
-                                            Color.Black.copy(alpha = 0.45f),
-                                            RoundedCornerShape(12.dp)
-                                        )
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    MessageMetadata(msg, isOutgoing, Color.White)
-                                }
-                            }
-                        }
-                    }
-                    // ── Normal photo ──────────────────────────────────────────
-                    else {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -385,8 +266,12 @@ fun PhotoMessageBubble(
                                     onCancelDownload(content.fileId)
                                 },
                                 onIdleClick = {
-                                    AutoDownloadSuppression.clear(content.fileId)
-                                    if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
+                                    if (content.isViewOnce && !content.isViewOnceOpened) {
+                                        onOpenViewOnce(msg)
+                                    } else {
+                                        AutoDownloadSuppression.clear(content.fileId)
+                                        if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
+                                    }
                                 }
                             )
                         }
@@ -413,8 +298,16 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    SpoilerWrapper(isRevealed = isMediaSpoilerRevealed) {
-                        Box(modifier = Modifier.fillMaxSize())
+                    // Show spoiler overlay for hasSpoiler photos (toggleable)
+                    // Show permanent spoiler overlay for view once photos (never revealed in bubble)
+                    if (content.hasSpoiler) {
+                        SpoilerWrapper(isRevealed = isMediaSpoilerRevealed) {
+                            Box(modifier = Modifier.fillMaxSize())
+                        }
+                    } else if (content.isViewOnce) {
+                        SpoilerWrapper(isRevealed = false) {
+                            Box(modifier = Modifier.fillMaxSize())
+                        }
                     }
 
                     if (content.caption.isEmpty() && showMetadata) {
@@ -431,7 +324,7 @@ fun PhotoMessageBubble(
                             MessageMetadata(msg, isOutgoing, Color.White)
                         }
                     }
-                    } // end normal photo
+                }
 
                 if (content.caption.isNotEmpty()) {
                     val timeColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(alpha = 0.7f)
@@ -498,4 +391,4 @@ fun PhotoMessageBubble(
             )
         }
     }
-}}
+}
