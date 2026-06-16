@@ -9,16 +9,18 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,6 +34,7 @@ import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -94,8 +97,6 @@ fun PhotoMessageBubble(
         namespacedCacheKey("chat_photo:${content.fileId}", stablePath)
     }
 
-    // Lock aspect ratio from first valid dimensions to prevent bubble size jumps
-    // during download state changes (isDownloading/progress recompositions).
     val stableAspectRatio = remember(msg.id, content.fileId) {
         if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
@@ -140,8 +141,7 @@ fun PhotoMessageBubble(
 
     var imagePosition by remember { mutableStateOf(Offset.Zero) }
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
-    // View once photos always show as spoiler (never revealed); hasSpoiler photos start hidden
-    var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler && !content.isViewOnce) }
+    var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
 
     Column(
         modifier = modifier.width(IntrinsicSize.Max),
@@ -152,9 +152,7 @@ fun PhotoMessageBubble(
             color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
-            Column(modifier = Modifier
-                .widthIn(max = 340.dp)
-            ) {
+            Column(modifier = Modifier.widthIn(max = 340.dp)) {
                 if (isGroup && !isOutgoing && !isSameSenderAbove) {
                     Box(
                         modifier = Modifier
@@ -178,6 +176,7 @@ fun PhotoMessageBubble(
                         ForwardContent(forward, isOutgoing, onForwardClick = onForwardOriginClick)
                     }
                 }
+
                 msg.replyToMsg?.let { reply ->
                     Box(
                         modifier = Modifier
@@ -229,10 +228,13 @@ fun PhotoMessageBubble(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
+                        // Background / image layer
                         if (!hasPath) {
                             MediaLoadingBackground(
                                 previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Crop,
+                                // blur the minithumbnail for view once
+                                modifier = if (content.isViewOnce) Modifier.fillMaxSize().blur(20.dp) else Modifier.fillMaxSize()
                             )
                         }
 
@@ -254,7 +256,7 @@ fun PhotoMessageBubble(
                             )
                         }
 
-                        if (!hasPath) {
+                        if (!hasPath && !content.isViewOnce) {
                             MediaLoadingAction(
                                 isDownloading = content.isDownloading,
                                 progress = content.downloadProgress,
@@ -266,14 +268,34 @@ fun PhotoMessageBubble(
                                     onCancelDownload(content.fileId)
                                 },
                                 onIdleClick = {
-                                    if (content.isViewOnce && !content.isViewOnceOpened) {
-                                        onOpenViewOnce(msg)
-                                    } else {
-                                        AutoDownloadSuppression.clear(content.fileId)
-                                        if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
-                                    }
+                                    AutoDownloadSuppression.clear(content.fileId)
+                                    if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
                                 }
                             )
+                        }
+                    }
+
+                    // View once overlay — blurred bg + dark scrim + flame icon
+                    if (content.isViewOnce && !content.isViewOnceOpened) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color.Black.copy(alpha = 0.35f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Whatshot,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
                         }
                     }
 
@@ -291,21 +313,14 @@ fun PhotoMessageBubble(
                                     trackColor = Color.White.copy(alpha = 0.3f),
                                 )
                             } else {
-                                LoadingIndicator(
-                                    color = Color.White
-                                )
+                                LoadingIndicator(color = Color.White)
                             }
                         }
                     }
 
-                    // Show spoiler overlay for hasSpoiler photos (toggleable)
-                    // Show permanent spoiler overlay for view once photos (never revealed in bubble)
+                    // hasSpoiler overlay (unchanged)
                     if (content.hasSpoiler) {
                         SpoilerWrapper(isRevealed = isMediaSpoilerRevealed) {
-                            Box(modifier = Modifier.fillMaxSize())
-                        }
-                    } else if (content.isViewOnce) {
-                        SpoilerWrapper(isRevealed = false) {
                             Box(modifier = Modifier.fillMaxSize())
                         }
                     }
