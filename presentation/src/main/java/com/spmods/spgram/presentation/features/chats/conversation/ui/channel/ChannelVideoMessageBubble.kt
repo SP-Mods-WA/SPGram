@@ -6,13 +6,10 @@ import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -207,13 +204,11 @@ fun ChannelVideoMessageBubble(
 
                 val mediaRatio = stableAspectRatio
 
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val mediaHeight = (maxWidth / mediaRatio.coerceIn(0.5f, 2f)).coerceIn(160.dp, 320.dp)
-
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(mediaHeight)
+                        .heightIn(min = 160.dp, max = 320.dp)
+                        .aspectRatio(mediaRatio)
                         .clip(
                             if (hasCaption) RoundedCornerShape(
                                 topStart = topStart,
@@ -413,7 +408,6 @@ fun ChannelVideoMessageBubble(
                         }
                     }
                 }
-                } // end BoxWithConstraints
 
                 // Caption Section
                 if (hasCaption) {
