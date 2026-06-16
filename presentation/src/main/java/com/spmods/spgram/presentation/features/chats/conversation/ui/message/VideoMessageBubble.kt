@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -218,10 +220,15 @@ fun VideoMessageBubble(
 
                 val ratio = stableAspectRatio
 
+                BoxWithConstraints(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val mediaHeight = (maxWidth / ratio.coerceIn(0.5f, 2f)).coerceIn(160.dp, 280.dp)
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(ratio.coerceIn(0.5f, 2f))
+                        .height(mediaHeight)
                         .clipToBounds()
                         .onGloballyPositioned {
                             layoutTracker.videoPosition = it.positionInWindow()
@@ -384,6 +391,7 @@ fun VideoMessageBubble(
                         )
                     }
                 }
+                } // end BoxWithConstraints
 
                 if (content.caption.isNotEmpty()) {
                     val timeColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(alpha = 0.7f)
