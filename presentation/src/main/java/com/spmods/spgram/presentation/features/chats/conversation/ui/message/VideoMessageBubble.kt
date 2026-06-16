@@ -218,16 +218,15 @@ fun VideoMessageBubble(
                 }
 
                 val ratio = stableAspectRatio
-
+                
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .clipToBounds()
-                        .onGloballyPositioned {
-                            layoutTracker.videoPosition = it.positionInWindow()
-                        }
-                } else {
+    Modifier
+        .fillMaxWidth()
+        .aspectRatio(1f)  // ← 16/9 වෙනුවට 1f (square)
+        .widthIn(max = 280.dp)
+        .heightIn(max = 280.dp)
+        .clipToBounds()
+} else {
                     Modifier
                         .fillMaxWidth()
                         .heightIn(min = 160.dp, max = 280.dp)
