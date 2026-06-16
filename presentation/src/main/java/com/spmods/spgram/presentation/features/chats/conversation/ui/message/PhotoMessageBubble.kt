@@ -143,6 +143,14 @@ fun PhotoMessageBubble(
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
     var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
 
+    val viewOnceGradient = Brush.radialGradient(
+        colors = listOf(
+            Color(0xFF9DBDD4),
+            Color(0xFF7A9FB8),
+            Color(0xFF4A7090)
+        )
+    )
+
     Column(
         modifier = modifier.width(IntrinsicSize.Max),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
@@ -193,12 +201,19 @@ fun PhotoMessageBubble(
                     }
                 }
 
+                // Outer image box — gradient applied here directly for view once
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 160.dp, max = 320.dp)
                         .aspectRatio(stableAspectRatio)
                         .clipToBounds()
+                        .then(
+                            if (content.isViewOnce && !hasPath)
+                                Modifier.background(brush = viewOnceGradient)
+                            else
+                                Modifier
+                        )
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                         .pointerInput(Unit) {
                             detectTapGestures(
@@ -224,33 +239,16 @@ fun PhotoMessageBubble(
                             )
                         }
                 ) {
+                    // Image / normal background layer
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (!hasPath) {
-                            if (content.isViewOnce) {
-                                // TDLib doesn't provide minithumbnail for view once —
-                                // use a Telegram-style radial gradient background
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            brush = Brush.radialGradient(
-                                                colors = listOf(
-                                                    Color(0xFF9DBDD4),
-                                                    Color(0xFF7A9FB8),
-                                                    Color(0xFF4A7090)
-                                                )
-                                            )
-                                        )
-                                )
-                            } else {
-                                MediaLoadingBackground(
-                                    previewData = content.minithumbnail,
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
+                        if (!hasPath && !content.isViewOnce) {
+                            MediaLoadingBackground(
+                                previewData = content.minithumbnail,
+                                contentScale = ContentScale.Crop
+                            )
                         }
 
                         if (hasPath) {
@@ -271,7 +269,7 @@ fun PhotoMessageBubble(
                             )
                         }
 
-                        // Download action only for non-view-once photos
+                        // Download action only for non-view-once
                         if (!hasPath && !content.isViewOnce) {
                             MediaLoadingAction(
                                 isDownloading = content.isDownloading,
@@ -291,12 +289,12 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // View once overlay: dark scrim + flame icon in frosted circle
+                    // View once overlay: semi-transparent scrim + flame icon in frosted circle
                     if (content.isViewOnce && !content.isViewOnceOpened) {
                         Box(
                             modifier = Modifier
                                 .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.25f)),
+                                .background(Color.Black.copy(alpha = 0.20f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Box(
