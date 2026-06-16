@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material.icons.rounded.Stream
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -502,7 +503,6 @@ private fun VideoLoadingLayer(
             isDownloading = content.isDownloading,
             progress = content.downloadProgress,
             idleIcon = when {
-                // view-once uses same Download icon as original Telegram
                 content.supportsStreaming -> Icons.Rounded.Stream
                 else -> Icons.Default.Download
             },
@@ -514,6 +514,29 @@ private fun VideoLoadingLayer(
             onCancelClick = onCancelDownload,
             onIdleClick = onStartDownload
         )
+
+        if (isViewOnce) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(Color.Black.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Whatshot,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
