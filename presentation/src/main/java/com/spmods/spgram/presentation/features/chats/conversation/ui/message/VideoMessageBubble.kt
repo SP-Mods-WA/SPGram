@@ -221,9 +221,8 @@ fun VideoMessageBubble(
 
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                     Modifier
-                        .widthIn(max = 280.dp)
                         .fillMaxWidth()
-                        .aspectRatio(5f / 3f)
+                        .aspectRatio(16f / 9f)
                         .clipToBounds()
                         .onGloballyPositioned {
                             layoutTracker.videoPosition = it.positionInWindow()
