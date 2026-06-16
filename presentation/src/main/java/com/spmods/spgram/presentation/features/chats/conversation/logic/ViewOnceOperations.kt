@@ -10,7 +10,8 @@ import com.spmods.spgram.presentation.features.chats.conversation.DefaultChatCom
 /**
  * Handles tapping a view-once (self-destructing) message.
  *
- * Files are auto-downloaded on arrival. We read the LATEST message from _state
+ * View-once files are NOT auto-downloaded. The user must tap the message
+ * to trigger download and open. We read the LATEST message from _state
  * so we never use a stale snapshot that has path=null after download completed.
  *
  * Voice: playback is triggered directly from VoiceMessageBubble (UI layer has
