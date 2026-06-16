@@ -116,7 +116,7 @@ fun VideoMessageBubble(
     }
     var isAutoDownloadSuppressed by remember(msg.id, content.fileId) { mutableStateOf(false) }
 
-    val stableAspectRatio = remember(msg.id, content.fileId) {
+    val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
         if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
         else 1f
@@ -229,7 +229,14 @@ fun VideoMessageBubble(
                             layoutTracker.videoPosition = it.positionInWindow()
                         }
                 ) {
-                    if (hasPath || content.supportsStreaming) {
+                    if ((hasPath || content.supportsStreaming) && content.isViewOnce && !content.isViewOnceOpened) {
+                        VideoLoadingLayer(
+                            content = content,
+                            isViewOnce = true,
+                            onCancelDownload = {},
+                            onStartDownload = { onOpenViewOnce(msg) }
+                        )
+                    } else if (hasPath || content.supportsStreaming) {
                             if (autoplayVideos) {
                                 val videoPath = stablePath ?: "http://streaming/${content.fileId}"
                                 VideoStickerPlayer(
