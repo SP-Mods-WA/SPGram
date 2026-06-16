@@ -219,8 +219,16 @@ fun VideoMessageBubble(
 
                 val ratio = stableAspectRatio
 
-                Box(
-                    modifier = Modifier
+                val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .clipToBounds()
+                        .onGloballyPositioned {
+                            layoutTracker.videoPosition = it.positionInWindow()
+                        }
+                } else {
+                    Modifier
                         .fillMaxWidth()
                         .heightIn(min = 160.dp, max = 280.dp)
                         .aspectRatio(ratio)
@@ -228,7 +236,9 @@ fun VideoMessageBubble(
                         .onGloballyPositioned {
                             layoutTracker.videoPosition = it.positionInWindow()
                         }
-                ) {
+                }
+
+                Box(modifier = boxModifier) {
                     if ((hasPath || content.supportsStreaming) && content.isViewOnce && !content.isViewOnceOpened) {
                         VideoLoadingLayer(
                             content = content,
