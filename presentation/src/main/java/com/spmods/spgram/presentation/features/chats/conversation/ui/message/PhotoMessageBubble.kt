@@ -36,7 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -143,14 +142,6 @@ fun PhotoMessageBubble(
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
     var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
 
-    val viewOnceGradient = Brush.radialGradient(
-        colors = listOf(
-            Color(0xFF9DBDD4),
-            Color(0xFF7A9FB8),
-            Color(0xFF4A7090)
-        )
-    )
-
     Column(
         modifier = modifier.width(IntrinsicSize.Max),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
@@ -201,19 +192,12 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                // Outer image box — gradient applied here directly for view once
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 160.dp, max = 320.dp)
                         .aspectRatio(stableAspectRatio)
                         .clipToBounds()
-                        .then(
-                            if (content.isViewOnce && !hasPath)
-                                Modifier.background(brush = viewOnceGradient)
-                            else
-                                Modifier
-                        )
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                         .pointerInput(Unit) {
                             detectTapGestures(
@@ -239,62 +223,65 @@ fun PhotoMessageBubble(
                             )
                         }
                 ) {
-                    // Image / normal background layer
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (!hasPath && !content.isViewOnce) {
-                            MediaLoadingBackground(
-                                previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-
-                        if (hasPath) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(stablePath)
-                                    .apply {
-                                        photoCacheKey?.let {
-                                            memoryCacheKey(it)
-                                            diskCacheKey(it)
-                                        }
-                                    }
-                                    .crossfade(false)
-                                    .build(),
-                                contentDescription = content.caption,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-
-                        // Download action only for non-view-once
-                        if (!hasPath && !content.isViewOnce) {
-                            MediaLoadingAction(
-                                isDownloading = content.isDownloading,
-                                progress = content.downloadProgress,
-                                idleIcon = Icons.Default.Download,
-                                idleContentDescription = stringResource(R.string.cd_download),
-                                showCancelOnDownload = content.isDownloading,
-                                onCancelClick = {
-                                    AutoDownloadSuppression.suppress(content.fileId)
-                                    onCancelDownload(content.fileId)
-                                },
-                                onIdleClick = {
-                                    AutoDownloadSuppression.clear(content.fileId)
-                                    if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
-                                }
-                            )
-                        }
+                    // --- Background layer ---
+                    if (content.isViewOnce && !hasPath) {
+                        // Solid color — guaranteed to cover everything, no thumbnail leak
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFF6B8FA5))
+                        )
+                    } else if (!hasPath) {
+                        MediaLoadingBackground(
+                            previewData = content.minithumbnail,
+                            contentScale = ContentScale.Crop
+                        )
                     }
 
-                    // View once overlay: semi-transparent scrim + flame icon in frosted circle
+                    // --- Actual image (after download) ---
+                    if (hasPath) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(stablePath)
+                                .apply {
+                                    photoCacheKey?.let {
+                                        memoryCacheKey(it)
+                                        diskCacheKey(it)
+                                    }
+                                }
+                                .crossfade(false)
+                                .build(),
+                            contentDescription = content.caption,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    // --- Download action (non-view-once only) ---
+                    if (!hasPath && !content.isViewOnce) {
+                        MediaLoadingAction(
+                            isDownloading = content.isDownloading,
+                            progress = content.downloadProgress,
+                            idleIcon = Icons.Default.Download,
+                            idleContentDescription = stringResource(R.string.cd_download),
+                            showCancelOnDownload = content.isDownloading,
+                            onCancelClick = {
+                                AutoDownloadSuppression.suppress(content.fileId)
+                                onCancelDownload(content.fileId)
+                            },
+                            onIdleClick = {
+                                AutoDownloadSuppression.clear(content.fileId)
+                                if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
+                            }
+                        )
+                    }
+
+                    // --- View once overlay: scrim + flame icon ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
                         Box(
                             modifier = Modifier
                                 .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.20f)),
+                                .background(Color.Black.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Box(
@@ -313,6 +300,7 @@ fun PhotoMessageBubble(
                         }
                     }
 
+                    // --- Upload progress ---
                     if (content.isUploading) {
                         Box(
                             modifier = Modifier
@@ -332,13 +320,14 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // hasSpoiler overlay (unchanged)
+                    // --- hasSpoiler overlay (unchanged) ---
                     if (content.hasSpoiler) {
                         SpoilerWrapper(isRevealed = isMediaSpoilerRevealed) {
                             Box(modifier = Modifier.fillMaxSize())
                         }
                     }
 
+                    // --- Metadata overlay ---
                     if (content.caption.isEmpty() && showMetadata) {
                         Box(
                             modifier = Modifier
