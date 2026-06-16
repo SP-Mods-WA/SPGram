@@ -1,8 +1,6 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +9,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,7 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -40,7 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -143,14 +138,6 @@ fun PhotoMessageBubble(
         bottomStart = bottomStart
     )
 
-    val viewOnceBorderBrush = Brush.linearGradient(
-        colors = listOf(
-            Color(0xFF9B5FC0),
-            Color(0xFF6B4FBF),
-            Color(0xFF4A6FD4)
-        )
-    )
-
     var imagePosition by remember { mutableStateOf(Offset.Zero) }
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
     var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
@@ -161,13 +148,6 @@ fun PhotoMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            modifier = if (content.isViewOnce && !content.isViewOnceOpened) {
-                Modifier.border(
-                    width = 1.5.dp,
-                    brush = viewOnceBorderBrush,
-                    shape = bubbleShape
-                )
-            } else Modifier,
             color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
@@ -219,12 +199,11 @@ fun PhotoMessageBubble(
                         .aspectRatio(stableAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
-                        // ← ORIGINAL pointerInput එකම - කිසිම change නෑ
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {
                                     when {
-                                        content.isViewOnce && !content.isViewOnceOpened -> {
+                                        content.isViewOnce && !content.isViewOnceOpened && content.path == null -> {
                                             onOpenViewOnce(msg)
                                         }
                                         content.hasSpoiler -> {
@@ -244,120 +223,84 @@ fun PhotoMessageBubble(
                             )
                         }
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // ← GALAXY BACKGROUND - view-once unopened නම් පමණක්
-                        if (content.isViewOnce && !content.isViewOnceOpened) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        brush = Brush.radialGradient(
-                                            colorStops = arrayOf(
-                                                0.0f to Color(0xFFAD6FD8),
-                                                0.35f to Color(0xFF7B5FC0),
-                                                0.55f to Color(0xFF4A6FD4),
-                                                0.75f to Color(0xFF2B5FC0),
-                                                1.0f to Color(0xFF1A3A9F)
-                                            ),
-                                            center = Offset(Float.POSITIVE_INFINITY, 0f),
-                                            radius = 1400f
-                                        )
-                                    )
-                            )
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                val random = java.util.Random(98765L)
-                                repeat(160) {
-                                    val x = random.nextFloat() * size.width
-                                    val y = random.nextFloat() * size.height
-                                    val r = random.nextFloat() * 2.3f + 0.3f
-                                    val alpha = random.nextFloat() * 0.7f + 0.3f
-                                    drawCircle(
-                                        color = Color.White.copy(alpha = alpha),
-                                        radius = r,
-                                        center = Offset(x, y)
-                                    )
-                                }
-                            }
-                        } else if (!hasPath) {
-                            // ← ORIGINAL - galaxy නෑ නම් original background
-                            MediaLoadingBackground(
-                                previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-
-                        // ← ORIGINAL - actual image (view-once opened නම් පමණක්)
-                        if (hasPath && (!content.isViewOnce || content.isViewOnceOpened)) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(stablePath)
-                                    .apply {
-                                        photoCacheKey?.let {
-                                            memoryCacheKey(it)
-                                            diskCacheKey(it)
-                                        }
-                                    }
-                                    .crossfade(false)
-                                    .build(),
-                                contentDescription = content.caption,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-
-                        // ← ORIGINAL - download action (view-once නැති photos)
-                        if (!hasPath) {
-                            MediaLoadingAction(
-                                isDownloading = content.isDownloading,
-                                progress = content.downloadProgress,
-                                idleIcon = Icons.Default.Download,
-                                idleContentDescription = stringResource(R.string.cd_download),
-                                showCancelOnDownload = content.isDownloading,
-                                onCancelClick = {
-                                    AutoDownloadSuppression.suppress(content.fileId)
-                                    onCancelDownload(content.fileId)
-                                },
-                                onIdleClick = {
-                                    if (content.isViewOnce && !content.isViewOnceOpened) {
-                                        onOpenViewOnce(msg)
-                                    } else {
-                                        AutoDownloadSuppression.clear(content.fileId)
-                                        if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
-                                    }
-                                }
-                            )
-                        }
+                    // --- Background layer ---
+                    if (content.isViewOnce && !hasPath) {
+                        // Solid color — guaranteed to cover everything, no thumbnail leak
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFF6B8FA5))
+                        )
+                    } else if (!hasPath) {
+                        MediaLoadingBackground(
+                            previewData = content.minithumbnail,
+                            contentScale = ContentScale.Crop
+                        )
                     }
 
-                    // ← GALAXY FLAME ICON OVERLAY
+                    // --- Actual image (after download) ---
+                    if (hasPath) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(stablePath)
+                                .apply {
+                                    photoCacheKey?.let {
+                                        memoryCacheKey(it)
+                                        diskCacheKey(it)
+                                    }
+                                }
+                                .crossfade(false)
+                                .build(),
+                            contentDescription = content.caption,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    // --- Download action (non-view-once only) ---
+                    if (!hasPath && !content.isViewOnce) {
+                        MediaLoadingAction(
+                            isDownloading = content.isDownloading,
+                            progress = content.downloadProgress,
+                            idleIcon = Icons.Default.Download,
+                            idleContentDescription = stringResource(R.string.cd_download),
+                            showCancelOnDownload = content.isDownloading,
+                            onCancelClick = {
+                                AutoDownloadSuppression.suppress(content.fileId)
+                                onCancelDownload(content.fileId)
+                            },
+                            onIdleClick = {
+                                AutoDownloadSuppression.clear(content.fileId)
+                                if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
+                            }
+                        )
+                    }
+
+                    // --- View once overlay: scrim + flame icon ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
                         Box(
-                            modifier = Modifier.matchParentSize(),
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color.Black.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(72.dp)
-                                    .background(
-                                        Color.Black.copy(alpha = 0.40f),
-                                        CircleShape
-                                    ),
+                                    .size(64.dp)
+                                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Whatshot,
                                     contentDescription = null,
                                     tint = Color.White,
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(32.dp)
                                 )
                             }
                         }
                     }
 
-                    // ← ORIGINAL upload progress
+                    // --- Upload progress ---
                     if (content.isUploading) {
                         Box(
                             modifier = Modifier
@@ -377,12 +320,14 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // ← ORIGINAL spoiler
-                    SpoilerWrapper(isRevealed = isMediaSpoilerRevealed) {
-                        Box(modifier = Modifier.fillMaxSize())
+                    // --- hasSpoiler overlay (unchanged) ---
+                    if (content.hasSpoiler) {
+                        SpoilerWrapper(isRevealed = isMediaSpoilerRevealed) {
+                            Box(modifier = Modifier.fillMaxSize())
+                        }
                     }
 
-                    // ← ORIGINAL metadata
+                    // --- Metadata overlay ---
                     if (content.caption.isEmpty() && showMetadata) {
                         Box(
                             modifier = Modifier
@@ -399,7 +344,6 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                // ← ORIGINAL caption section
                 if (content.caption.isNotEmpty()) {
                     val timeColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(alpha = 0.7f)
 
