@@ -161,7 +161,7 @@ fun PhotoMessageBubble(
         Surface(
             shape = bubbleShape,
             // Add glow border only for view-once unopened
-            modifier = if (content.isViewOnce && !content.isViewOnceOpened && !hasPath) {
+            modifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                 Modifier.border(
                     width = 1.5.dp,
                     brush = viewOnceBorderBrush,
@@ -245,7 +245,7 @@ fun PhotoMessageBubble(
                             detectTapGestures(
                                 onTap = {
                                     when {
-                                        content.isViewOnce && !content.isViewOnceOpened && content.path == null -> {
+                                        content.isViewOnce && !content.isViewOnceOpened -> {
                                             onOpenViewOnce(msg)
                                         }
                                         content.hasSpoiler -> {
@@ -268,7 +268,7 @@ fun PhotoMessageBubble(
                     // ============================================================
                     // BACKGROUND LAYER
                     // ============================================================
-                    if (content.isViewOnce && !hasPath) {
+                    if (content.isViewOnce && !content.isViewOnceOpened) {
                         // --- Telegram-style galaxy background ---
                         Box(
                             modifier = Modifier
@@ -312,9 +312,9 @@ fun PhotoMessageBubble(
                     }
 
                     // ============================================================
-                    // ACTUAL IMAGE (after download)
+                    // ACTUAL IMAGE (after download) - view-once opened එකෙදී පමණක්
                     // ============================================================
-                    if (hasPath) {
+                    if (hasPath && (!content.isViewOnce || content.isViewOnceOpened)) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(stablePath)
