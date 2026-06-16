@@ -34,9 +34,9 @@ import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -228,14 +228,29 @@ fun PhotoMessageBubble(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Background / image layer
                         if (!hasPath) {
-                            MediaLoadingBackground(
-                                previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop,
-                                // blur the minithumbnail for view once
-                                modifier = if (content.isViewOnce) Modifier.fillMaxSize().blur(20.dp) else Modifier.fillMaxSize()
-                            )
+                            if (content.isViewOnce) {
+                                // TDLib doesn't provide minithumbnail for view once —
+                                // use a Telegram-style radial gradient background
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            brush = Brush.radialGradient(
+                                                colors = listOf(
+                                                    Color(0xFF9DBDD4),
+                                                    Color(0xFF7A9FB8),
+                                                    Color(0xFF4A7090)
+                                                )
+                                            )
+                                        )
+                                )
+                            } else {
+                                MediaLoadingBackground(
+                                    previewData = content.minithumbnail,
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
                         }
 
                         if (hasPath) {
@@ -256,6 +271,7 @@ fun PhotoMessageBubble(
                             )
                         }
 
+                        // Download action only for non-view-once photos
                         if (!hasPath && !content.isViewOnce) {
                             MediaLoadingAction(
                                 isDownloading = content.isDownloading,
@@ -275,12 +291,12 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // View once overlay — blurred bg + dark scrim + flame icon
+                    // View once overlay: dark scrim + flame icon in frosted circle
                     if (content.isViewOnce && !content.isViewOnceOpened) {
                         Box(
                             modifier = Modifier
                                 .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.35f)),
+                                .background(Color.Black.copy(alpha = 0.25f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Box(
