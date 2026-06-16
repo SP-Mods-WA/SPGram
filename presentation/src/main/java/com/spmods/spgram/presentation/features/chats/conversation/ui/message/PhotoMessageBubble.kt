@@ -224,7 +224,7 @@ fun PhotoMessageBubble(
                             detectTapGestures(
                                 onTap = {
                                     when {
-                                        content.isViewOnce && !content.isViewOnceOpened && content.path == null -> {
+                                        content.isViewOnce && !content.isViewOnceOpened -> {
                                             onOpenViewOnce(msg)
                                         }
                                         content.hasSpoiler -> {
@@ -289,8 +289,8 @@ fun PhotoMessageBubble(
                             )
                         }
 
-                        // ← ORIGINAL - actual image
-                        if (hasPath) {
+                        // ← ORIGINAL - actual image (view-once opened නම් පමණක්)
+                        if (hasPath && (!content.isViewOnce || content.isViewOnceOpened)) {
                             AsyncImage(
                                 model = ImageRequest.Builder(context)
                                     .data(stablePath)
