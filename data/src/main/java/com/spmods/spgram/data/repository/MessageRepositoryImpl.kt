@@ -196,9 +196,6 @@ class MessageRepositoryImpl(
                                 ::resolveSenderName
                             )
                         )
-                        if (extracted.isViewOnce && !refreshed.isOutgoing && extracted.fileId != 0 && extracted.path == null) {
-                            downloadFile(extracted.fileId, priority = 32)
-                        }
                         return
                     }
                 }
@@ -216,14 +213,6 @@ class MessageRepositoryImpl(
                     isViewOnceOpened = extracted.isViewOnceOpened
                 )
 
-                // Safety net: if TDLib reveals a view-once file id that wasn't available
-                // at initial map time (fileId was 0), kick off the download now.
-                if (extracted.isViewOnce && extracted.fileId != 0 && extracted.path == null) {
-                    val isOutgoing = cache.getMessage(update.chatId, update.messageId)?.isOutgoing ?: false
-                    if (!isOutgoing) {
-                        downloadFile(extracted.fileId, priority = 32)
-                    }
-                }
             }
 
             is TdApi.UpdateMessageEdited -> {
@@ -270,10 +259,6 @@ class MessageRepositoryImpl(
                         messageMapper.mapToEntity(refreshed, ::resolveSenderName)
                     )
 
-                    val extracted = messageMapper.extractCachedContent(refreshed.content)
-                    if (extracted.isViewOnce && !refreshed.isOutgoing && extracted.fileId != 0 && extracted.path == null) {
-                        downloadFile(extracted.fileId, priority = 32)
-                    }
                 }
             }
 
