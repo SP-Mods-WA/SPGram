@@ -1007,8 +1007,8 @@ class MessageRepositoryImpl(
     private suspend fun triggerFileDownload(msg: TdApi.Message) {
         // Never auto-download view-once content
         val isViewOnce = when (val content = msg.content) {
-            is TdApi.MessagePhoto -> content.ttlSeconds != 0
-            is TdApi.MessageVideo -> content.ttlSeconds != 0
+            is TdApi.MessagePhoto -> content.isSecret
+            is TdApi.MessageVideo -> content.isSecret
             else -> false
         }
         if (isViewOnce) return
