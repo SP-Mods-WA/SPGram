@@ -355,14 +355,14 @@ fun SettingsContent(component: SettingsComponent) {
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = stringResource(R.string.support_spgram_title),
+                    text = "Support SPGram",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = stringResource(R.string.sponsor_sheet_description),
+                    text = "Your support is very valuable to help us boost our channel. Join our main channel now and give us a big support by sharing it with your friends.",
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
