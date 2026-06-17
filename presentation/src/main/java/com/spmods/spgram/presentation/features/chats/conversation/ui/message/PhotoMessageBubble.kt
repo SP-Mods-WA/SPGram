@@ -34,8 +34,10 @@ import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -234,11 +236,36 @@ fun PhotoMessageBubble(
                 ) {
                     // --- Background layer ---
                     if (content.isViewOnce && !hasPath) {
-                        MediaLoadingBackground(
-                            previewData = content.minithumbnail,
-                            contentScale = ContentScale.Crop,
-                            previewBlur = 14.dp
-                        )
+                        if (content.minithumbnail != null) {
+                            MediaLoadingBackground(
+                                previewData = content.minithumbnail,
+                                contentScale = ContentScale.Crop,
+                                previewBlur = 14.dp
+                            )
+                        } else {
+                            // No thumbnail — frosted glass effect with layered gradients
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                // Base color
+                                Box(modifier = Modifier.fillMaxSize().background(Color(0xFF4A6FA5)))
+                                // Radial highlight top-left
+                                Box(modifier = Modifier.fillMaxSize().background(
+                                    Brush.radialGradient(
+                                        colors = listOf(Color(0x886B9FD4), Color.Transparent),
+                                        radius = 400f
+                                    )
+                                ))
+                                // Radial highlight bottom-right
+                                Box(modifier = Modifier.fillMaxSize().background(
+                                    Brush.radialGradient(
+                                        colors = listOf(Color(0x55A87FC1), Color.Transparent),
+                                        center = Offset(Float.MAX_VALUE, Float.MAX_VALUE),
+                                        radius = 500f
+                                    )
+                                ))
+                                // Frosted overlay
+                                Box(modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.12f)))
+                            }
+                        }
                     } else if (!hasPath) {
                         MediaLoadingBackground(
                             previewData = content.minithumbnail,
