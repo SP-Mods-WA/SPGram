@@ -96,7 +96,7 @@ fun PhotoMessageBubble(
         namespacedCacheKey("chat_photo:${content.fileId}", stablePath)
     }
 
-    val stableAspectRatio = remember(msg.id, content.fileId) {
+    val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
         if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
         else if (content.isViewOnce) 0.75f else 1f
@@ -192,13 +192,22 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                Box(
-                    modifier = Modifier
+                val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
+                    Modifier
+                        .size(160.dp)
+                        .clipToBounds()
+                        .onGloballyPositioned { imagePosition = it.positionInWindow() }
+                } else {
+                    Modifier
                         .fillMaxWidth()
                         .heightIn(min = 160.dp, max = 320.dp)
                         .aspectRatio(stableAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
+                }
+
+                Box(
+                    modifier = boxModifier
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {
@@ -225,11 +234,10 @@ fun PhotoMessageBubble(
                 ) {
                     // --- Background layer ---
                     if (content.isViewOnce && !hasPath) {
-                        // Solid color — guaranteed to cover everything, no thumbnail leak
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color(0xFF6B8FA5))
+                        MediaLoadingBackground(
+                            previewData = content.minithumbnail,
+                            contentScale = ContentScale.Crop,
+                            previewBlur = 14.dp
                         )
                     } else if (!hasPath) {
                         MediaLoadingBackground(
