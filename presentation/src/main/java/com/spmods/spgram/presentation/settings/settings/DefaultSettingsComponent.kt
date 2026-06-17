@@ -165,7 +165,7 @@ class DefaultSettingsComponent(
     }
 
     override fun onSupportClicked() {
-        externalNavigator.openUrl("https://boosty.to/spgram")
+        externalNavigator.openUrl("https://t.me/boost/SPModsSandun")
         onSupportDismissed()
     }
 
