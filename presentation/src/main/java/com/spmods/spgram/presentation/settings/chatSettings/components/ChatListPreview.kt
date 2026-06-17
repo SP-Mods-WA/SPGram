@@ -76,8 +76,8 @@ fun ChatListPreview(
                     )
             ) {
                 PreviewChatItem(
-                    name = stringResource(R.string.preview_name_konata),
-                    message = stringResource(R.string.preview_message_konata),
+                    name = "Sandun Piumal",
+                    message = "Hey, I just reviewed the new UI design updates you sent. The chat list layout looks super clean, but let's double-check the padding on smaller screens. Let me know when you're free to hop on a quick call!",
                     time = stringResource(R.string.preview_time_konata),
                     lines = messageLines,
                     showPhotos = showPhotos,
@@ -85,8 +85,8 @@ fun ChatListPreview(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 PreviewChatItem(
-                    name = stringResource(R.string.preview_name_kagami),
-                    message = stringResource(R.string.preview_message_kagami),
+                    name = "Pasindu Supun",
+                    message = "Machan, are we still meeting up this evening? Don't forget to bring the project files we discussed yesterday. Text me once you leave home, and I'll head out too. See ya!",
                     time = stringResource(R.string.preview_time_kagami),
                     lines = messageLines,
                     showPhotos = showPhotos,
