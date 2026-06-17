@@ -1005,6 +1005,14 @@ class MessageRepositoryImpl(
     }
 
     private suspend fun triggerFileDownload(msg: TdApi.Message) {
+        // Never auto-download view-once content
+        val isViewOnce = when (val content = msg.content) {
+            is TdApi.MessagePhoto -> content.ttlSeconds != 0
+            is TdApi.MessageVideo -> content.ttlSeconds != 0
+            else -> false
+        }
+        if (isViewOnce) return
+
         val lowQualityFile = when (val content = msg.content) {
             is TdApi.MessagePhoto -> {
                 content.photo.sizes.find { it.type == "m" }?.photo
