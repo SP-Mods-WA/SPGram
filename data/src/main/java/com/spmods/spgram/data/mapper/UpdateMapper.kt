@@ -3,7 +3,6 @@ package com.spmods.spgram.data.mapper
 import org.drinkless.tdlib.TdApi
 import com.spmods.spgram.domain.models.MessageEntity
 import com.spmods.spgram.domain.models.RichText
-import com.spmods.spgram.domain.models.UpdateInfo
 
 fun TdApi.FormattedText.toChangelog(): List<RichText> {
     val text = this.text
@@ -45,18 +44,4 @@ fun TdApi.FormattedText.toChangelog(): List<RichText> {
 
 fun TdApi.TextEntity.toDomain(): MessageEntity? {
     return toMessageEntityOrNull()
-}
-
-fun TdApi.MessageDocument.toUpdateInfo(): UpdateInfo? {
-    val text = this.caption.text
-    val match = Regex("""(\d+\.\d+\.\d+)\s*\((\d+)\)""").find(text) ?: return null
-    return UpdateInfo(
-        version = match.groupValues[1],
-        versionCode = match.groupValues[2].toInt(),
-        description = text,
-        changelog = this.caption.toChangelog(),
-        downloadUrl = response.downloadUrl,
-        fileName = this.document.fileName,
-        fileSize = this.document.document.size
-    )
 }
