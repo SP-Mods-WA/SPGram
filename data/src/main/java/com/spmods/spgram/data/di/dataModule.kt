@@ -49,7 +49,7 @@ import com.spmods.spgram.data.datasource.remote.TdPrivacyRemoteDataSource
 import com.spmods.spgram.data.datasource.remote.TdProxyRemoteDataSource
 import com.spmods.spgram.data.datasource.remote.TdSettingsRemoteDataSource
 import com.spmods.spgram.data.datasource.remote.TdStickerRemoteSource
-import com.spmods.spgram.data.datasource.remote.TdUpdateRemoteDataSource
+import com.spmods.spgram.data.datasource.remote.GitHubUpdateRemoteDataSource
 import com.spmods.spgram.data.datasource.remote.TdUserRemoteDataSource
 import com.spmods.spgram.data.datasource.remote.UpdateRemoteDateSource
 import com.spmods.spgram.data.datasource.remote.UserRemoteDataSource
@@ -804,17 +804,13 @@ val dataModule = module {
     }
 
     factory<UpdateRemoteDateSource> {
-        TdUpdateRemoteDataSource(
-            gateway = get()
-        )
+        GitHubUpdateRemoteDataSource()
     }
 
     single<UpdateRepository> {
         UpdateRepositoryImpl(
             context = androidContext(),
             remote = get(),
-            fileQueue = get(),
-            fileUpdateHandler = get(),
             authRepository = get(),
             scope = get(),
             stringProvider = get(),
