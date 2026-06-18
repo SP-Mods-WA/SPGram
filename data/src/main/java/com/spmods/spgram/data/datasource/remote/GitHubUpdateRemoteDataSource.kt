@@ -98,6 +98,6 @@ class GitHubUpdateRemoteDataSource(
         // Replace with your actual GitHub raw JSON URL, e.g.:
         // https://raw.githubusercontent.com/YourUser/YourRepo/main/update.json
         const val UPDATE_JSON_URL =
-            "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/update.json"
+            "https://raw.githubusercontent.com/SP-Mods-WA/SP-Mods-WA/refs/heads/main/spgram_update_json"
     }
 }
