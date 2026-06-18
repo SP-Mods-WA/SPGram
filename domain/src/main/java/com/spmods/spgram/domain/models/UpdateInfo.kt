@@ -5,9 +5,10 @@ data class UpdateInfo(
     val versionCode: Int,
     val description: String,
     val changelog: List<RichText>,
-    val fileId: Int,
+    val downloadUrl: String,       // direct download URL from website
     val fileName: String,
-    val fileSize: Long
+    val fileSize: Long,
+    val forceUpdate: Boolean = false  // JSON flag — true = sheet cannot be dismissed
 )
 
 data class RichText(
