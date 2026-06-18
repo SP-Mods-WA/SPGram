@@ -190,12 +190,7 @@ class UpdateRepositoryImpl(
         val uri = FileProvider.getUriForFile(
             context, "${context.packageName}.provider", file
         )
-        context.startActivity(
-            Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
-                data = uri
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-        )
-    }
+    override suspend fun getTdLibVersion(): String = remote.getTdLibVersion()
+
+    override suspend fun getTdLibCommitHash(): String = remote.getTdLibCommitHash()
 }
