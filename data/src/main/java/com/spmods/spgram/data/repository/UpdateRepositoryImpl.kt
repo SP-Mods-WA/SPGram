@@ -190,6 +190,7 @@ class UpdateRepositoryImpl(
         val uri = FileProvider.getUriForFile(
             context, "${context.packageName}.provider", file
         )
+    }
     override suspend fun getTdLibVersion(): String = remote.getTdLibVersion()
 
     override suspend fun getTdLibCommitHash(): String = remote.getTdLibCommitHash()
