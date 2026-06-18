@@ -61,6 +61,7 @@ class DefaultChatListComponent(
     private val attachMenuBotRepository: AttachMenuBotRepository = container.repositories.attachMenuBotRepository
     private val updateRepository: UpdateRepository = container.repositories.updateRepository
     override val appPreferences: AppPreferences = container.preferences.appPreferences
+    override val updateState: StateFlow<UpdateState> = updateRepository.updateState
 
     internal val _state = MutableStateFlow(
         ChatListComponent.State(
@@ -758,6 +759,10 @@ class DefaultChatListComponent(
     }
 
     override fun onUpdateClicked() = store.accept(ChatListStore.Intent.UpdateClicked)
+
+    override fun downloadUpdate() { updateRepository.downloadUpdate() }
+    override fun installUpdate() { updateRepository.installUpdate() }
+    override fun cancelDownload() { updateRepository.cancelDownload() }
 
     internal fun handleUpdateClicked(): ChatListStore.Label.OpenSettings? {
         val currentState = _state.value.updateState
