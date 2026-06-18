@@ -113,7 +113,7 @@ fun ChatSettingsPreview(
             }
 
             val meName = stringResource(R.string.preview_msg_sender_me)
-            val konataName = stringResource(R.string.preview_name_konata_short)
+            val konataName = "Sandun Piumal"
             val msgText1 = stringResource(R.string.preview_msg_text_1)
             val msgText2 = stringResource(R.string.preview_msg_text_2)
             val msgText3 = stringResource(R.string.preview_msg_text_3)
@@ -129,7 +129,7 @@ fun ChatSettingsPreview(
                     content = MessageContent.Text(
                         text = msgText2,
                         entities = listOf(
-                            MessageEntity(83, 4, MessageEntityType.TextUrl("https://youtu.be/dQw4w9WgXcQ"))
+                            MessageEntity(83, 4, MessageEntityType.TextUrl("https://www.spmods.download"))
                         )
                     ),
                     isRead = true,
