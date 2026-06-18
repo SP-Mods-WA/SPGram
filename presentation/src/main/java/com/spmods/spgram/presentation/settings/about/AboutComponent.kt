@@ -54,7 +54,6 @@ class DefaultAboutComponent(
     }
 
     override fun checkForUpdates() {
-        if (isTelemtBuild) return
         scope.launch {
             updateRepository.checkForUpdates()
         }
