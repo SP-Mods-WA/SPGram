@@ -164,6 +164,17 @@ fun ChatListContent(component: ChatListComponent) {
     var showStatusMenu by remember { mutableStateOf(false) }
     var showAlphaSheet by remember { mutableStateOf(false) }
     var showDeleteChatsSheet by remember { mutableStateOf(false) }
+
+    // ── Update sheet ──────────────────────────────────────────────────────
+    val updateState by component.updateState.collectAsState()
+    var updateSheetDismissed by remember { mutableStateOf(false) }
+    val showUpdateSheet = remember(updateState, updateSheetDismissed) {
+        !updateSheetDismissed && updateState.let {
+            it is com.spmods.spgram.domain.models.UpdateState.UpdateAvailable ||
+            it is com.spmods.spgram.domain.models.UpdateState.Downloading ||
+            it is com.spmods.spgram.domain.models.UpdateState.ReadyToInstall
+        }
+    }
     var statusAnchorBounds by remember { mutableStateOf<Rect?>(null) }
     val statusMenuTransitionState = remember { MutableTransitionState(false) }
 
@@ -1622,6 +1633,22 @@ fun ChatListContent(component: ChatListComponent) {
                 showDeleteChatsSheet = false
             },
             onDismiss = { showDeleteChatsSheet = false }
+        )
+    }
+
+    // ── Update Bottom Sheet ───────────────────────────────────────────────
+    if (showUpdateSheet) {
+        com.spmods.spgram.presentation.features.chats.list.components.UpdateBottomSheet(
+            state = updateState,
+            onDownload = { component.downloadUpdate() },
+            onInstall = { component.installUpdate() },
+            onCancel = { component.cancelDownload() },
+            onDismiss = {
+                val us = updateState
+                if (us is com.spmods.spgram.domain.models.UpdateState.UpdateAvailable && !us.info.forceUpdate) {
+                    updateSheetDismissed = true
+                }
+            }
         )
     }
 }
