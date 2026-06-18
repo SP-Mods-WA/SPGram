@@ -20,6 +20,7 @@ interface ChatListComponent {
     val searchState: StateFlow<SearchState>
 
     val appPreferences: AppPreferences
+    val updateState: StateFlow<UpdateState>
 
     fun onChatClicked(id: Long)
     fun onProfileClicked(id: Long)
@@ -59,6 +60,9 @@ interface ChatListComponent {
     fun onDismissWebView()
 
     fun onUpdateClicked()
+    fun downloadUpdate()
+    fun installUpdate()
+    fun cancelDownload()
 
     fun handleBack(): Boolean
 
