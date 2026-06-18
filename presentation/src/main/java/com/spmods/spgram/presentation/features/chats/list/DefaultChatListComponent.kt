@@ -338,9 +338,7 @@ class DefaultChatListComponent(
             .launchIn(scope)
 
         scope.launch {
-            if (!isTelemtBuild) {
-                updateRepository.checkForUpdates()
-            }
+            updateRepository.checkForUpdates()
         }
 
         _state.onEach {
