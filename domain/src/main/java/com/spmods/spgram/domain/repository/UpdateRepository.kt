@@ -9,4 +9,6 @@ interface UpdateRepository {
     fun downloadUpdate()
     fun cancelDownload()
     fun installUpdate()
+    suspend fun getTdLibVersion(): String
+    suspend fun getTdLibCommitHash(): String
 }
