@@ -1,5 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.list
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -1638,9 +1640,22 @@ fun ChatListContent(component: ChatListComponent) {
 
     // ── Update Bottom Sheet ───────────────────────────────────────────────
     if (showUpdateSheet) {
+        val localContext = LocalContext.current
         com.spmods.spgram.presentation.features.chats.list.components.UpdateBottomSheet(
             state = updateState,
-            onDownload = { component.downloadUpdate() },
+            onDownload = {
+                val us = updateState
+                if (us is com.spmods.spgram.domain.models.UpdateState.UpdateAvailable) {
+                    val url = us.info.downloadUrl
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        localContext.startActivity(intent)
+                    } catch (e: Exception) {
+                        Log.e("UpdateSheet", "Failed to open browser: $url", e)
+                    }
+                }
+            },
             onInstall = { component.installUpdate() },
             onCancel = { component.cancelDownload() },
             onDismiss = {
