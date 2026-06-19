@@ -851,7 +851,7 @@ fun SettingsContent(component: SettingsComponent) {
                             position = ItemPosition.BOTTOM,
                             onClick = component::onProxySettingsClicked
                         )
-                    }
+                    } /*
 
                     item {
                         SettingsItem(
@@ -871,7 +871,7 @@ fun SettingsContent(component: SettingsComponent) {
                             position = ItemPosition.BOTTOM,
                             onClick = component::onShowSupportClicked
                         )
-                    }
+                    } */
 
                     item {
                         SettingsItem(
