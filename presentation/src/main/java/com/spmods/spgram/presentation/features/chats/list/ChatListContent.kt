@@ -579,29 +579,17 @@ fun ChatListContent(component: ChatListComponent) {
                     }
                 }
 
-                if (uiState.connectionStatus == ConnectionStatus.Connecting || uiState.connectionStatus == ConnectionStatus.Updating || uiState.connectionStatus == ConnectionStatus.ConnectingToProxy) {
-                    Column {
-                        LinearWavyProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = Color.Transparent
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                    }
-                }
+                
 
                 val isMainView = !searchState.isSearchActive && foldersState.selectedFolderId != -2
 
                 if (isMainView) {
-                    val archiveSpacerPx = with(density) { 6.dp.toPx() }
-                    val archiveSlotHeightPx = archiveItemHeightPx + archiveSpacerPx
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(with(density) {
                                 val visibleArchiveHeight = if (isArchivePersistent) {
-                                    (archiveSlotHeightPx + headerOffsetPx).coerceAtLeast(0f)
+                                    (archiveItemHeightPx + headerOffsetPx).coerceAtLeast(0f)
                                 } else if (isMainFolder) {
                                     archiveRevealPx
                                 } else {
@@ -619,7 +607,7 @@ fun ChatListContent(component: ChatListComponent) {
                                     .fillMaxWidth()
                                     .height(with(density) {
                                         if (isArchivePersistent) {
-                                            (archiveSlotHeightPx + headerOffsetPx).coerceAtLeast(0f)
+                                            (archiveItemHeightPx + headerOffsetPx).coerceAtLeast(0f)
                                                 .toDp()
                                         } else if (isMainFolder) {
                                             archiveRevealPx.toDp()
@@ -629,12 +617,12 @@ fun ChatListContent(component: ChatListComponent) {
                                     })
                                     .graphicsLayer {
                                         alpha = if (isArchivePersistent) {
-                                            ((archiveSlotHeightPx + headerOffsetPx) / archiveSlotHeightPx).coerceIn(
+                                            ((archiveItemHeightPx + headerOffsetPx) / archiveItemHeightPx).coerceIn(
                                                 0f,
                                                 1f
                                             )
                                         } else if (isMainFolder) {
-                                            (archiveRevealPx / archiveSlotHeightPx).coerceIn(0f, 1f)
+                                            (archiveRevealPx / archiveItemHeightPx).coerceIn(0f, 1f)
                                         } else {
                                             0f
                                         }
@@ -642,22 +630,21 @@ fun ChatListContent(component: ChatListComponent) {
                                     }
                             ) {
                                 Column(
-                                    Modifier.offset {
-                                        if (isArchivePersistent) {
-                                            IntOffset(0, headerOffsetPx.roundToInt())
-                                        } else {
-                                            IntOffset(0, 0)
-                                        }
-                                    }
-                                ) {
-                                    ArchiveHeaderCard(
-                                        isPinned = uiState.isArchivePinned,
-                                        onClick = { component.onFolderClicked(-2) },
-                                        onLongClick = { component.onArchivePinToggle() }
-                                    )
-                                    Spacer(Modifier.height(6.dp))
-                                }
-                            }
+    Modifier.offset {
+        if (isArchivePersistent) {
+            IntOffset(0, headerOffsetPx.roundToInt())
+        } else {
+            IntOffset(0, 0)
+        }
+    }
+) {
+    ArchiveHeaderCard(
+        isPinned = uiState.isArchivePinned,
+        onClick = { component.onFolderClicked(-2) },
+        onLongClick = { component.onArchivePinToggle() }
+    )
+}
+Spacer(Modifier.height(6.dp))
 
                             if (visibleFolders.size > 1) {
                                 FolderTabs(
