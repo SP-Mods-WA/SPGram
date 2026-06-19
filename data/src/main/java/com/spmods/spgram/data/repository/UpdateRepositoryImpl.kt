@@ -13,6 +13,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.spmods.spgram.data.core.coRunCatching
@@ -46,7 +47,8 @@ class UpdateRepositoryImpl(
     private var downloadJob: Job? = null
 
     override suspend fun checkForUpdates() {
-        if (authRepository.authState.value !is AuthStep.Ready) return
+        // auth Ready වෙනකම් wait කරනවා — immediately return කරන්නේ නැහැ
+        authRepository.authState.first { it is AuthStep.Ready }
 
         _updateState.value = UpdateState.Checking
 
