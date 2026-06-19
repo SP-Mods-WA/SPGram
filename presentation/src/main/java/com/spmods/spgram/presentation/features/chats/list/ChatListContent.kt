@@ -578,6 +578,7 @@ fun ChatListContent(component: ChatListComponent) {
                         }
                     }
                 }
+            }
 
                 
 
