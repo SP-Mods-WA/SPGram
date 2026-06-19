@@ -212,7 +212,8 @@ fun AboutContent(component: AboutComponent) {
                 )
 
                 if (!isTelemtBuild) {
-                    UpdateSection(updateState, component)
+                    val uriHandlerForUpdate = LocalUriHandler.current
+                    UpdateSection(updateState, component, uriHandlerForUpdate)
                 }
             }
 
@@ -326,7 +327,7 @@ fun AboutContent(component: AboutComponent) {
 }
 
 @Composable
-private fun UpdateSection(state: UpdateState, component: AboutComponent) {
+private fun UpdateSection(state: UpdateState, component: AboutComponent, uriHandler: androidx.compose.ui.platform.UriHandler) {
     var showChangelog by remember { mutableStateOf(false) }
 
     AnimatedContent(
@@ -376,7 +377,7 @@ private fun UpdateSection(state: UpdateState, component: AboutComponent) {
                             if (state.info.changelog.isNotEmpty()) {
                                 showChangelog = true
                             } else {
-                                component.downloadUpdate()
+                                uriHandler.openUri(state.info.downloadUrl)
                             }
                         }
 
@@ -394,7 +395,7 @@ private fun UpdateSection(state: UpdateState, component: AboutComponent) {
             onDismiss = { showChangelog = false },
             onDownload = {
                 showChangelog = false
-                component.downloadUpdate()
+                uriHandler.openUri(state.info.downloadUrl)
             }
         )
     }
