@@ -234,10 +234,10 @@ class AppPreferences(
     private val _enableStreaming = MutableStateFlow(prefs.getBoolean(KEY_ENABLE_STREAMING, true))
     val enableStreaming: StateFlow<Boolean> = _enableStreaming
 
-    private val _compressPhotos = MutableStateFlow(prefs.getBoolean(KEY_COMPRESS_PHOTOS, true))
+    private val _compressPhotos = MutableStateFlow(prefs.getBoolean(KEY_COMPRESS_PHOTOS, false))
     val compressPhotos: StateFlow<Boolean> = _compressPhotos
 
-    private val _compressVideos = MutableStateFlow(prefs.getBoolean(KEY_COMPRESS_VIDEOS, true))
+    private val _compressVideos = MutableStateFlow(prefs.getBoolean(KEY_COMPRESS_VIDEOS, false))
     val compressVideos: StateFlow<Boolean> = _compressVideos
 
     private val _cacheLimitSize = MutableStateFlow(prefs.getLong(KEY_CACHE_LIMIT_SIZE, 10L * 1024 * 1024 * 1024))
@@ -1141,8 +1141,8 @@ class AppPreferences(
         _autoplayGifs.value = true
         _autoplayVideos.value = true
         _enableStreaming.value = true
-        _compressPhotos.value = true
-        _compressVideos.value = true
+        _compressPhotos.value = false
+        _compressVideos.value = false
         _cacheLimitSize.value = 10L * 1024 * 1024 * 1024
         _autoClearCacheTime.value = 7
         _privateChatsNotifications.value = true
