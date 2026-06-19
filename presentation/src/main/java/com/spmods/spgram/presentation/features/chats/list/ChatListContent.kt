@@ -594,12 +594,14 @@ fun ChatListContent(component: ChatListComponent) {
                 val isMainView = !searchState.isSearchActive && foldersState.selectedFolderId != -2
 
                 if (isMainView) {
+                    val archiveSpacerPx = with(density) { 6.dp.toPx() }
+                    val archiveSlotHeightPx = archiveItemHeightPx + archiveSpacerPx
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(with(density) {
                                 val visibleArchiveHeight = if (isArchivePersistent) {
-                                    (archiveItemHeightPx + headerOffsetPx).coerceAtLeast(0f)
+                                    (archiveSlotHeightPx + headerOffsetPx).coerceAtLeast(0f)
                                 } else if (isMainFolder) {
                                     archiveRevealPx
                                 } else {
@@ -617,7 +619,7 @@ fun ChatListContent(component: ChatListComponent) {
                                     .fillMaxWidth()
                                     .height(with(density) {
                                         if (isArchivePersistent) {
-                                            (archiveItemHeightPx + headerOffsetPx).coerceAtLeast(0f)
+                                            (archiveSlotHeightPx + headerOffsetPx).coerceAtLeast(0f)
                                                 .toDp()
                                         } else if (isMainFolder) {
                                             archiveRevealPx.toDp()
@@ -627,12 +629,12 @@ fun ChatListContent(component: ChatListComponent) {
                                     })
                                     .graphicsLayer {
                                         alpha = if (isArchivePersistent) {
-                                            ((archiveItemHeightPx + headerOffsetPx) / archiveItemHeightPx).coerceIn(
+                                            ((archiveSlotHeightPx + headerOffsetPx) / archiveSlotHeightPx).coerceIn(
                                                 0f,
                                                 1f
                                             )
                                         } else if (isMainFolder) {
-                                            (archiveRevealPx / archiveItemHeightPx).coerceIn(0f, 1f)
+                                            (archiveRevealPx / archiveSlotHeightPx).coerceIn(0f, 1f)
                                         } else {
                                             0f
                                         }
