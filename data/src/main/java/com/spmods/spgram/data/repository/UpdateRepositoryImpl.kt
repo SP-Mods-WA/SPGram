@@ -13,7 +13,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.spmods.spgram.data.core.coRunCatching
@@ -47,13 +46,12 @@ class UpdateRepositoryImpl(
     private var downloadJob: Job? = null
 
     override suspend fun checkForUpdates() {
-        // auth Ready වෙනකම් wait කරනවා — immediately return කරන්නේ නැහැ
-        authRepository.authState.first { it is AuthStep.Ready }
+        if (authRepository.authState.value !is AuthStep.Ready) return
 
         _updateState.value = UpdateState.Checking
 
         coRunCatching {
-            val info = remote.fetchLatestUpdate()
+            val info = withContext(Dispatchers.IO) { remote.fetchLatestUpdate() }
                 ?: return@coRunCatching run {
                     _updateState.value =
                         UpdateState.Error(stringProvider.getString("update_no_update_found"))
