@@ -583,7 +583,7 @@ fun ChatListContent(component: ChatListComponent) {
                 if (uiState.connectionStatus == ConnectionStatus.Connecting || uiState.connectionStatus == ConnectionStatus.Updating || uiState.connectionStatus == ConnectionStatus.ConnectingToProxy) {
                     Column {
                         
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(0.dp))
                     }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
@@ -812,7 +812,7 @@ fun ChatListContent(component: ChatListComponent) {
                             .fillMaxSize()
                             .semantics { contentDescription = "ChatList" },
                         contentPadding = PaddingValues(
-                            top = 12.dp,
+                            top = 6.dp,
                             bottom = 88.dp,
                             start = if (isTablet) 12.dp else 0.dp,
                             end = if (isTablet) 12.dp else 0.dp
