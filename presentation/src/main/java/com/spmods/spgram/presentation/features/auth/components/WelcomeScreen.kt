@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,11 +31,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,33 +45,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.airbnb.lottie.compose.LottieAnimation
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.LottieConstants
-import com.airbnb.lottie.compose.animateLottieCompositionAsState
-import com.airbnb.lottie.compose.rememberLottieComposition
 import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.ui.ExpressiveDefaults
 
 /**
  * The very first screen shown on a fresh install, before "Your Phone".
- * Soft, light, friendly direction: a gently morphing blob behind the brand
- * animation, a short pitch, and a single call-to-action button — matching
- * the calm M3 Expressive mood of the rest of the auth flow.
+ * Soft, light, friendly direction: the real app icon sits inside a gently
+ * morphing blob, with a short pitch and a single call-to-action button —
+ * matching the calm M3 Expressive mood of the rest of the auth flow.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun WelcomeScreen(
     onContinue: () -> Unit
 ) {
-    val composition by rememberLottieComposition(
-        LottieCompositionSpec.RawRes(R.raw.intro_plane)
-    )
-    val progress by animateLottieCompositionAsState(
-        composition = composition,
-        iterations = LottieConstants.IterateForever
-    )
-
     // Continuous morph cycle driving the blob's four corner radii independently,
     // so the shape never looks like a static rounded square.
     val morph = rememberInfiniteTransition(label = "blobMorph")
@@ -80,6 +70,19 @@ fun WelcomeScreen(
             repeatMode = RepeatMode.Restart
         ),
         label = "morphPhase"
+    )
+
+    // Gentle ambient float on the icon itself, so it doesn't feel static
+    // sitting inside the blob.
+    val floatTransition = rememberInfiniteTransition(label = "iconFloat")
+    val floatOffset by floatTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2600, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "floatOffset"
     )
 
     Column(
@@ -104,10 +107,12 @@ fun WelcomeScreen(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            LottieAnimation(
-                composition = composition,
-                progress = { progress },
-                modifier = Modifier.size(128.dp)
+            Image(
+                painter = painterResource(R.drawable.ic_app_logo),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(132.dp)
+                    .scale(1f + (floatOffset * 0.02f))
             )
         }
 
