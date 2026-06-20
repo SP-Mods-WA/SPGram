@@ -20,13 +20,16 @@ class DefaultAuthComponent(
     private val scope = componentScope
 
     private val _model = MutableValue(
-        AuthComponent.Model(authState = AuthComponent.AuthState.InputPhone)
+        AuthComponent.Model(authState = AuthComponent.AuthState.Welcome)
     )
     override val model: Value<AuthComponent.Model> = _model
+
+    private var hasPassedWelcome = false
 
     init {
         repository.authState
             .onEach { step ->
+                if (!hasPassedWelcome) return@onEach
                 val newAuthState = when (step) {
                     is AuthStep.InputPhone -> AuthComponent.AuthState.InputPhone
                     is AuthStep.InputCode -> AuthComponent.AuthState.InputCode(
@@ -75,6 +78,11 @@ class DefaultAuthComponent(
                 }
             }
             .launchIn(scope)
+    }
+
+    override fun onContinueFromWelcome() {
+        hasPassedWelcome = true
+        _model.update { it.copy(authState = AuthComponent.AuthState.InputPhone) }
     }
 
     override fun onPhoneEntered(phone: String) {
