@@ -578,9 +578,18 @@ fun ChatListContent(component: ChatListComponent) {
                         }
                     }
                 }
-            }
-Spacer(modifier = Modifier.height(6.dp))
-                
+
+                if (uiState.connectionStatus == ConnectionStatus.Connecting || uiState.connectionStatus == ConnectionStatus.Updating || uiState.connectionStatus == ConnectionStatus.ConnectingToProxy) {
+                    Column {
+                        LinearWavyProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = Color.Transparent
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+                }
 
                 val isMainView = !searchState.isSearchActive && foldersState.selectedFolderId != -2
 
@@ -647,6 +656,7 @@ Spacer(modifier = Modifier.height(6.dp))
                                     Spacer(Modifier.height(6.dp))
                                 }
                             }
+
                             if (visibleFolders.size > 1) {
                                 FolderTabs(
                                     modifier = Modifier,
