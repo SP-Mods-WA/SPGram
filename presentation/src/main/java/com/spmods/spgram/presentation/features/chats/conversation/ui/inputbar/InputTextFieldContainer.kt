@@ -18,10 +18,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material3.Icon
@@ -81,22 +81,22 @@ internal fun InputTextFieldContainer(
             modifier = Modifier.padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp)
         ) {
             AnimatedContent(
-                targetState = uiState.canAttachMedia,
+                targetState = uiState.canSendStickers,
                 transitionSpec = {
                     (fadeIn() + scaleIn(initialScale = 0.85f)).togetherWith(
                         fadeOut() + scaleOut(targetScale = 0.85f)
                     ).using(SizeTransform(clip = false))
                 },
-                label = "AttachIconInFieldVisibility"
-            ) { showAttach ->
-                if (showAttach) {
+                label = "StickerIconInFieldVisibility"
+            ) { showStickers ->
+                if (showStickers) {
                     IconButton(
-                        onClick = { onAttachClickState() },
+                        onClick = { onStickerMenuToggleState() },
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.AddCircleOutline,
-                            contentDescription = stringResource(R.string.cd_attach),
+                            imageVector = if (uiState.isStickerMenuVisible) Icons.Default.Keyboard else Icons.Outlined.EmojiEmotions,
+                            contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -156,17 +156,17 @@ internal fun InputTextFieldContainer(
             }
 
             AnimatedVisibility(
-                visible = uiState.canSendStickers,
+                visible = uiState.canAttachMedia,
                 enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
                 exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
             ) {
                 IconButton(
-                    onClick = { onStickerMenuToggleState() },
+                    onClick = { onAttachClickState() },
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        imageVector = if (uiState.isStickerMenuVisible) Icons.Default.Keyboard else Icons.Outlined.EmojiEmotions,
-                        contentDescription = null,
+                        imageVector = Icons.Filled.AttachFile,
+                        contentDescription = stringResource(R.string.cd_attach),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
