@@ -235,7 +235,7 @@ fun ChatListContent(component: ChatListComponent) {
     }
 
     val density = LocalDensity.current
-    val tabsHeight = if (visibleFolders.size > 1) 56.dp else 10.dp
+    val tabsHeight = if (visibleFolders.size > 1) 56.dp else 0.dp
     val archiveItemHeight = 78.dp
     val tabsHeightPx = with(density) { tabsHeight.toPx() }
     val archiveItemHeightPx = with(density) { archiveItemHeight.toPx() }
@@ -812,7 +812,7 @@ fun ChatListContent(component: ChatListComponent) {
                             .fillMaxSize()
                             .semantics { contentDescription = "ChatList" },
                         contentPadding = PaddingValues(
-                            top = 6.dp,
+                            top = 12.dp,
                             bottom = 88.dp,
                             start = if (isTablet) 12.dp else 0.dp,
                             end = if (isTablet) 12.dp else 0.dp
