@@ -586,6 +586,7 @@ fun ChatListContent(component: ChatListComponent) {
                         Spacer(modifier = Modifier.height(6.dp))
                     }
                 }
+                Spacer(modifier = Modifier.height(6.dp))
 
                 val isMainView = !searchState.isSearchActive && foldersState.selectedFolderId != -2
 
