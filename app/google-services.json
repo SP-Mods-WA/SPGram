@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "762669270610",
+    "project_id": "spgram-4afa2",
+    "storage_bucket": "spgram-4afa2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:762669270610:android:6a2fcf7fe7bca1bb44018b",
+        "android_client_info": {
+          "package_name": "com.spmods.spgram"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDaR3UKqU4DoS1tnOO1qBsOX0PsbYvr6Tg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
