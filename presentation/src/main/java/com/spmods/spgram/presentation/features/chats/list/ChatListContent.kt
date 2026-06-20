@@ -577,16 +577,12 @@ fun ChatListContent(component: ChatListComponent) {
                             )
                         }
                     }
+                    
                 }
 
                 if (uiState.connectionStatus == ConnectionStatus.Connecting || uiState.connectionStatus == ConnectionStatus.Updating || uiState.connectionStatus == ConnectionStatus.ConnectingToProxy) {
                     Column {
-                        LinearWavyProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = Color.Transparent
-                        )
+                        
                         Spacer(modifier = Modifier.height(6.dp))
                     }
                 }
