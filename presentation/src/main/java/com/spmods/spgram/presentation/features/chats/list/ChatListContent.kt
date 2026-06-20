@@ -579,7 +579,7 @@ fun ChatListContent(component: ChatListComponent) {
                     }
                 }
             }
-
+Spacer(modifier = Modifier.height(6.dp))
                 
 
                 val isMainView = !searchState.isSearchActive && foldersState.selectedFolderId != -2
@@ -631,22 +631,22 @@ fun ChatListContent(component: ChatListComponent) {
                                     }
                             ) {
                                 Column(
-    Modifier.offset {
-        if (isArchivePersistent) {
-            IntOffset(0, headerOffsetPx.roundToInt())
-        } else {
-            IntOffset(0, 0)
-        }
-    }
-) {
-    ArchiveHeaderCard(
-        isPinned = uiState.isArchivePinned,
-        onClick = { component.onFolderClicked(-2) },
-        onLongClick = { component.onArchivePinToggle() }
-    )
-    Spacer(Modifier.height(6.dp))
+                                    Modifier.offset {
+                                        if (isArchivePersistent) {
+                                            IntOffset(0, headerOffsetPx.roundToInt())
+                                        } else {
+                                            IntOffset(0, 0)
+                                        }
+                                    }
+                                ) {
+                                    ArchiveHeaderCard(
+                                        isPinned = uiState.isArchivePinned,
+                                        onClick = { component.onFolderClicked(-2) },
+                                        onLongClick = { component.onArchivePinToggle() }
+                                    )
+                                    Spacer(Modifier.height(6.dp))
                                 }
-
+                            }
                             if (visibleFolders.size > 1) {
                                 FolderTabs(
                                     modifier = Modifier,
