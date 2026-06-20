@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+        <string name="welcome_title">Welcome to SPGram</string>
+    <string name="welcome_subtitle">A fast, secure, and beautifully designed messaging experience. Stay connected with everyone, everywhere.</string>
+    <string name="welcome_start_messaging">Start Messaging</string>
+    <string name="welcome_terms_notice">By continuing, you agree to the Terms of Service and Privacy Policy.</string>
     <string name="confirmation_title">Confirmation</string>
     <string name="confirmation_message">Do you really want to authorize this device?</string>
     <string name="confirm_auth_action">Yes, sign in</string>
