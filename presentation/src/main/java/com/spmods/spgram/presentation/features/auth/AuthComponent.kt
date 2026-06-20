@@ -7,6 +7,7 @@ import com.spmods.spgram.domain.repository.AuthUiStatus
 interface AuthComponent {
     val model: Value<Model>
 
+    fun onContinueFromWelcome()
     fun onPhoneEntered(phone: String)
     fun onCodeEntered(code: String)
     fun onResendCode()
@@ -27,6 +28,7 @@ interface AuthComponent {
     )
 
     sealed class AuthState {
+        object Welcome : AuthState()
         object InputPhone : AuthState()
         data class InputCode(
             val codeLength: Int,
