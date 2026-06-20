@@ -650,7 +650,7 @@ fun ChatListContent(component: ChatListComponent) {
                                         onClick = { component.onFolderClicked(-2) },
                                         onLongClick = { component.onArchivePinToggle() }
                                     )
-                                    Spacer(Modifier.height(6.dp))
+                                    Spacer(Modifier.height(0.dp))
                                 }
                             }
 
