@@ -43,6 +43,7 @@ import com.spmods.spgram.presentation.features.auth.components.CodeInputScreen
 import com.spmods.spgram.presentation.features.auth.components.PasswordInputScreen
 import com.spmods.spgram.presentation.features.auth.components.RegistrationInputScreen
 import com.spmods.spgram.presentation.features.auth.components.PhoneInputScreen
+import com.spmods.spgram.presentation.features.auth.components.WelcomeScreen
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -64,51 +65,54 @@ fun AuthContent(component: AuthComponent) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            Surface(
-                color = MaterialTheme.colorScheme.background,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
+            if (model.authState !is AuthComponent.AuthState.Welcome) {
+                Surface(
+                    color = MaterialTheme.colorScheme.background,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    CenterAlignedTopAppBar(
-                        modifier = Modifier.widthIn(max = maxContentWidth),
-                        title = {
-                            Text(
-                                text = when (model.authState) {
-                                    is AuthComponent.AuthState.InputPhone -> stringResource(R.string.auth_title_phone)
-                                    is AuthComponent.AuthState.InputCode -> stringResource(R.string.auth_title_verification)
-                                    is AuthComponent.AuthState.InputPassword -> stringResource(R.string.auth_title_password)
-                                    is AuthComponent.AuthState.InputRegistration -> "Your Name"
-                                },
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        },
-                        navigationIcon = {
-                            if (model.authState is AuthComponent.AuthState.InputCode || model.authState is AuthComponent.AuthState.InputPassword || model.authState is AuthComponent.AuthState.InputRegistration) {
-                                IconButton(onClick = component::onBackToPhone) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CenterAlignedTopAppBar(
+                            modifier = Modifier.widthIn(max = maxContentWidth),
+                            title = {
+                                Text(
+                                    text = when (model.authState) {
+                                        is AuthComponent.AuthState.Welcome -> ""
+                                        is AuthComponent.AuthState.InputPhone -> stringResource(R.string.auth_title_phone)
+                                        is AuthComponent.AuthState.InputCode -> stringResource(R.string.auth_title_verification)
+                                        is AuthComponent.AuthState.InputPassword -> stringResource(R.string.auth_title_password)
+                                        is AuthComponent.AuthState.InputRegistration -> "Your Name"
+                                    },
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
+                            navigationIcon = {
+                                if (model.authState is AuthComponent.AuthState.InputCode || model.authState is AuthComponent.AuthState.InputPassword || model.authState is AuthComponent.AuthState.InputRegistration) {
+                                    IconButton(onClick = component::onBackToPhone) {
+                                        Icon(
+                                            Icons.AutoMirrored.Rounded.ArrowBack,
+                                            contentDescription = stringResource(R.string.cd_back)
+                                        )
+                                    }
+                                }
+                            },
+                            actions = {
+                                IconButton(onClick = component::onProxyClicked) {
                                     Icon(
-                                        Icons.AutoMirrored.Rounded.ArrowBack,
-                                        contentDescription = stringResource(R.string.cd_back)
+                                        imageVector = Icons.Rounded.SettingsEthernet,
+                                        contentDescription = stringResource(R.string.cd_proxy_settings),
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
-                            }
-                        },
-                        actions = {
-                            IconButton(onClick = component::onProxyClicked) {
-                                Icon(
-                                    imageVector = Icons.Rounded.SettingsEthernet,
-                                    contentDescription = stringResource(R.string.cd_proxy_settings),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        },
-                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background
+                            },
+                            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.background
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
@@ -146,6 +150,10 @@ fun AuthContent(component: AuthComponent) {
             ) { targetState ->
                 Box(modifier = contentModifier) {
                     when (targetState) {
+                        is AuthComponent.AuthState.Welcome -> WelcomeScreen(
+                            onContinue = component::onContinueFromWelcome
+                        )
+
                         is AuthComponent.AuthState.InputPhone -> PhoneInputScreen(
                             onConfirm = component::onPhoneEntered,
                             isSubmitting = model.isSubmitting,
@@ -197,6 +205,7 @@ fun AuthContent(component: AuthComponent) {
 
 private val AuthComponent.AuthState.index: Int
     get() = when (this) {
+        is AuthComponent.AuthState.Welcome -> 0
         is AuthComponent.AuthState.InputPhone -> 1
         is AuthComponent.AuthState.InputCode -> 2
         is AuthComponent.AuthState.InputRegistration -> 3
