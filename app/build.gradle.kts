@@ -63,7 +63,7 @@ android {
 
         applicationId = "com.spmods.spgram"
 
-        minSdk = 25
+        minSdk = 26
         targetSdk = 36
 
         versionCode = 10
