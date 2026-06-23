@@ -62,6 +62,7 @@ interface MessageRepository :
     val mediaUpdateFlow: Flow<Unit>
     suspend fun getHighResFileId(chatId: Long, messageId: Long): Int?
     fun registerFileForMessage(fileId: Int, chatId: Long, messageId: Long)
+    suspend fun getCallHistory(fromMessageId: Long = 0, limit: Int = 50): List<MessageModel>
     suspend fun getProfileMedia(
         chatId: Long,
         filter: ProfileMediaFilter,
