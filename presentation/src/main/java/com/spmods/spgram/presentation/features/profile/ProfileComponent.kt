@@ -31,6 +31,13 @@ interface ProfileComponent {
     fun onOpenWebView(url: String)
     fun onDismissMiniAppTOS()
     fun onAcceptMiniAppTOS()
+
+    // Story
+    fun onViewStory(index: Int)
+    fun onDismissStory()
+    fun onOpenStoryPoster()
+    fun onDismissStoryPoster()
+    fun onDeleteStory(storyId: Int)
     fun onLoadMoreMedia()
     fun onOpenMiniApp(url: String, name: String, chatId: Long)
     fun onDismissMiniApp()
@@ -105,6 +112,11 @@ interface ProfileComponent {
 
         val profilePhotos: List<String> = emptyList(),
         val personalAvatarPath: String? = null,
+
+        val stories: List<StoryModel> = emptyList(),
+        val isLoadingStories: Boolean = false,
+        val viewingStoryIndex: Int = -1,
+        val showStoryPoster: Boolean = false,
 
         val fullScreenImages: List<String>? = null,
         val fullScreenImageMessageIds: List<Long> = emptyList(),
