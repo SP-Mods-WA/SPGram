@@ -250,6 +250,21 @@ class DefaultRootComponent(
         navigation.popWhile { it !is Config.Chats }
     }
 
+    override fun onContactsClick() {
+        navigation.bringToFront(Config.NewChat)
+    }
+
+    override fun onProfileClick() {
+        scope.launch {
+            try {
+                val me = userRepository.getMe()
+                navigation.bringToFront(Config.Profile(me.id))
+            } catch (e: Exception) {
+                navigation.bringToFront(Config.Settings)
+            }
+        }
+    }
+
     override fun dismissStickerPreview() {
         _stickerSetToPreview.update { it.copy(stickerSet = null) }
     }
