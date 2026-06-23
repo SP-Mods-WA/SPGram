@@ -35,7 +35,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.spmods.spgram.core.date.DateFormatManager
 import com.spmods.spgram.core.date.toDate
 import com.spmods.spgram.domain.models.ChatModel
 import com.spmods.spgram.presentation.core.ui.AvatarForChat
