@@ -47,6 +47,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.spmods.spgram.presentation.root.RootComponent
+import com.spmods.spgram.presentation.features.calls.CallsContent
 import com.spmods.spgram.presentation.features.chats.list.ChatListComponent
 import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import kotlinx.coroutines.launch
@@ -220,14 +221,9 @@ fun MobileLayout(root: RootComponent) {
                 }
             }
 
-            // ── Calls tab overlay (shown over ChatsChild) ─────────────────
-            val callsChatsChild = remember(stack.items) {
-                stack.items.map { it.instance }
-                    .filterIsInstance<RootComponent.Child.ChatsChild>()
-                    .firstOrNull()
-            }
-            if (selectedBottomTab == MainTab.Calls && callsChatsChild != null) {
-                CallsContent(component = callsChatsChild.component)
+            // ── Calls tab overlay ─────────────────────────────────────────
+            if (selectedBottomTab == MainTab.Calls) {
+                CallsContent()
             }
         }
 
