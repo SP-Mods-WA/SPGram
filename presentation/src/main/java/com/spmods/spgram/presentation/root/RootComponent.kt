@@ -57,6 +57,8 @@ interface RootComponent {
     fun dismissStickerPreview()
     fun onSettingsClick()
     fun onChatsClick()
+    fun onContactsClick()
+    fun onProfileClick()
     fun dismissProxyConfirm()
     fun confirmProxy(server: String, port: Int, type: ProxyTypeModel)
     fun recheckProxyPing()
