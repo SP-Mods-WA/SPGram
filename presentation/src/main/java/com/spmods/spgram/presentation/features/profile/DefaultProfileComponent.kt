@@ -28,6 +28,7 @@ import com.spmods.spgram.domain.repository.BotRepository
 import com.spmods.spgram.domain.repository.ChatInfoRepository
 import com.spmods.spgram.domain.repository.ChatListRepository
 import com.spmods.spgram.domain.repository.ChatMemberStatus
+import com.spmods.spgram.domain.repository.StoryRepository
 import com.spmods.spgram.domain.repository.ChatMembersFilter
 import com.spmods.spgram.domain.repository.ChatOperationsRepository
 import com.spmods.spgram.domain.repository.ChatSettingsRepository
@@ -63,6 +64,7 @@ class DefaultProfileComponent(
     private val chatSettingsRepository: ChatSettingsRepository = container.repositories.chatSettingsRepository
     private val userRepository: UserRepository = container.repositories.userRepository
     private val profilePhotoRepository: ProfilePhotoRepository = container.repositories.profilePhotoRepository
+    private val storyRepository: StoryRepository = container.repositories.storyRepository
     private val chatInfoRepository: ChatInfoRepository = container.repositories.chatInfoRepository
     private val botRepository: BotRepository = container.repositories.botRepository
     private val chatStatisticsRepository: ChatStatisticsRepository = container.repositories.chatStatisticsRepository
@@ -90,6 +92,7 @@ class DefaultProfileComponent(
     init {
         loadData()
         loadMediaNextPage(isFirstLoad = true)
+        loadStories()
         observeProfilePhotos()
         observeUserUpdates()
         observeCurrentUser()
@@ -274,6 +277,45 @@ class DefaultProfileComponent(
     }
 
     private fun MessageContent.Photo.displayPath(): String? = path ?: thumbnailPath
+
+    private fun loadStories() {
+        scope.launch {
+            _state.update { it.copy(isLoadingStories = true) }
+            try {
+                val stories = storyRepository.getChatPageStories(chatId)
+                _state.update { it.copy(stories = stories) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _state.update { it.copy(isLoadingStories = false) }
+            }
+        }
+    }
+
+    override fun onViewStory(index: Int) {
+        _state.update { it.copy(viewingStoryIndex = index) }
+    }
+
+    override fun onDismissStory() {
+        _state.update { it.copy(viewingStoryIndex = -1) }
+    }
+
+    override fun onOpenStoryPoster() {
+        _state.update { it.copy(showStoryPoster = true) }
+    }
+
+    override fun onDismissStoryPoster() {
+        _state.update { it.copy(showStoryPoster = false) }
+    }
+
+    override fun onDeleteStory(storyId: Int) {
+        scope.launch {
+            storyRepository.deleteStory(chatId, storyId)
+            _state.update { it.copy(stories = it.stories.filter { s -> s.id != storyId }) }
+        }
+    }
 
     private fun loadMembersNextPage() {
         if (_state.value.isLoadingMembers || !_state.value.canLoadMoreMembers) return
