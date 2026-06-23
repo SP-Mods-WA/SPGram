@@ -56,6 +56,7 @@ interface MessageRemoteDataSource {
         threadId: Long?,
         senderId: Long? = null
     ): TdApi.FoundChatMessages?
+    suspend fun searchCallHistory(fromMessageId: Long = 0, limit: Int = 50): TdApi.FoundMessages?
     suspend fun getChatPinnedMessage(chatId: Long): TdApi.Message?
     suspend fun getPollVoters(chatId: Long, messageId: Long, optionId: Int, offset: Int, limit: Int): TdApi.PollVoters?
     suspend fun getMessageViewers(chatId: Long, messageId: Long): TdApi.MessageViewers?
