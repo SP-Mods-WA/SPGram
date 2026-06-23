@@ -1,12 +1,15 @@
 package com.spmods.spgram.app.components
 
-import com.spmods.spgram.app.R
-
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,13 +22,10 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AccountCircle
-import androidx.compose.material.icons.rounded.Contacts
-import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,120 +33,109 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.Image
+import com.spmods.spgram.app.R
 
 // ---------------------------------------------------------------------------
-// Tab enum
+// Tab enum  —  3 tabs only
 // ---------------------------------------------------------------------------
 
-enum class MainTab { Chats, Contacts, Settings, Profile }
+enum class MainTab { Chats, Stories, Calls }
 
 // ---------------------------------------------------------------------------
-// Data
+// Internal model
 // ---------------------------------------------------------------------------
-
-private sealed class TabIcon {
-    data class DrawableRes(val fillRes: Int, val unfillRes: Int) : TabIcon()
-    data class VectorIcon(val icon: ImageVector) : TabIcon()
-}
 
 private data class TabItem(
     val tab: MainTab,
     val label: String,
-    val icon: TabIcon,
+    val fillRes: Int,
+    val unfillRes: Int,
     val badgeCount: Int = 0,
     val hasDot: Boolean = false,
 )
 
 // ---------------------------------------------------------------------------
-// Liquid Glass bottom bar
+// Bottom bar
 // ---------------------------------------------------------------------------
 
 @Composable
 fun MainBottomBar(
     selectedTab: MainTab,
     chatsUnread: Int = 0,
+    hasStories: Boolean = false,
+    hasMissedCalls: Boolean = false,
     onTabSelected: (MainTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = isSystemInDarkTheme()
+
     val tabs = listOf(
         TabItem(
-            MainTab.Chats,
-            "Chats",
-            TabIcon.DrawableRes(R.drawable.sp_chat_fill, R.drawable.sp_chat_unfill),
-            badgeCount = chatsUnread
+            tab        = MainTab.Chats,
+            label      = "Chats",
+            fillRes    = R.drawable.sp_chat_fill,
+            unfillRes  = R.drawable.sp_chat_unfill,
+            badgeCount = chatsUnread,
         ),
         TabItem(
-            MainTab.Contacts,
-            "Contacts",
-            TabIcon.VectorIcon(Icons.Rounded.Contacts)
+            tab       = MainTab.Stories,
+            label     = "Stories",
+            fillRes   = R.drawable.sp_story_fill,
+            unfillRes = R.drawable.sp_story_unfill,
+            hasDot    = hasStories,
         ),
         TabItem(
-            MainTab.Settings,
-            "Settings",
-            TabIcon.VectorIcon(Icons.Rounded.Settings)
-        ),
-        TabItem(
-            MainTab.Profile,
-            "Profile",
-            TabIcon.VectorIcon(Icons.Rounded.AccountCircle)
+            tab       = MainTab.Calls,
+            label     = "Calls",
+            fillRes   = R.drawable.sp_call_fill,
+            unfillRes = R.drawable.sp_call_unfill,
+            hasDot    = hasMissedCalls,
         ),
     )
 
-    val surfaceColor = MaterialTheme.colorScheme.surface
+    // Dark theme  → near-black surface with subtle top border
+    // Light theme → white surface with subtle shadow line
+    val barBg   = if (isDark) Color(0xFF1A1A1A) else Color(0xFFFFFFFF)
+    val divider = if (isDark) Color(0xFF2C2C2C) else Color(0xFFE0E0E0)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .drawBehind {
-                drawRect(surfaceColor.copy(alpha = 0.72f))
-                drawRect(
-                    brush = Brush.horizontalGradient(
-                        listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.18f),
-                            Color.White.copy(alpha = 0.32f),
-                            Color.White.copy(alpha = 0.18f),
-                            Color.Transparent,
-                        )
-                    ),
-                    topLeft = Offset.Zero,
-                    size = size.copy(height = 1.dp.toPx())
-                )
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.10f),
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.04f),
-                        )
-                    )
+                // solid background
+                drawRect(barBg)
+                // 1 px top divider
+                drawLine(
+                    color       = divider,
+                    start       = Offset(0f, 0f),
+                    end         = Offset(size.width, 0f),
+                    strokeWidth = 1.dp.toPx(),
                 )
             }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
-                .padding(horizontal = 8.dp),
+                .height(62.dp),
             horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment     = Alignment.CenterVertically,
         ) {
             tabs.forEach { item ->
                 BottomBarItem(
-                    item = item,
+                    item     = item,
                     selected = selectedTab == item.tab,
-                    onClick = { onTabSelected(item.tab) },
+                    isDark   = isDark,
+                    onClick  = { onTabSelected(item.tab) },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -156,81 +145,111 @@ fun MainBottomBar(
 }
 
 // ---------------------------------------------------------------------------
-// Tab item
+// Single tab item
 // ---------------------------------------------------------------------------
 
 @Composable
 private fun BottomBarItem(
     item: TabItem,
     selected: Boolean,
+    isDark: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Active colour: cyan-ish for dark, brand primary for light
+    val activeColor   = if (isDark) Color(0xFF52C5F5) else MaterialTheme.colorScheme.primary
+    val inactiveColor = if (isDark) Color(0xFF7A7A8A) else Color(0xFF8E8E93)
+
     val iconColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary
-                      else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(220), label = "IconColor",
+        targetValue    = if (selected) activeColor else inactiveColor,
+        animationSpec  = tween(200),
+        label          = "iconColor",
     )
+    val labelColor by animateColorAsState(
+        targetValue    = if (selected) activeColor else inactiveColor,
+        animationSpec  = tween(200),
+        label          = "labelColor",
+    )
+
+    // Pill indicator behind icon when selected
+    val pillWidth by animateDpAsState(
+        targetValue   = if (selected) 48.dp else 0.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label         = "pillWidth",
+    )
+    val pillColor = if (isDark)
+        Color(0xFF52C5F5).copy(alpha = 0.15f)
+    else
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+
     Column(
         modifier = modifier
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
+                indication        = null,
+                onClick           = onClick,
             )
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        BadgedBox(
-            badge = {
-                when {
-                    item.badgeCount > 0 -> Badge(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ) {
-                        Text(
-                            text = if (item.badgeCount > 99) "99+" else item.badgeCount.toString(),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
+        Box(contentAlignment = Alignment.Center) {
+            // pill background
+            if (pillWidth > 0.dp) {
+                Box(
+                    modifier = Modifier
+                        .size(width = pillWidth, height = 32.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(pillColor)
+                )
+            }
+
+            BadgedBox(
+                badge = {
+                    when {
+                        item.badgeCount > 0 -> Badge(
+                            containerColor = if (isDark) Color(0xFFFF453A) else Color(0xFFFF3B30),
+                            contentColor   = Color.White,
+                        ) {
+                            // Unlimited badge — show full number up to 9999, then "∞"
+                            val label = when {
+                                item.badgeCount >= 10000 -> "∞"
+                                else                     -> item.badgeCount.toString()
+                            }
+                            Text(
+                                text       = label,
+                                fontSize   = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        item.hasDot -> Badge(
+                            containerColor = if (isDark) Color(0xFF52C5F5) else MaterialTheme.colorScheme.primary,
+                            modifier       = Modifier.size(8.dp),
                         )
+                        else -> {}
                     }
-                    item.hasDot -> Badge(containerColor = MaterialTheme.colorScheme.primary)
-                    else -> {}
-                }
-            },
-        ) {
-            when (val icon = item.icon) {
-                is TabIcon.DrawableRes -> {
-                    Image(
-                        painter = painterResource(
-                            id = if (selected) icon.fillRes else icon.unfillRes
-                        ),
-                        contentDescription = item.label,
-                        modifier = Modifier.size(26.dp),
-                        colorFilter = ColorFilter.tint(iconColor),
-                    )
-                }
-                is TabIcon.VectorIcon -> {
-                    Icon(
-                        imageVector = icon.icon,
-                        contentDescription = item.label,
-                        modifier = Modifier.size(26.dp),
-                        tint = iconColor,
-                    )
-                }
+                },
+            ) {
+                Image(
+                    painter     = painterResource(
+                        id = if (selected) item.fillRes else item.unfillRes
+                    ),
+                    contentDescription = item.label,
+                    modifier    = Modifier.size(26.dp),
+                    colorFilter = ColorFilter.tint(iconColor),
+                )
             }
         }
 
         Spacer(Modifier.height(3.dp))
 
         Text(
-            text = item.label,
+            text  = item.label,
+            color = labelColor,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                fontSize = 11.sp,
+                fontSize   = 11.sp,
             ),
-            color = iconColor,
         )
     }
 }
