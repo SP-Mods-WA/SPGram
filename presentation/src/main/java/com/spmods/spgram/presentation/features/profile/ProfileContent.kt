@@ -80,6 +80,9 @@ import com.spmods.spgram.presentation.features.profile.components.ProfileHeaderT
 import com.spmods.spgram.presentation.features.profile.components.ProfileInfoSection
 import com.spmods.spgram.presentation.features.profile.components.ProfileInfoSectionSkeleton
 import com.spmods.spgram.presentation.features.profile.components.ProfilePermissionsDialog
+import com.spmods.spgram.presentation.features.profile.components.ProfileStoriesSection
+import com.spmods.spgram.presentation.features.profile.components.StoryPosterSheet
+import com.spmods.spgram.presentation.features.profile.components.StoryViewerScreen
 import com.spmods.spgram.presentation.features.profile.components.ProfileQRDialog
 import com.spmods.spgram.presentation.features.profile.components.ProfileReportDialog
 import com.spmods.spgram.presentation.features.profile.components.ProfileTOSDialog
@@ -380,6 +383,15 @@ fun ProfileContent(component: ProfileComponent) {
                         }
                     }
 
+                    item(span = { GridItemSpan(3) }) {
+                        ProfileStoriesSection(
+                            stories = state.stories,
+                            isOwnProfile = state.isCurrentUser,
+                            onStoryClick = component::onViewStory,
+                            onAddStory = component::onOpenStoryPoster
+                        )
+                    }
+
                     profileMediaSection(
                         state = state,
                         isGroup = isGroup,
@@ -412,6 +424,31 @@ fun ProfileContent(component: ProfileComponent) {
             onDismiss = component::onDismissReport,
             onReport = component::onReport
         )
+
+        // Story viewer overlay
+        if (state.viewingStoryIndex >= 0 && state.stories.isNotEmpty()) {
+            StoryViewerScreen(
+                stories = state.stories,
+                initialIndex = state.viewingStoryIndex,
+                canDeleteStory = state.isCurrentUser,
+                onDelete = { storyId ->
+                    component.onDeleteStory(storyId)
+                    component.onDismissStory()
+                },
+                onDismiss = component::onDismissStory
+            )
+        }
+
+        // Story poster sheet
+        if (state.showStoryPoster) {
+            StoryPosterSheet(
+                chatId = state.chat?.id ?: return@Box,
+                onPosted = { newStory ->
+                    component.onDismissStoryPoster()
+                },
+                onDismiss = component::onDismissStoryPoster
+            )
+        }
 
         if (showLeaveSheet) {
             ConfirmationSheet(
