@@ -386,7 +386,7 @@ fun ProfileContent(component: ProfileComponent) {
                     item(span = { GridItemSpan(3) }) {
                         ProfileStoriesSection(
                             stories = state.stories,
-                            isOwnProfile = state.isCurrentUser,
+                            isOwnProfile = state.currentUser != null,
                             onStoryClick = component::onViewStory,
                             onAddStory = component::onOpenStoryPoster
                         )
@@ -430,7 +430,7 @@ fun ProfileContent(component: ProfileComponent) {
             StoryViewerScreen(
                 stories = state.stories,
                 initialIndex = state.viewingStoryIndex,
-                canDeleteStory = state.isCurrentUser,
+                canDeleteStory = state.currentUser != null,
                 onDelete = { storyId ->
                     component.onDeleteStory(storyId)
                     component.onDismissStory()
