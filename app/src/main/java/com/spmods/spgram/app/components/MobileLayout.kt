@@ -46,6 +46,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.spmods.spgram.presentation.root.RootComponent
+import com.spmods.spgram.presentation.features.chats.list.ChatListComponent
 import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -68,19 +69,16 @@ fun MobileLayout(root: RootComponent) {
     val activeChild = stack.active.instance
     val isDark = LocalDarkTheme.current
 
-    // Count of chats that HAVE unread messages (not sum of message counts)
-    val chatsUnread by remember(activeChild) {
-        derivedStateOf {
-            val chatsChild = stack.items
-                .map { it.instance }
-                .filterIsInstance<RootComponent.Child.ChatsChild>()
-                .firstOrNull()
-            chatsChild?.component?.state?.value
-                ?.chats
-                ?.count { it.unreadCount > 0 }
-                ?: 0
-        }
+    // Reactively collect unread chat count from ChatsChild StateFlow
+    val chatsChild = remember(stack.items) {
+        stack.items
+            .map { it.instance }
+            .filterIsInstance<RootComponent.Child.ChatsChild>()
+            .firstOrNull()
     }
+    val chatsComponentState by chatsChild?.component?.state?.collectAsState()
+        ?: remember { androidx.compose.runtime.mutableStateOf(ChatListComponent.State()) }
+    val chatsUnread = chatsComponentState.chats.count { it.unreadCount > 0 }
 
     // Determine which bottom tab is currently active
     val selectedTab by remember(activeChild) {
