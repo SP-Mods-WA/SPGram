@@ -972,6 +972,7 @@ class MessageRepositoryImpl(
                 val result = messageRemoteDataSource.searchCallHistory(fromMessageId, limit)
                 result?.messages?.mapNotNull { msg ->
                     cache.putMessage(msg)
+                    if (msg.content !is TdApi.MessageCall) return@mapNotNull null
                     coRunCatching {
                         messageMapper.mapMessageToModel(msg)
                     }.getOrNull()
