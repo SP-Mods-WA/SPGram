@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import com.spmods.spgram.presentation.features.calls.CallsContent
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -62,6 +63,7 @@ fun MobileLayout(root: RootComponent) {
     var isCompletingSwipeBack by remember { mutableStateOf(false) }
     var widthPx by remember { mutableFloatStateOf(0f) }
     var isSwipeBackBlocked by remember { mutableStateOf(false) }
+    var selectedBottomTab by remember { mutableStateOf(MainTab.Chats) }
     val canUseDragToBack =
         isDragToBackEnabled && isSwipeBackSupported(stack.active.instance) && !isSwipeBackBlocked
     val dragProgress = if (widthPx > 0f) (dragOffsetX / widthPx).coerceIn(0f, 1f) else 0f
@@ -92,12 +94,12 @@ fun MobileLayout(root: RootComponent) {
         }
     }
 
-    // Show bottom bar only on Chats root screen
+    // Reset to Chats tab when user navigates into a chat or other screen
     val showBottomBar by remember(activeChild) {
         derivedStateOf {
             when (activeChild) {
                 is RootComponent.Child.ChatsChild -> true
-                else -> false
+                else -> { false }
             }
         }
     }
@@ -217,6 +219,16 @@ fun MobileLayout(root: RootComponent) {
                     }
                 }
             }
+
+            // ── Calls tab overlay (shown over ChatsChild) ─────────────────
+            val callsChatsChild = remember(stack.items) {
+                stack.items.map { it.instance }
+                    .filterIsInstance<RootComponent.Child.ChatsChild>()
+                    .firstOrNull()
+            }
+            if (selectedBottomTab == MainTab.Calls && callsChatsChild != null) {
+                CallsContent(component = callsChatsChild.component)
+            }
         }
 
         // ── Bottom Navigation Bar ──────────────────────────────────────────
@@ -227,14 +239,14 @@ fun MobileLayout(root: RootComponent) {
             modifier = Modifier.fillMaxWidth()
         ) {
             MainBottomBar(
-                selectedTab = selectedTab ?: MainTab.Chats,
+                selectedTab = selectedBottomTab,
                 chatsUnread = chatsUnread,
                 isDark = isDark,
                 onTabSelected = { tab ->
                     when (tab) {
-                        MainTab.Chats   -> root.onChatsClick()
-                        MainTab.Stories -> { /* Stories — wire when screen available */ }
-                        MainTab.Calls   -> { /* Calls — wire when screen available */ }
+                        MainTab.Chats   -> { selectedBottomTab = MainTab.Chats; root.onChatsClick() }
+                        MainTab.Stories -> { selectedBottomTab = MainTab.Stories }
+                        MainTab.Calls   -> { selectedBottomTab = MainTab.Calls }
                     }
                 }
             )
