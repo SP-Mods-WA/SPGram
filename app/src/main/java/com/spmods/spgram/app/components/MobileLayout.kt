@@ -46,6 +46,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.spmods.spgram.presentation.root.RootComponent
+import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -65,6 +66,21 @@ fun MobileLayout(root: RootComponent) {
     val dragProgress = if (widthPx > 0f) (dragOffsetX / widthPx).coerceIn(0f, 1f) else 0f
 
     val activeChild = stack.active.instance
+    val isDark = LocalDarkTheme.current
+
+    // Total unread count from active ChatsChild state
+    val chatsUnread by remember(activeChild) {
+        derivedStateOf {
+            val chatsChild = stack.items
+                .map { it.instance }
+                .filterIsInstance<RootComponent.Child.ChatsChild>()
+                .firstOrNull()
+            chatsChild?.component?.state?.value
+                ?.chats
+                ?.sumOf { it.unreadCount }
+                ?: 0
+        }
+    }
 
     // Determine which bottom tab is currently active
     val selectedTab by remember(activeChild) {
@@ -212,11 +228,13 @@ fun MobileLayout(root: RootComponent) {
         ) {
             MainBottomBar(
                 selectedTab = selectedTab ?: MainTab.Chats,
+                chatsUnread = chatsUnread,
+                isDark = isDark,
                 onTabSelected = { tab ->
                     when (tab) {
                         MainTab.Chats   -> root.onChatsClick()
-                        MainTab.Stories -> { /* Stories screen — wire when available */ }
-                        MainTab.Calls   -> { /* Calls screen — wire when available */ }
+                        MainTab.Stories -> { /* Stories — wire when screen available */ }
+                        MainTab.Calls   -> { /* Calls — wire when screen available */ }
                     }
                 }
             )
