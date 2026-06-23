@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.spmods.spgram.core.date.DateFormatManager
 import com.spmods.spgram.core.date.toDate
 import com.spmods.spgram.domain.models.ChatModel
 import com.spmods.spgram.presentation.core.ui.AvatarForChat
@@ -49,7 +50,7 @@ fun CallsContent(
     component: ChatListComponent,
 ) {
     val state by component.state.collectAsState()
-    val timeFormat = koinInject<DateFormatManager>().use24HourFormat
+    val timeFormat = koinInject<DateFormatManager>().getHourMinuteFormat()
 
     // Filter all loaded chats where last message was a call
     val callChats = remember(state.chatsByFolder) {
