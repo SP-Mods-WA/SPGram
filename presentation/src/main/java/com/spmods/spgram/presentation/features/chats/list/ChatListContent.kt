@@ -109,6 +109,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -707,15 +708,16 @@ fun ChatListContent(component: ChatListComponent) {
                 ) {
                     FloatingActionButton(
                         onClick = { component.onNewChatClicked() },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(22.dp),
                         containerColor = Color(0xFF25D366),
                         contentColor = Color.White,
-                        modifier = Modifier.size(60.dp)
+                        modifier = Modifier.size(64.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.Edit,
+                            painter = painterResource(id = R.drawable.ic_compose),
                             contentDescription = stringResource(R.string.new_chat_fab),
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(30.dp),
+                            tint = Color.White
                         )
                     }
                 }
