@@ -34,7 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.spmods.spgram.domain.models.StoryContentModel
 import com.spmods.spgram.domain.models.StoryModel
 
@@ -130,7 +130,7 @@ private fun StoryThumbnailItem(
                 .clickable(onClick = onClick)
         ) {
             if (thumbnailPath != null) {
-                AsyncImage(
+                SubcomposeAsyncImage(
                     model = thumbnailPath,
                     contentDescription = null,
                     modifier = Modifier
