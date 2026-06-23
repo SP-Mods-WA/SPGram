@@ -125,7 +125,7 @@ fun MainBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(62.dp),
+                .height(72.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment     = Alignment.CenterVertically,
         ) {
@@ -197,8 +197,8 @@ private fun BottomBarItem(
             if (pillWidth > 0.dp) {
                 Box(
                     modifier = Modifier
-                        .size(width = pillWidth, height = 32.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .size(width = pillWidth, height = 36.dp)
+                        .clip(RoundedCornerShape(18.dp))
                         .background(pillColor)
                 )
             }
@@ -210,14 +210,13 @@ private fun BottomBarItem(
                             containerColor = if (isDark) Color(0xFFFF453A) else Color(0xFFFF3B30),
                             contentColor   = Color.White,
                         ) {
-                            // Unlimited badge — show full number up to 9999, then "∞"
                             val label = when {
                                 item.badgeCount >= 10000 -> "∞"
                                 else                     -> item.badgeCount.toString()
                             }
                             Text(
                                 text       = label,
-                                fontSize   = 10.sp,
+                                fontSize   = 11.sp,
                                 fontWeight = FontWeight.Bold,
                             )
                         }
@@ -234,7 +233,7 @@ private fun BottomBarItem(
                         id = if (selected) item.fillRes else item.unfillRes
                     ),
                     contentDescription = item.label,
-                    modifier    = Modifier.size(26.dp),
+                    modifier    = Modifier.size(28.dp),
                     colorFilter = ColorFilter.tint(iconColor),
                 )
             }
@@ -246,8 +245,8 @@ private fun BottomBarItem(
             text  = item.label,
             color = labelColor,
             style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                fontSize   = 11.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                fontSize   = 12.sp,
             ),
         )
     }
