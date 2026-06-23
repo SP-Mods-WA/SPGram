@@ -969,14 +969,20 @@ class MessageRepositoryImpl(
     override suspend fun getCallHistory(fromMessageId: Long, limit: Int): List<MessageModel> =
         withContext(dispatcherProvider.io) {
             try {
-                val result = messageRemoteDataSource.searchCallHistory(fromMessageId, limit)
-                result?.messages?.mapNotNull { msg ->
-                    cache.putMessage(msg)
-                    if (msg.content !is TdApi.MessageCall) return@mapNotNull null
+                val callChats = chatLocalDataSource.getTopChats(500)
+                    .filter { it.lastMessageContentType == "call" && it.lastMessageId != 0L }
+                    .sortedByDescending { it.lastMessageDate }
+                    .take(limit)
+
+                callChats.mapNotNull { chatEntity ->
                     coRunCatching {
-                        messageMapper.mapMessageToModel(msg)
+                        val msg = messageRemoteDataSource.getMessage(chatEntity.id, chatEntity.lastMessageId)
+                        if (msg != null) {
+                            cache.putMessage(msg)
+                            messageMapper.mapMessageToModel(msg)
+                        } else null
                     }.getOrNull()
-                } ?: emptyList()
+                }
             } catch (e: Exception) {
                 emptyList()
             }
