@@ -42,6 +42,7 @@ import com.spmods.spgram.domain.repository.PaymentRepository
 import com.spmods.spgram.domain.repository.PremiumRepository
 import com.spmods.spgram.domain.repository.PrivacyRepository
 import com.spmods.spgram.domain.repository.ProfilePhotoRepository
+import com.spmods.spgram.domain.repository.StoryRepository
 import com.spmods.spgram.domain.repository.ProxyDiagnosticsRepository
 import com.spmods.spgram.domain.repository.ProxyRepository
 import com.spmods.spgram.domain.repository.PushDebugRepository
@@ -94,6 +95,7 @@ interface RepositoriesContainer {
     val userRepository: UserRepository
     val userProfileEditRepository: UserProfileEditRepository
     val profilePhotoRepository: ProfilePhotoRepository
+    val storyRepository: StoryRepository
     val chatInfoRepository: ChatInfoRepository
     val premiumRepository: PremiumRepository
     val botRepository: BotRepository
