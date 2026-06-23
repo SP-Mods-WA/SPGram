@@ -43,6 +43,7 @@ import com.spmods.spgram.domain.repository.PaymentRepository
 import com.spmods.spgram.domain.repository.PremiumRepository
 import com.spmods.spgram.domain.repository.PrivacyRepository
 import com.spmods.spgram.domain.repository.ProfilePhotoRepository
+import com.spmods.spgram.domain.repository.StoryRepository
 import com.spmods.spgram.domain.repository.ProxyDiagnosticsRepository
 import com.spmods.spgram.domain.repository.ProxyRepository
 import com.spmods.spgram.domain.repository.PushDebugRepository
@@ -95,6 +96,7 @@ class KoinRepositoriesContainer(private val koin: Koin) : RepositoriesContainer 
     override val userRepository: UserRepository by lazy { koin.get() }
     override val userProfileEditRepository: UserProfileEditRepository by lazy { koin.get() }
     override val profilePhotoRepository: ProfilePhotoRepository by lazy { koin.get() }
+    override val storyRepository: StoryRepository by lazy { koin.get() }
     override val chatInfoRepository: ChatInfoRepository by lazy { koin.get() }
     override val premiumRepository: PremiumRepository by lazy { koin.get() }
     override val botRepository: BotRepository by lazy { koin.get() }
