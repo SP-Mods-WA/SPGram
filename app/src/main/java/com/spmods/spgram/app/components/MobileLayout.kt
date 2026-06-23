@@ -7,11 +7,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -61,8 +65,70 @@ fun MobileLayout(root: RootComponent) {
     val dragProgress = if (widthPx > 0f) (dragOffsetX / widthPx).coerceIn(0f, 1f) else 0f
 
     val activeChild = stack.active.instance
-    val isOnChatsRoot by remember(activeChild) {
-        derivedStateOf { activeChild is RootComponent.Child.ChatsChild }
+
+    // Determine which bottom tab is currently active
+    val selectedTab by remember(activeChild) {
+        derivedStateOf {
+            when (activeChild) {
+                is RootComponent.Child.ChatsChild -> MainTab.Chats
+                is RootComponent.Child.NewChatChild -> MainTab.Contacts
+                is RootComponent.Child.SettingsChild,
+                is RootComponent.Child.EditProfileChild,
+                is RootComponent.Child.SessionsChild,
+                is RootComponent.Child.FoldersChild,
+                is RootComponent.Child.ChatSettingsChild,
+                is RootComponent.Child.DataStorageChild,
+                is RootComponent.Child.StorageUsageChild,
+                is RootComponent.Child.NetworkUsageChild,
+                is RootComponent.Child.PremiumChild,
+                is RootComponent.Child.PrivacyChild,
+                is RootComponent.Child.AdBlockChild,
+                is RootComponent.Child.PowerSavingChild,
+                is RootComponent.Child.NotificationsChild,
+                is RootComponent.Child.ProxyChild,
+                is RootComponent.Child.StickersChild,
+                is RootComponent.Child.AboutChild,
+                is RootComponent.Child.DebugChild,
+                is RootComponent.Child.PasscodeChild -> MainTab.Settings
+                is RootComponent.Child.ProfileChild -> MainTab.Profile
+                else -> null
+            }
+        }
+    }
+
+    // Show bottom bar only on primary screens (not chat detail, auth, startup, etc.)
+    val showBottomBar by remember(activeChild) {
+        derivedStateOf {
+            when (activeChild) {
+                is RootComponent.Child.ChatsChild,
+                is RootComponent.Child.NewChatChild,
+                is RootComponent.Child.SettingsChild,
+                is RootComponent.Child.EditProfileChild,
+                is RootComponent.Child.SessionsChild,
+                is RootComponent.Child.FoldersChild,
+                is RootComponent.Child.ChatSettingsChild,
+                is RootComponent.Child.DataStorageChild,
+                is RootComponent.Child.StorageUsageChild,
+                is RootComponent.Child.NetworkUsageChild,
+                is RootComponent.Child.PremiumChild,
+                is RootComponent.Child.PrivacyChild,
+                is RootComponent.Child.AdBlockChild,
+                is RootComponent.Child.PowerSavingChild,
+                is RootComponent.Child.NotificationsChild,
+                is RootComponent.Child.ProxyChild,
+                is RootComponent.Child.StickersChild,
+                is RootComponent.Child.AboutChild,
+                is RootComponent.Child.DebugChild,
+                is RootComponent.Child.PasscodeChild,
+                is RootComponent.Child.ProfileChild,
+                is RootComponent.Child.ProfileLogsChild,
+                is RootComponent.Child.AdminManageChild,
+                is RootComponent.Child.ChatEditChild,
+                is RootComponent.Child.MemberListChild,
+                is RootComponent.Child.ChatPermissionsChild -> true
+                else -> false
+            }
+        }
     }
 
     LaunchedEffect(canUseDragToBack) {
@@ -72,113 +138,134 @@ fun MobileLayout(root: RootComponent) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.fillMaxSize()) {
 
-            // ── Previous screen (swipe-back peek) ─────────────────────────
-            if (dragOffsetX > 0f && previous != null) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer {
-                                translationX = ((dragProgress - 1f) * widthPx * 0.08f)
-                            },
-                    ) { RenderChild(previous) }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.3f * (1f - dragProgress))),
-                    )
-                }
-            }
-
-            // ── Main navigation stack ──────────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onSizeChanged { widthPx = it.width.toFloat() }
-                    .then(
-                        if (canUseDragToBack) {
-                            Modifier.pointerInput(canUseDragToBack) {
-                                awaitEachGesture {
-                                    if (size.width == 0) return@awaitEachGesture
-                                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Main)
-                                    val pointerId = down.id
-                                    val touchSlop = viewConfiguration.touchSlop
-                                    val velocityTracker = VelocityTracker()
-                                    velocityTracker.addPosition(down.uptimeMillis, down.position)
-                                    var totalDx = 0f; var totalDy = 0f
-                                    var isDragging = false; var shouldAnimateBack = false
-
-                                    while (true) {
-                                        val event = awaitPointerEvent(PointerEventPass.Main)
-                                        if (event.changes.any { it.isConsumed } && !isDragging) { dragOffsetX = 0f; break }
-                                        val change = event.changes.fastFirstOrNull { it.id == pointerId } ?: break
-                                        velocityTracker.addPosition(change.uptimeMillis, change.position)
-
-                                        if (change.changedToUpIgnoreConsumed()) {
-                                            if (isDragging) {
-                                                val width = size.width.toFloat()
-                                                val progress = (dragOffsetX / width).coerceIn(0f, 1f)
-                                                val velocityX = velocityTracker.calculateVelocity().x
-                                                val shouldCommit = progress >= 0.22f || velocityX >= 1400f
-                                                if (shouldCommit) {
-                                                    coroutineScope.launch {
-                                                        isCompletingSwipeBack = true
-                                                        animate(dragOffsetX, width, animationSpec = tween(180)) { v, _ -> dragOffsetX = v }
-                                                        root.onBack(); dragOffsetX = 0f; isCompletingSwipeBack = false
-                                                    }
-                                                } else { shouldAnimateBack = true }
-                                            }
-                                            break
-                                        }
-
-                                        val delta = change.position - change.previousPosition
-                                        if (!isDragging) {
-                                            totalDx += delta.x; totalDy += delta.y
-                                            if (totalDx < -touchSlop) { dragOffsetX = 0f; break }
-                                            if (!(totalDx > touchSlop && abs(totalDx) > abs(totalDy))) continue
-                                            isDragging = true
-                                        }
-                                        if (delta != Offset.Zero) change.consume()
-                                        dragOffsetX = (dragOffsetX + delta.x).coerceIn(0f, size.width.toFloat())
-                                    }
-
-                                    if (shouldAnimateBack && dragOffsetX > 0f && !isCompletingSwipeBack) {
-                                        coroutineScope.launch {
-                                            animate(dragOffsetX, 0f, animationSpec = spring()) { v, _ -> dragOffsetX = v }
-                                        }
-                                    }
-                                }
-                            }
-                        } else Modifier
-                    )
-                    .graphicsLayer {
-                        translationX = dragOffsetX
-                        shadowElevation = if (dragOffsetX > 0f) 12f else 0f
-                    },
-            ) {
-                Children(
-                    stack = root.childStack,
-                    animation = predictiveBackAnimation(
-                        backHandler = root.backHandler,
-                        onBack = root::onBack,
-                        fallbackAnimation = if (!isCompletingSwipeBack) stackAnimation(slide() + fade()) else null,
-                    ),
-                ) { child ->
-                    key(child.key) {
-                        RenderChild(
-                            child = child.instance,
-                            isOverlay = false,
-                            onSwipeBackBlockedChanged = { blocked ->
-                                if (stack.active.instance === child.instance) isSwipeBackBlocked = blocked
-                            },
+                // ── Previous screen (swipe-back peek) ─────────────────────────
+                if (dragOffsetX > 0f && previous != null) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    translationX = ((dragProgress - 1f) * widthPx * 0.08f)
+                                },
+                        ) { RenderChild(previous) }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.3f * (1f - dragProgress))),
                         )
                     }
                 }
-            }
 
+                // ── Main navigation stack ──────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .onSizeChanged { widthPx = it.width.toFloat() }
+                        .then(
+                            if (canUseDragToBack) {
+                                Modifier.pointerInput(canUseDragToBack) {
+                                    awaitEachGesture {
+                                        if (size.width == 0) return@awaitEachGesture
+                                        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Main)
+                                        val pointerId = down.id
+                                        val touchSlop = viewConfiguration.touchSlop
+                                        val velocityTracker = VelocityTracker()
+                                        velocityTracker.addPosition(down.uptimeMillis, down.position)
+                                        var totalDx = 0f; var totalDy = 0f
+                                        var isDragging = false; var shouldAnimateBack = false
+
+                                        while (true) {
+                                            val event = awaitPointerEvent(PointerEventPass.Main)
+                                            if (event.changes.any { it.isConsumed } && !isDragging) { dragOffsetX = 0f; break }
+                                            val change = event.changes.fastFirstOrNull { it.id == pointerId } ?: break
+                                            velocityTracker.addPosition(change.uptimeMillis, change.position)
+
+                                            if (change.changedToUpIgnoreConsumed()) {
+                                                if (isDragging) {
+                                                    val width = size.width.toFloat()
+                                                    val progress = (dragOffsetX / width).coerceIn(0f, 1f)
+                                                    val velocityX = velocityTracker.calculateVelocity().x
+                                                    val shouldCommit = progress >= 0.22f || velocityX >= 1400f
+                                                    if (shouldCommit) {
+                                                        coroutineScope.launch {
+                                                            isCompletingSwipeBack = true
+                                                            animate(dragOffsetX, width, animationSpec = tween(180)) { v, _ -> dragOffsetX = v }
+                                                            root.onBack(); dragOffsetX = 0f; isCompletingSwipeBack = false
+                                                        }
+                                                    } else { shouldAnimateBack = true }
+                                                }
+                                                break
+                                            }
+
+                                            val delta = change.position - change.previousPosition
+                                            if (!isDragging) {
+                                                totalDx += delta.x; totalDy += delta.y
+                                                if (totalDx < -touchSlop) { dragOffsetX = 0f; break }
+                                                if (!(totalDx > touchSlop && abs(totalDx) > abs(totalDy))) continue
+                                                isDragging = true
+                                            }
+                                            if (delta != Offset.Zero) change.consume()
+                                            dragOffsetX = (dragOffsetX + delta.x).coerceIn(0f, size.width.toFloat())
+                                        }
+
+                                        if (shouldAnimateBack && dragOffsetX > 0f && !isCompletingSwipeBack) {
+                                            coroutineScope.launch {
+                                                animate(dragOffsetX, 0f, animationSpec = spring()) { v, _ -> dragOffsetX = v }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else Modifier
+                        )
+                        .graphicsLayer {
+                            translationX = dragOffsetX
+                            shadowElevation = if (dragOffsetX > 0f) 12f else 0f
+                        },
+                ) {
+                    Children(
+                        stack = root.childStack,
+                        animation = predictiveBackAnimation(
+                            backHandler = root.backHandler,
+                            onBack = root::onBack,
+                            fallbackAnimation = if (!isCompletingSwipeBack) stackAnimation(slide() + fade()) else null,
+                        ),
+                    ) { child ->
+                        key(child.key) {
+                            RenderChild(
+                                child = child.instance,
+                                isOverlay = false,
+                                onSwipeBackBlockedChanged = { blocked ->
+                                    if (stack.active.instance === child.instance) isSwipeBackBlocked = blocked
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Bottom Navigation Bar ──────────────────────────────────────────
+        AnimatedVisibility(
+            visible = showBottomBar,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(200)),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(150)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            MainBottomBar(
+                selectedTab = selectedTab ?: MainTab.Chats,
+                onTabSelected = { tab ->
+                    when (tab) {
+                        MainTab.Chats -> root.onChatsClick()
+                        MainTab.Contacts -> root.onContactsClick()
+                        MainTab.Settings -> root.onSettingsClick()
+                        MainTab.Profile -> root.onProfileClick()
+                    }
+                }
+            )
         }
     }
 }
