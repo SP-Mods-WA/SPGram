@@ -38,7 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.spmods.spgram.domain.models.StoryContentModel
 import com.spmods.spgram.domain.models.StoryModel
 import kotlinx.coroutines.delay
@@ -82,7 +82,7 @@ fun StoryViewerScreen(
         // Story content
         when (val content = story.content) {
             is StoryContentModel.Photo -> {
-                AsyncImage(
+                SubcomposeAsyncImage(
                     model = content.filePath,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
@@ -91,7 +91,7 @@ fun StoryViewerScreen(
             }
             is StoryContentModel.Video -> {
                 // Thumbnail as placeholder while video support is added
-                AsyncImage(
+                SubcomposeAsyncImage(
                     model = content.thumbnailPath.ifEmpty { content.filePath },
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
