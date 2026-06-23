@@ -124,7 +124,7 @@ fun CallsContent(
 @Composable
 private fun CallItem(
     chat: ChatModel,
-    timeFormat: Boolean,
+    timeFormat: String,
 ) {
     // Determine call direction from last message text
     // lastMessageText contains formatted call info from ServiceMessageFormatter
