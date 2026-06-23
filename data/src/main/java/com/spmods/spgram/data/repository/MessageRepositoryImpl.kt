@@ -966,6 +966,21 @@ class MessageRepositoryImpl(
         messageRemoteDataSource.sendWebAppResult(launchId, queryId)
     }
 
+    override suspend fun getCallHistory(fromMessageId: Long, limit: Int): List<MessageModel> =
+        withContext(dispatcherProvider.io) {
+            try {
+                val result = messageRemoteDataSource.searchCallHistory(fromMessageId, limit)
+                result?.messages?.mapNotNull { msg ->
+                    cache.putMessage(msg)
+                    coRunCatching {
+                        messageMapper.mapMessageToModel(msg)
+                    }.getOrNull()
+                } ?: emptyList()
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+
     override suspend fun getProfileMedia(
         chatId: Long,
         filter: ProfileMediaFilter,
