@@ -102,6 +102,7 @@ import com.spmods.spgram.data.repository.PollRepositoryImpl
 import com.spmods.spgram.data.repository.PremiumRepositoryImpl
 import com.spmods.spgram.data.repository.PrivacyRepositoryImpl
 import com.spmods.spgram.data.repository.ProfilePhotoRepositoryImpl
+import com.spmods.spgram.data.repository.StoryRepositoryImpl
 import com.spmods.spgram.data.repository.ProxyDiagnosticsRepositoryImpl
 import com.spmods.spgram.data.repository.ProxyRepositoryImpl
 import com.spmods.spgram.data.repository.PushDebugRepositoryImpl
@@ -144,6 +145,7 @@ import com.spmods.spgram.domain.repository.PollRepository
 import com.spmods.spgram.domain.repository.PremiumRepository
 import com.spmods.spgram.domain.repository.PrivacyRepository
 import com.spmods.spgram.domain.repository.ProfilePhotoRepository
+import com.spmods.spgram.domain.repository.StoryRepository
 import com.spmods.spgram.domain.repository.ProxyDiagnosticsRepository
 import com.spmods.spgram.domain.repository.ProxyRepository
 import com.spmods.spgram.domain.repository.PushDebugRepository
@@ -332,6 +334,14 @@ val dataModule = module {
         ProfilePhotoRepositoryImpl(
             remote = get(),
             chatLocal = get(),
+            gateway = get(),
+            fileQueue = get(),
+            fileObserverHub = get()
+        )
+    }
+
+    single<StoryRepository> {
+        StoryRepositoryImpl(
             gateway = get(),
             fileQueue = get(),
             fileObserverHub = get()
