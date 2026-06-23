@@ -71,61 +71,16 @@ fun MobileLayout(root: RootComponent) {
         derivedStateOf {
             when (activeChild) {
                 is RootComponent.Child.ChatsChild -> MainTab.Chats
-                is RootComponent.Child.NewChatChild -> MainTab.Contacts
-                is RootComponent.Child.SettingsChild,
-                is RootComponent.Child.EditProfileChild,
-                is RootComponent.Child.SessionsChild,
-                is RootComponent.Child.FoldersChild,
-                is RootComponent.Child.ChatSettingsChild,
-                is RootComponent.Child.DataStorageChild,
-                is RootComponent.Child.StorageUsageChild,
-                is RootComponent.Child.NetworkUsageChild,
-                is RootComponent.Child.PremiumChild,
-                is RootComponent.Child.PrivacyChild,
-                is RootComponent.Child.AdBlockChild,
-                is RootComponent.Child.PowerSavingChild,
-                is RootComponent.Child.NotificationsChild,
-                is RootComponent.Child.ProxyChild,
-                is RootComponent.Child.StickersChild,
-                is RootComponent.Child.AboutChild,
-                is RootComponent.Child.DebugChild,
-                is RootComponent.Child.PasscodeChild -> MainTab.Settings
-                is RootComponent.Child.ProfileChild -> MainTab.Profile
                 else -> null
             }
         }
     }
 
-    // Show bottom bar only on primary screens (not chat detail, auth, startup, etc.)
+    // Show bottom bar only on Chats root screen
     val showBottomBar by remember(activeChild) {
         derivedStateOf {
             when (activeChild) {
-                is RootComponent.Child.ChatsChild,
-                is RootComponent.Child.NewChatChild,
-                is RootComponent.Child.SettingsChild,
-                is RootComponent.Child.EditProfileChild,
-                is RootComponent.Child.SessionsChild,
-                is RootComponent.Child.FoldersChild,
-                is RootComponent.Child.ChatSettingsChild,
-                is RootComponent.Child.DataStorageChild,
-                is RootComponent.Child.StorageUsageChild,
-                is RootComponent.Child.NetworkUsageChild,
-                is RootComponent.Child.PremiumChild,
-                is RootComponent.Child.PrivacyChild,
-                is RootComponent.Child.AdBlockChild,
-                is RootComponent.Child.PowerSavingChild,
-                is RootComponent.Child.NotificationsChild,
-                is RootComponent.Child.ProxyChild,
-                is RootComponent.Child.StickersChild,
-                is RootComponent.Child.AboutChild,
-                is RootComponent.Child.DebugChild,
-                is RootComponent.Child.PasscodeChild,
-                is RootComponent.Child.ProfileChild,
-                is RootComponent.Child.ProfileLogsChild,
-                is RootComponent.Child.AdminManageChild,
-                is RootComponent.Child.ChatEditChild,
-                is RootComponent.Child.MemberListChild,
-                is RootComponent.Child.ChatPermissionsChild -> true
+                is RootComponent.Child.ChatsChild -> true
                 else -> false
             }
         }
@@ -259,10 +214,9 @@ fun MobileLayout(root: RootComponent) {
                 selectedTab = selectedTab ?: MainTab.Chats,
                 onTabSelected = { tab ->
                     when (tab) {
-                        MainTab.Chats -> root.onChatsClick()
-                        MainTab.Contacts -> root.onContactsClick()
-                        MainTab.Settings -> root.onSettingsClick()
-                        MainTab.Profile -> root.onProfileClick()
+                        MainTab.Chats   -> root.onChatsClick()
+                        MainTab.Stories -> { /* Stories screen — wire when available */ }
+                        MainTab.Calls   -> { /* Calls screen — wire when available */ }
                     }
                 }
             )
