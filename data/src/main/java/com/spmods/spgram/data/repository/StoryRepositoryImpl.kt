@@ -54,17 +54,12 @@ class StoryRepositoryImpl(
         caption: String,
         activePeriodSeconds: Int
     ): StoryModel? {
-        val thumbnail = if (thumbnailPath.isNotEmpty()) {
-            TdApi.InputThumbnail(TdApi.InputFileLocal(thumbnailPath), 720, 1280)
-        } else null
-
         val content = TdApi.InputStoryContentVideo(
             TdApi.InputFileLocal(videoPath),
             intArrayOf(),
             0.0,
             0.0,
-            false,
-            thumbnail
+            false
         )
         return postStory(chatId, content, caption, activePeriodSeconds)
     }
