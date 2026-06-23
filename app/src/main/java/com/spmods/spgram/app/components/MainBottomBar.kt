@@ -104,7 +104,7 @@ fun MainBottomBar(
 
     // Dark theme  → near-black surface with subtle top border
     // Light theme → white surface with subtle shadow line
-    val barBg   = if (isDark) Color(0xFF1A1A1A) else Color(0xFFFFFFFF)
+    val barBg   = MaterialTheme.colorScheme.surface
     val divider = if (isDark) Color(0xFF2C2C2C) else Color(0xFFE0E0E0)
 
     Column(
