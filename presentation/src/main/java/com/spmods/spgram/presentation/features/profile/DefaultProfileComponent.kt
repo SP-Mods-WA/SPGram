@@ -92,7 +92,6 @@ class DefaultProfileComponent(
     init {
         loadData()
         loadMediaNextPage(isFirstLoad = true)
-        loadStories()
         observeProfilePhotos()
         observeUserUpdates()
         observeCurrentUser()
@@ -158,6 +157,22 @@ class DefaultProfileComponent(
                     resolvedUserId = user?.id?.takeIf { it > 0 },
                     isGroupOrChannel = chat?.let { it.isGroup || it.isChannel } ?: (chatId < 0)
                 )
+
+                // Load stories with the resolved chat id (correct for both own + other profiles)
+                val resolvedId = chat?.id ?: chatId
+                scope.launch {
+                    _state.update { it.copy(isLoadingStories = true) }
+                    try {
+                        val stories = storyRepository.getChatPageStories(resolvedId)
+                        _state.update { it.copy(stories = stories) }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    } finally {
+                        _state.update { it.copy(isLoadingStories = false) }
+                    }
+                }
             } finally {
                 _state.update { it.copy(isLoading = false) }
             }
@@ -278,22 +293,6 @@ class DefaultProfileComponent(
 
     private fun MessageContent.Photo.displayPath(): String? = path ?: thumbnailPath
 
-    private fun loadStories() {
-        scope.launch {
-            _state.update { it.copy(isLoadingStories = true) }
-            try {
-                val stories = storyRepository.getChatPageStories(chatId)
-                _state.update { it.copy(stories = stories) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                _state.update { it.copy(isLoadingStories = false) }
-            }
-        }
-    }
-
     override fun onViewStory(index: Int) {
         _state.update { it.copy(viewingStoryIndex = index) }
     }
@@ -312,7 +311,8 @@ class DefaultProfileComponent(
 
     override fun onDeleteStory(storyId: Int) {
         scope.launch {
-            storyRepository.deleteStory(chatId, storyId)
+            val resolvedId = _state.value.chat?.id ?: chatId
+            storyRepository.deleteStory(resolvedId, storyId)
             _state.update { it.copy(stories = it.stories.filter { s -> s.id != storyId }) }
         }
     }
