@@ -19,9 +19,13 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.Contacts
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,34 +33,37 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.Image
 
 // ---------------------------------------------------------------------------
 // Tab enum
 // ---------------------------------------------------------------------------
 
-enum class MainTab { Chats, Stories, Calls }
+enum class MainTab { Chats, Contacts, Settings, Profile }
 
 // ---------------------------------------------------------------------------
 // Data
 // ---------------------------------------------------------------------------
 
+private sealed class TabIcon {
+    data class DrawableRes(val fillRes: Int, val unfillRes: Int) : TabIcon()
+    data class VectorIcon(val icon: ImageVector) : TabIcon()
+}
+
 private data class TabItem(
     val tab: MainTab,
     val label: String,
-    val fillIcon: Int,
-    val unfillIcon: Int,
+    val icon: TabIcon,
     val badgeCount: Int = 0,
     val hasDot: Boolean = false,
 )
@@ -69,15 +76,31 @@ private data class TabItem(
 fun MainBottomBar(
     selectedTab: MainTab,
     chatsUnread: Int = 0,
-    hasStories: Boolean = false,
-    hasMissedCalls: Boolean = false,
     onTabSelected: (MainTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val tabs = listOf(
-        TabItem(MainTab.Chats,   "Chats",   R.drawable.sp_chat_fill,   R.drawable.sp_chat_unfill,   badgeCount = chatsUnread),
-        TabItem(MainTab.Stories, "Stories", R.drawable.sp_story_fill,  R.drawable.sp_story_unfill,  hasDot = hasStories),
-        TabItem(MainTab.Calls,   "Calls",   R.drawable.sp_call_fill,   R.drawable.sp_call_unfill,   hasDot = hasMissedCalls),
+        TabItem(
+            MainTab.Chats,
+            "Chats",
+            TabIcon.DrawableRes(R.drawable.sp_chat_fill, R.drawable.sp_chat_unfill),
+            badgeCount = chatsUnread
+        ),
+        TabItem(
+            MainTab.Contacts,
+            "Contacts",
+            TabIcon.VectorIcon(Icons.Rounded.Contacts)
+        ),
+        TabItem(
+            MainTab.Settings,
+            "Settings",
+            TabIcon.VectorIcon(Icons.Rounded.Settings)
+        ),
+        TabItem(
+            MainTab.Profile,
+            "Profile",
+            TabIcon.VectorIcon(Icons.Rounded.AccountCircle)
+        ),
     )
 
     val surfaceColor = MaterialTheme.colorScheme.surface
@@ -177,14 +200,26 @@ private fun BottomBarItem(
                 }
             },
         ) {
-            Image(
-                painter = painterResource(
-                    id = if (selected) item.fillIcon else item.unfillIcon
-                ),
-                contentDescription = item.label,
-                modifier = Modifier.size(26.dp),
-                colorFilter = ColorFilter.tint(iconColor),
-            )
+            when (val icon = item.icon) {
+                is TabIcon.DrawableRes -> {
+                    Image(
+                        painter = painterResource(
+                            id = if (selected) icon.fillRes else icon.unfillRes
+                        ),
+                        contentDescription = item.label,
+                        modifier = Modifier.size(26.dp),
+                        colorFilter = ColorFilter.tint(iconColor),
+                    )
+                }
+                is TabIcon.VectorIcon -> {
+                    Icon(
+                        imageVector = icon.icon,
+                        contentDescription = item.label,
+                        modifier = Modifier.size(26.dp),
+                        tint = iconColor,
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(3.dp))
