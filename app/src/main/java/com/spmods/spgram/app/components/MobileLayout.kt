@@ -78,13 +78,9 @@ fun MobileLayout(root: RootComponent) {
     }
     val chatsComponentState by chatsChild?.component?.state?.collectAsState()
         ?: remember { androidx.compose.runtime.mutableStateOf(ChatListComponent.State()) }
-    // Use FolderModel unreadCount (TDLib provided) — accurate even before scroll
-    val chatsUnread = chatsComponentState.folders
-        .firstOrNull { it.id == -1 }
-        ?.unreadCount
-        ?: chatsComponentState.chatsByFolder
-            .values.flatten().distinctBy { it.id }
-            .count { it.unreadCount > 0 }
+    val chatsUnread = chatsComponentState.chatsByFolder[-1]
+        ?.count { it.unreadCount > 0 }
+        ?: 0
 
     // Determine which bottom tab is currently active
     val selectedTab by remember(activeChild) {
