@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CallMade
 import androidx.compose.material.icons.rounded.CallMissed
 import androidx.compose.material.icons.rounded.CallReceived
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,40 +26,38 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.spmods.spgram.core.date.toDate
-import com.spmods.spgram.domain.models.ChatModel
+import com.spmods.spgram.domain.models.MessageContent
+import com.spmods.spgram.domain.models.MessageModel
+import com.spmods.spgram.domain.repository.MessageRepository
 import com.spmods.spgram.presentation.core.ui.AvatarForChat
 import com.spmods.spgram.presentation.core.util.DateFormatManager
 import com.spmods.spgram.presentation.core.util.toShortRelativeDate
-import com.spmods.spgram.presentation.features.chats.list.ChatListComponent
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CallsContent(
-    component: ChatListComponent,
-) {
-    val state by component.state.collectAsState()
+fun CallsContent() {
+    val messageRepository: MessageRepository = koinInject()
     val timeFormat = koinInject<DateFormatManager>().getHourMinuteFormat()
 
-    // Filter all loaded chats where last message was a call
-    val callChats = remember(state.chatsByFolder) {
-        state.chatsByFolder
-            .values
-            .flatten()
-            .distinctBy { it.id }
-            .filter { it.lastMessageContentType == "call" }
-            .sortedByDescending { it.lastMessageDate }
+    var calls by remember { mutableStateOf<List<MessageModel>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        calls = messageRepository.getCallHistory(limit = 100)
+        isLoading = false
     }
 
     Scaffold(
@@ -80,41 +79,45 @@ fun CallsContent(
         },
         containerColor = MaterialTheme.colorScheme.surface,
     ) { padding ->
-        if (callChats.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CallReceived,
-                        contentDescription = null,
-                        modifier = Modifier.size(56.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                    )
-                    Text(
-                        text = "No recent calls",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
+                    CircularProgressIndicator()
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                items(callChats, key = { it.id }) { chat ->
-                    CallItem(
-                        chat = chat,
-                        timeFormat = timeFormat,
-                    )
+            calls.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.CallReceived,
+                            contentDescription = null,
+                            modifier = Modifier.size(56.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        )
+                        Text(
+                            text = "No recent calls",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(padding)
+                ) {
+                    items(calls, key = { it.id }) { message ->
+                        CallItem(message = message, timeFormat = timeFormat)
+                    }
                 }
             }
         }
@@ -123,14 +126,13 @@ fun CallsContent(
 
 @Composable
 private fun CallItem(
-    chat: ChatModel,
+    message: MessageModel,
     timeFormat: String,
 ) {
-    // Determine call direction from last message text
-    // lastMessageText contains formatted call info from ServiceMessageFormatter
-    val isMissed = chat.lastMessageText.contains("missed", ignoreCase = true) ||
-                   chat.lastMessageText.contains("declined", ignoreCase = true)
-    val isOutgoing = chat.isLastMessageOutgoing
+    val serviceText = (message.content as? MessageContent.Service)?.text ?: ""
+    val isMissed = serviceText.contains("missed", ignoreCase = true) ||
+                   serviceText.contains("declined", ignoreCase = true)
+    val isOutgoing = message.isOutgoing
 
     val callIcon = when {
         isMissed   -> Icons.Rounded.CallMissed
@@ -142,8 +144,8 @@ private fun CallItem(
         else     -> MaterialTheme.colorScheme.primary
     }
 
-    val timeStr = remember(chat.lastMessageDate) {
-        chat.lastMessageDate.toDate().toShortRelativeDate(timeFormat)
+    val timeStr = remember(message.date) {
+        message.date.toDate().toShortRelativeDate(timeFormat)
     }
 
     Row(
@@ -152,21 +154,18 @@ private fun CallItem(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Avatar
         AvatarForChat(
-            path          = chat.avatarPath,
-            fallbackPath  = chat.personalAvatarPath,
-            name          = chat.title,
-            size          = 52.dp,
-            isOnline      = chat.isOnline,
+            path         = message.senderAvatar,
+            fallbackPath = message.senderPersonalAvatar,
+            name         = message.senderName,
+            size         = 52.dp,
         )
 
         Spacer(Modifier.width(14.dp))
 
-        // Name + call info
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text     = chat.title,
+                text     = message.senderName,
                 style    = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -184,9 +183,9 @@ private fun CallItem(
                     tint = callIconTint,
                 )
                 Text(
-                    text  = chat.lastMessageText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text     = serviceText,
+                    style    = MaterialTheme.typography.bodySmall,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -195,7 +194,6 @@ private fun CallItem(
 
         Spacer(Modifier.width(8.dp))
 
-        // Time
         Text(
             text  = timeStr,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
