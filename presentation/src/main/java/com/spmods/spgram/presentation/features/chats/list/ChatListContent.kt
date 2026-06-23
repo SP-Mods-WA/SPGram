@@ -66,7 +66,6 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -685,54 +684,39 @@ fun ChatListContent(component: ChatListComponent) {
         },
         floatingActionButton = {
             if (!isTablet) {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                // Forward FAB
+                AnimatedVisibility(
+                    visible = uiState.isForwarding && selectionState.selectedChatIds.isNotEmpty(),
+                    enter = scaleIn() + fadeIn(),
+                    exit = scaleOut() + fadeOut()
                 ) {
-                    // Camera FAB (secondary — smaller)
-                    AnimatedVisibility(
-                        visible = !searchState.isSearchActive && foldersState.selectedFolderId != -2 && !uiState.isForwarding,
-                        enter = scaleIn() + fadeIn(),
-                        exit = scaleOut() + fadeOut()
+                    FloatingActionButton(
+                        onClick = { component.onConfirmForwarding() },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ) {
-                        FloatingActionButton(
-                            onClick = { /* camera action */ },
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ) {
-                            Icon(Icons.Rounded.CameraAlt, contentDescription = "Camera")
-                        }
+                        Icon(Icons.AutoMirrored.Rounded.Send, stringResource(R.string.action_send))
                     }
+                }
 
-                    // New Chat FAB (primary)
-                    AnimatedVisibility(
-                        visible = !searchState.isSearchActive && foldersState.selectedFolderId != -2 && !uiState.isForwarding,
-                        enter = scaleIn() + fadeIn(),
-                        exit = scaleOut() + fadeOut()
+                // WhatsApp-style New Chat FAB
+                AnimatedVisibility(
+                    visible = !searchState.isSearchActive && foldersState.selectedFolderId != -2 && !uiState.isForwarding,
+                    enter = scaleIn() + fadeIn(),
+                    exit = scaleOut() + fadeOut()
+                ) {
+                    FloatingActionButton(
+                        onClick = { component.onNewChatClicked() },
+                        shape = RoundedCornerShape(16.dp),
+                        containerColor = Color(0xFF25D366),
+                        contentColor = Color.White,
+                        modifier = Modifier.size(60.dp)
                     ) {
-                        ExtendedFloatingActionButton(
-                            onClick = { component.onNewChatClicked() },
-                            icon = { Icon(Icons.Rounded.Edit, null) },
-                            text = { Text(stringResource(R.string.new_chat_fab)) },
-                            expanded = isFabExpanded,
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        Icon(
+                            imageVector = Icons.Rounded.Edit,
+                            contentDescription = stringResource(R.string.new_chat_fab),
+                            modifier = Modifier.size(26.dp)
                         )
-                    }
-
-                    // Forward FAB
-                    AnimatedVisibility(
-                        visible = uiState.isForwarding && selectionState.selectedChatIds.isNotEmpty(),
-                        enter = scaleIn() + fadeIn(),
-                        exit = scaleOut() + fadeOut()
-                    ) {
-                        FloatingActionButton(
-                            onClick = { component.onConfirmForwarding() },
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        ) {
-                            Icon(Icons.AutoMirrored.Rounded.Send, stringResource(R.string.action_send))
-                        }
                     }
                 }
             }
