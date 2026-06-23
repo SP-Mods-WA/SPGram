@@ -68,7 +68,7 @@ fun MobileLayout(root: RootComponent) {
     val activeChild = stack.active.instance
     val isDark = LocalDarkTheme.current
 
-    // Total unread count from active ChatsChild state
+    // Count of chats that HAVE unread messages (not sum of message counts)
     val chatsUnread by remember(activeChild) {
         derivedStateOf {
             val chatsChild = stack.items
@@ -77,7 +77,7 @@ fun MobileLayout(root: RootComponent) {
                 .firstOrNull()
             chatsChild?.component?.state?.value
                 ?.chats
-                ?.sumOf { it.unreadCount }
+                ?.count { it.unreadCount > 0 }
                 ?: 0
         }
     }
