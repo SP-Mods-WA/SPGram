@@ -394,6 +394,16 @@ class TdMessageRemoteDataSource(
         return safeExecute(request)
     }
 
+    override suspend fun searchCallHistory(fromMessageId: Long, limit: Int): TdApi.FoundMessages? {
+        val request = TdApi.SearchMessages().apply {
+            this.query = ""
+            this.offset = ""
+            this.limit = limit
+            this.filter = TdApi.SearchMessagesFilterCall()
+        }
+        return safeExecute(request)
+    }
+
     override suspend fun searchMessages(
         chatId: Long,
         query: String,
