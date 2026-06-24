@@ -34,8 +34,13 @@ import com.spmods.spgram.domain.models.ChatEventActionModel
 import com.spmods.spgram.domain.models.ChatEventLogFiltersModel
 import com.spmods.spgram.domain.models.ChatEventModel
 import com.spmods.spgram.domain.models.ChatPermissionsModel
+import com.spmods.spgram.domain.models.DownloadedFileCountsModel
+import com.spmods.spgram.domain.models.DownloadedFileModel
+import com.spmods.spgram.domain.models.DownloadsFilter
 import com.spmods.spgram.domain.models.FileModel
+import com.spmods.spgram.domain.models.FoundDownloadsModel
 import com.spmods.spgram.domain.models.InlineQueryResultModel
+import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageDownloadEvent
 import com.spmods.spgram.domain.models.MessageEntity
 import com.spmods.spgram.domain.models.MessageEntityType
@@ -1497,6 +1502,70 @@ class MessageRepositoryImpl(
         } else {
             return null
         }
+    }
+
+    override suspend fun searchFileDownloads(
+        filter: DownloadsFilter,
+        onlyActive: Boolean,
+        onlyCompleted: Boolean,
+        offset: String,
+        limit: Int
+    ): FoundDownloadsModel = withContext(dispatcherProvider.io) {
+        // TdApi.SearchFileDownloads only supports text search via `query`; it has
+        // no concept of a media-type filter, so we fetch broadly and narrow the
+        // results to the requested type ourselves via matchesFilter().
+        val request = TdApi.SearchFileDownloads("", onlyActive, onlyCompleted, offset, limit)
+
+        try {
+            val result = gateway.execute(request)
+            if (result is TdApi.FoundFileDownloads) {
+                val mapped = result.files.mapNotNull { fd ->
+                    coRunCatching {
+                        cache.putMessage(fd.message)
+                        val model = messageMapper.mapMessageToModel(fd.message)
+                        DownloadedFileModel(
+                            fileId = fd.fileId,
+                            message = model,
+                            addDate = fd.addDate,
+                            completeDate = fd.completeDate,
+                            isPaused = fd.isPaused
+                        )
+                    }.getOrNull()
+                }.filter { matchesFilter(it.message.content, filter) }
+
+                FoundDownloadsModel(
+                    counts = DownloadedFileCountsModel(
+                        activeCount = result.totalCounts.activeCount,
+                        pausedCount = result.totalCounts.pausedCount,
+                        completedCount = result.totalCounts.completedCount
+                    ),
+                    files = mapped,
+                    nextOffset = result.nextOffset
+                )
+            } else {
+                FoundDownloadsModel(DownloadedFileCountsModel(0, 0, 0), emptyList(), "")
+            }
+        } catch (e: Exception) {
+            FoundDownloadsModel(DownloadedFileCountsModel(0, 0, 0), emptyList(), "")
+        }
+    }
+
+    private fun matchesFilter(content: MessageContent, filter: DownloadsFilter): Boolean =
+        when (filter) {
+            DownloadsFilter.ALL -> true
+            DownloadsFilter.PHOTOS -> content is MessageContent.Photo
+            DownloadsFilter.VIDEOS -> content is MessageContent.Video || content is MessageContent.VideoNote || content is MessageContent.Gif
+            DownloadsFilter.FILES -> content is MessageContent.Document
+            DownloadsFilter.MUSIC -> content is MessageContent.Audio
+            DownloadsFilter.VOICE -> content is MessageContent.Voice
+        }
+
+    override suspend fun removeFileFromDownloads(fileId: Int, deleteFromCache: Boolean) {
+        coRunCatching { gateway.execute(TdApi.RemoveFileFromDownloads(fileId, deleteFromCache)) }
+    }
+
+    override suspend fun toggleDownloadIsPaused(fileId: Int, isPaused: Boolean) {
+        coRunCatching { gateway.execute(TdApi.ToggleDownloadIsPaused(fileId, isPaused)) }
     }
 
     override fun registerFileForMessage(fileId: Int, chatId: Long, messageId: Long) {
