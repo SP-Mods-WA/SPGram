@@ -11,6 +11,11 @@ interface StoryRepository {
         limit: Int = 20
     ): List<StoryModel>
 
+    /** Get active stories for another user's chat (use for non-own profiles) */
+    suspend fun getActiveStories(
+        chatId: Long
+    ): List<StoryModel>
+
     /** Post a photo story */
     suspend fun postPhotoStory(
         chatId: Long,
