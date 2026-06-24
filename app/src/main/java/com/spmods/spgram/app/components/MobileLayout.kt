@@ -23,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import com.spmods.spgram.presentation.features.calls.CallsContent
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -48,10 +47,15 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.spmods.spgram.presentation.root.RootComponent
 import com.spmods.spgram.presentation.features.calls.CallsContent
+import com.spmods.spgram.presentation.features.download.DownloadContent
 import com.spmods.spgram.presentation.features.chats.list.ChatListComponent
 import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import org.koin.compose.koinInject
+import com.spmods.spgram.domain.models.DownloadsFilter
+import com.spmods.spgram.domain.models.FileDownloadEvent
+import com.spmods.spgram.domain.repository.FileRepository
 
 @OptIn(ExperimentalDecomposeApi::class)
 @Composable
@@ -84,6 +88,28 @@ fun MobileLayout(root: RootComponent) {
     val chatsUnread = chatsComponentState.chatsByFolder[-1]
         ?.count { it.unreadCount > 0 }
         ?: 0
+
+    // Show a dot on the Download tab while a file is actively downloading
+    val fileRepository: FileRepository = koinInject()
+    var hasActiveDownload by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        suspend fun refresh() {
+            val result = fileRepository.searchFileDownloads(
+                filter = DownloadsFilter.ALL,
+                onlyActive = true,
+                limit = 1
+            )
+            hasActiveDownload = result.counts.activeCount > 0
+        }
+        refresh()
+        fileRepository.fileDownloadFlow.collect { event ->
+            when (event) {
+                is FileDownloadEvent.Progress -> hasActiveDownload = true
+                is FileDownloadEvent.Completed -> refresh()
+            }
+        }
+    }
 
     // Determine which bottom tab is currently active
     val selectedTab by remember(activeChild) {
@@ -225,6 +251,11 @@ fun MobileLayout(root: RootComponent) {
             if (selectedBottomTab == MainTab.Calls) {
                 CallsContent()
             }
+
+            // ── Download tab overlay ──────────────────────────────────────
+            if (selectedBottomTab == MainTab.Download) {
+                DownloadContent()
+            }
         }
 
         // ── Bottom Navigation Bar ──────────────────────────────────────────
@@ -237,12 +268,14 @@ fun MobileLayout(root: RootComponent) {
             MainBottomBar(
                 selectedTab = selectedBottomTab,
                 chatsUnread = chatsUnread,
+                hasActiveDownload = hasActiveDownload,
                 isDark = isDark,
                 onTabSelected = { tab ->
                     when (tab) {
-                        MainTab.Chats   -> { selectedBottomTab = MainTab.Chats; root.onChatsClick() }
-                        MainTab.Stories -> { selectedBottomTab = MainTab.Stories }
-                        MainTab.Calls   -> { selectedBottomTab = MainTab.Calls }
+                        MainTab.Chats    -> { selectedBottomTab = MainTab.Chats; root.onChatsClick() }
+                        MainTab.Stories  -> { selectedBottomTab = MainTab.Stories }
+                        MainTab.Calls    -> { selectedBottomTab = MainTab.Calls }
+                        MainTab.Download -> { selectedBottomTab = MainTab.Download }
                     }
                 }
             )
