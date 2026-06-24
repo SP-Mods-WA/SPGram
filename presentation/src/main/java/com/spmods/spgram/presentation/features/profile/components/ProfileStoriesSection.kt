@@ -42,11 +42,14 @@ import com.spmods.spgram.domain.models.StoryModel
 fun ProfileStoriesSection(
     stories: List<StoryModel>,
     isOwnProfile: Boolean,
+    isLoadingStories: Boolean = false,
     onStoryClick: (Int) -> Unit,
     onAddStory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if (stories.isEmpty() && !isOwnProfile) return
+    // For other users: hide only when loading is done AND stories are empty
+    // Don't hide while still loading (stories may arrive after render)
+    if (stories.isEmpty() && !isOwnProfile && !isLoadingStories) return
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
