@@ -158,14 +158,16 @@ class DefaultProfileComponent(
                     isGroupOrChannel = chat?.let { it.isGroup || it.isChannel } ?: (chatId < 0)
                 )
 
-                // Official Telegram behavior: use GetChatPostedToChatPageStories for ALL profiles.
-                // This returns publicly posted profile stories for any user, not just own profile.
+                // Observe active stories: triggers GetChatActiveStories (populates TDLib cache)
+                // then listens for updateChatActiveStories so async-arriving stories show up.
                 val resolvedId = chat?.id ?: chatId
                 scope.launch {
                     _state.update { it.copy(isLoadingStories = true) }
                     try {
-                        val stories = storyRepository.getChatPageStories(resolvedId)
-                        _state.update { it.copy(stories = stories) }
+                        storyRepository.observeActiveStories(resolvedId)
+                            .collect { stories ->
+                                _state.update { it.copy(stories = stories, isLoadingStories = false) }
+                            }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
