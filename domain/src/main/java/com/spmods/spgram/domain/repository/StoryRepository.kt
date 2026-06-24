@@ -1,6 +1,7 @@
 package com.spmods.spgram.domain.repository
 
 import com.spmods.spgram.domain.models.StoryModel
+import kotlinx.coroutines.flow.Flow
 
 interface StoryRepository {
 
@@ -15,6 +16,13 @@ interface StoryRepository {
     suspend fun getActiveStories(
         chatId: Long
     ): List<StoryModel>
+
+    /**
+     * Returns a Flow that emits updated active stories whenever TDLib fires
+     * updateChatActiveStories for the given chatId.
+     * Call getActiveStories(chatId) first to trigger TDLib to fetch from server.
+     */
+    fun observeActiveStories(chatId: Long): Flow<List<StoryModel>>
 
     /** Post a photo story */
     suspend fun postPhotoStory(
