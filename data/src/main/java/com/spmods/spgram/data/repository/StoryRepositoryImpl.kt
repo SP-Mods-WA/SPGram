@@ -10,7 +10,10 @@ import com.spmods.spgram.domain.models.StoryContentModel
 import com.spmods.spgram.domain.models.StoryModel
 import com.spmods.spgram.domain.repository.StoryRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 class StoryRepositoryImpl(
@@ -42,29 +45,33 @@ class StoryRepositoryImpl(
         return (activeStories + pageStories).filter { seen.add(it.id) }
     }
 
-    override fun observeActiveStories(chatId: Long): Flow<List<StoryModel>> = flow {
-        // Trigger TDLib to fetch stories from the server for this chat.
-        // TDLib will fire updateChatActiveStories asynchronously when data arrives.
-        val initial = getActiveStories(chatId)
-        emit(initial)
-
-        // Then listen to live updates for this specific chat
-        gateway.updates.collect { update ->
-            if (update is org.drinkless.tdlib.TdApi.UpdateChatActiveStories) {
-                val activeStories = update.activeStories
-                if (activeStories.chatId == chatId) {
-                    val posterChatId = activeStories.chatId.takeIf { it != 0L } ?: chatId
-                    val stories = activeStories.stories.mapNotNull { storyInfo ->
-                        coRunCatching {
-                            gateway.execute(org.drinkless.tdlib.TdApi.GetStory(posterChatId, storyInfo.storyId, false)) as? org.drinkless.tdlib.TdApi.Story
-                        }.getOrNull()?.toModel()
+    override fun observeActiveStories(chatId: Long): Flow<List<StoryModel>> = channelFlow {
+        // Listen for TDLib updateChatActiveStories in background coroutine
+        launch {
+            gateway.updates
+                .filterIsInstance<TdApi.UpdateChatActiveStories>()
+                .collect { update ->
+                    if (update.activeStories.chatId == chatId) {
+                        val posterChatId = update.activeStories.chatId.takeIf { it != 0L } ?: chatId
+                        val stories = update.activeStories.stories.mapNotNull { storyInfo ->
+                            coRunCatching {
+                                gateway.execute(TdApi.GetStory(posterChatId, storyInfo.storyId, false)) as? TdApi.Story
+                            }.getOrNull()?.toModel()
+                        }
+                        val pageStories = getChatPageStories(posterChatId)
+                        val seen = mutableSetOf<Int>()
+                        send((stories + pageStories).filter { seen.add(it.id) })
                     }
-                    val pageStories = getChatPageStories(posterChatId)
-                    val seen = mutableSetOf<Int>()
-                    emit((stories + pageStories).filter { seen.add(it.id) })
                 }
-            }
         }
+
+        // Trigger TDLib to fetch from server (fires updateChatActiveStories async)
+        // and emit whatever is currently cached
+        val initial = getActiveStories(chatId)
+        send(initial)
+
+        // channelFlow stays open until the collector is cancelled — no join() needed
+        awaitClose()
     }
 
     override suspend fun getChatPageStories(
