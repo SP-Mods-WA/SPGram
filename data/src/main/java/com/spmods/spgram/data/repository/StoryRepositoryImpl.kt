@@ -23,9 +23,13 @@ class StoryRepositoryImpl(
             gateway.execute(req) as? TdApi.ChatActiveStories
         }.getOrNull() ?: return emptyList()
 
+        // Use result.chatId (the actual poster chat ID) not the input chatId.
+        // TDLib may resolve it differently (e.g. user peer vs chat peer).
+        val posterChatId = result.chatId.takeIf { it != 0L } ?: chatId
+
         return result.stories.mapNotNull { storyInfo ->
             val story = coRunCatching {
-                gateway.execute(TdApi.GetStory(chatId, storyInfo.storyId, false)) as? TdApi.Story
+                gateway.execute(TdApi.GetStory(posterChatId, storyInfo.storyId, false)) as? TdApi.Story
             }.getOrNull() ?: return@mapNotNull null
             story.toModel()
         }
