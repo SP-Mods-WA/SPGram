@@ -17,6 +17,15 @@ class StoryRepositoryImpl(
     private val fileObserverHub: FileObserverHub
 ) : StoryRepository {
 
+    override suspend fun getActiveStories(chatId: Long): List<StoryModel> {
+        val req = TdApi.GetChatActiveStories(chatId)
+        val result = coRunCatching {
+            gateway.execute(req) as? TdApi.ChatActiveStories
+        }.getOrNull() ?: return emptyList()
+
+        return result.stories.mapNotNull { it.toModel() }
+    }
+
     override suspend fun getChatPageStories(
         chatId: Long,
         fromStoryId: Int,
