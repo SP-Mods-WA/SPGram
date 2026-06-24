@@ -23,7 +23,12 @@ class StoryRepositoryImpl(
             gateway.execute(req) as? TdApi.ChatActiveStories
         }.getOrNull() ?: return emptyList()
 
-        return result.stories.mapNotNull { it.toModel() }
+        return result.stories.mapNotNull { storyInfo ->
+            val story = coRunCatching {
+                gateway.execute(TdApi.GetStory(chatId, storyInfo.storyId, false)) as? TdApi.Story
+            }.getOrNull() ?: return@mapNotNull null
+            story.toModel()
+        }
     }
 
     override suspend fun getChatPageStories(
