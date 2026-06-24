@@ -65,12 +65,20 @@ class StoryRepositoryImpl(
                 }
         }
 
-        // Trigger TDLib to fetch from server (fires updateChatActiveStories async)
-        // and emit whatever is currently cached
+        // Re-emit stories when any story file finishes downloading (thumbnails update)
+        launch {
+            fileObserverHub.fileStates
+                .filter { it.isDownloaded }
+                .collect {
+                    val refreshed = getActiveStories(chatId)
+                    if (refreshed.isNotEmpty()) send(refreshed)
+                }
+        }
+
+        // Trigger TDLib to fetch from server — emit immediately (paths may be empty initially)
         val initial = getActiveStories(chatId)
         send(initial)
 
-        // channelFlow stays open until the collector is cancelled — no join() needed
         awaitClose()
     }
 
@@ -154,7 +162,8 @@ class StoryRepositoryImpl(
     }
 
     private suspend fun TdApi.Story.toModel(): StoryModel? {
-        val contentModel = resolveContent(content) ?: return null
+        // resolveContent never returns null now (uses fast path), only Unsupported for unknown types
+        val contentModel = resolveContent(content) ?: StoryContentModel.Unsupported
         return StoryModel(
             id = id,
             posterChatId = posterChatId,
@@ -172,18 +181,33 @@ class StoryRepositoryImpl(
             is TdApi.StoryContentPhoto -> {
                 val best = content.photo.sizes.maxByOrNull { it.width * it.height }?.photo
                     ?: return StoryContentModel.Unsupported
-                val path = resolveFilePath(best) ?: return null
+                // Enqueue download but don't wait — return cached path or empty string
+                val path = resolveFilePathFast(best)
                 StoryContentModel.Photo(path)
             }
             is TdApi.StoryContentVideo -> {
                 val videoFile = content.video.video
                 val thumbFile = content.video.thumbnail?.file
-                val videoPath = resolveFilePath(videoFile) ?: return null
-                val thumbPath = thumbFile?.let { resolveFilePath(it) }.orEmpty()
+                val videoPath = resolveFilePathFast(videoFile)
+                val thumbPath = thumbFile?.let { resolveFilePathFast(it) }.orEmpty()
                 StoryContentModel.Video(videoPath, thumbPath)
             }
             else -> StoryContentModel.Unsupported
         }
+    }
+
+    // Returns immediately with cached path (or empty string) and enqueues download in background
+    private fun resolveFilePathFast(file: TdApi.File): String {
+        val direct = file.local.path.takeIf { isValidFilePath(it) }
+        if (direct != null) return direct
+        val fileId = file.id.takeIf { it != 0 } ?: return ""
+        fileQueue.enqueue(
+            fileId = fileId,
+            priority = STORY_DOWNLOAD_PRIORITY,
+            type = FileDownloadQueue.DownloadType.DEFAULT,
+            synchronous = false
+        )
+        return fileObserverHub.getCachedPath(fileId) ?: ""
     }
 
     private suspend fun resolveFilePath(file: TdApi.File): String? {
