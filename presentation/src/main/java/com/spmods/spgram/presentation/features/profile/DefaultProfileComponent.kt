@@ -158,22 +158,13 @@ class DefaultProfileComponent(
                     isGroupOrChannel = chat?.let { it.isGroup || it.isChannel } ?: (chatId < 0)
                 )
 
-                // Load stories — own profile uses chat page stories, other profiles use active stories
-                // For active stories of other users, we must pass the user's own ID (positive),
-                // not the chat wrapper ID, because TdApi.GetChatActiveStories expects the user
-                // chat ID which equals the user's ID for private chats.
+                // Official Telegram behavior: use GetChatPostedToChatPageStories for ALL profiles.
+                // This returns publicly posted profile stories for any user, not just own profile.
                 val resolvedId = chat?.id ?: chatId
-                val storyUserId = user?.id?.takeIf { it > 0 } ?: resolvedId
                 scope.launch {
                     _state.update { it.copy(isLoadingStories = true) }
                     try {
-                        val me = coRunCatching { userRepository.getMe() }.getOrNull()
-                        val isOwnProfile = me != null && (me.id == resolvedId || me.id == user?.id)
-                        val stories = if (isOwnProfile) {
-                            storyRepository.getChatPageStories(resolvedId)
-                        } else {
-                            storyRepository.getActiveStories(storyUserId)
-                        }
+                        val stories = storyRepository.getChatPageStories(resolvedId)
                         _state.update { it.copy(stories = stories) }
                     } catch (e: CancellationException) {
                         throw e
