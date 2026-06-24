@@ -384,9 +384,10 @@ fun ProfileContent(component: ProfileComponent) {
                     }
 
                     item(span = { GridItemSpan(3) }) {
+                        val profileUser = state.user
                         ProfileStoriesSection(
                             stories = state.stories,
-                            isOwnProfile = state.user?.id != null && state.user.id == state.currentUser?.id,
+                            isOwnProfile = profileUser != null && profileUser.id == state.currentUser?.id,
                             onStoryClick = component::onViewStory,
                             onAddStory = component::onOpenStoryPoster
                         )
@@ -427,10 +428,11 @@ fun ProfileContent(component: ProfileComponent) {
 
         // Story viewer overlay
         if (state.viewingStoryIndex >= 0 && state.stories.isNotEmpty()) {
+            val profileUser = state.user
             StoryViewerScreen(
                 stories = state.stories,
                 initialIndex = state.viewingStoryIndex,
-                canDeleteStory = state.user?.id != null && state.user.id == state.currentUser?.id,
+                canDeleteStory = profileUser != null && profileUser.id == state.currentUser?.id,
                 onDelete = { storyId ->
                     component.onDeleteStory(storyId)
                     component.onDismissStory()
