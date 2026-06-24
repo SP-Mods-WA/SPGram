@@ -18,21 +18,26 @@ class StoryRepositoryImpl(
 ) : StoryRepository {
 
     override suspend fun getActiveStories(chatId: Long): List<StoryModel> {
-        val req = TdApi.GetChatActiveStories(chatId)
-        val result = coRunCatching {
-            gateway.execute(req) as? TdApi.ChatActiveStories
-        }.getOrNull() ?: return emptyList()
+        // Step 1: get active (unexpired) stories via GetChatActiveStories
+        val activeResult = coRunCatching {
+            gateway.execute(TdApi.GetChatActiveStories(chatId)) as? TdApi.ChatActiveStories
+        }.getOrNull()
 
-        // Use result.chatId (the actual poster chat ID) not the input chatId.
-        // TDLib may resolve it differently (e.g. user peer vs chat peer).
-        val posterChatId = result.chatId.takeIf { it != 0L } ?: chatId
+        val posterChatId = activeResult?.chatId?.takeIf { it != 0L } ?: chatId
 
-        return result.stories.mapNotNull { storyInfo ->
-            val story = coRunCatching {
+        val activeStories = activeResult?.stories?.mapNotNull { storyInfo ->
+            coRunCatching {
                 gateway.execute(TdApi.GetStory(posterChatId, storyInfo.storyId, false)) as? TdApi.Story
-            }.getOrNull() ?: return@mapNotNull null
-            story.toModel()
-        }
+            }.getOrNull()?.toModel()
+        } ?: emptyList()
+
+        // Step 2: also fetch stories pinned to profile page (posted to chat page)
+        // Official Telegram shows both active + pinned profile stories on profile page
+        val pageStories = getChatPageStories(posterChatId)
+
+        // Merge both lists, deduplicate by story id
+        val seen = mutableSetOf<Int>()
+        return (activeStories + pageStories).filter { seen.add(it.id) }
     }
 
     override suspend fun getChatPageStories(
