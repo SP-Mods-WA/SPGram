@@ -388,6 +388,7 @@ fun ProfileContent(component: ProfileComponent) {
                         ProfileStoriesSection(
                             stories = state.stories,
                             isOwnProfile = profileUser != null && profileUser.id == state.currentUser?.id,
+                            isLoadingStories = state.isLoadingStories,
                             onStoryClick = component::onViewStory,
                             onAddStory = component::onOpenStoryPoster
                         )
