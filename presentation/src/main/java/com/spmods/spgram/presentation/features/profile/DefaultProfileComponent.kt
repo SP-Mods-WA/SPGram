@@ -158,12 +158,18 @@ class DefaultProfileComponent(
                     isGroupOrChannel = chat?.let { it.isGroup || it.isChannel } ?: (chatId < 0)
                 )
 
-                // Load stories with the resolved chat id (correct for both own + other profiles)
+                // Load stories — own profile uses chat page stories, other profiles use active stories
                 val resolvedId = chat?.id ?: chatId
                 scope.launch {
                     _state.update { it.copy(isLoadingStories = true) }
                     try {
-                        val stories = storyRepository.getChatPageStories(resolvedId)
+                        val me = coRunCatching { userRepository.getMe() }.getOrNull()
+                        val isOwnProfile = me != null && (me.id == chatId || me.id == user?.id)
+                        val stories = if (isOwnProfile) {
+                            storyRepository.getChatPageStories(resolvedId)
+                        } else {
+                            storyRepository.getActiveStories(resolvedId)
+                        }
                         _state.update { it.copy(stories = stories) }
                     } catch (e: CancellationException) {
                         throw e
