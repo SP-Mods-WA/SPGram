@@ -44,10 +44,10 @@ import androidx.compose.ui.unit.sp
 import com.spmods.spgram.app.R
 
 // ---------------------------------------------------------------------------
-// Tab enum  —  3 tabs only
+// Tab enum  —  4 tabs
 // ---------------------------------------------------------------------------
 
-enum class MainTab { Chats, Stories, Calls }
+enum class MainTab { Chats, Stories, Calls, Download }
 
 // ---------------------------------------------------------------------------
 // Internal model
@@ -72,6 +72,7 @@ fun MainBottomBar(
     chatsUnread: Int = 0,
     hasStories: Boolean = false,
     hasMissedCalls: Boolean = false,
+    hasActiveDownload: Boolean = false,
     isDark: Boolean = false,
     onTabSelected: (MainTab) -> Unit,
     modifier: Modifier = Modifier,
@@ -99,6 +100,13 @@ fun MainBottomBar(
             fillRes   = R.drawable.sp_call_fill,
             unfillRes = R.drawable.sp_call_unfill,
             hasDot    = hasMissedCalls,
+        ),
+        TabItem(
+            tab       = MainTab.Download,
+            label     = "Download",
+            fillRes   = R.drawable.sp_download_fill,
+            unfillRes = R.drawable.sp_download_unfill,
+            hasDot    = hasActiveDownload,
         ),
     )
 
