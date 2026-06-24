@@ -590,7 +590,10 @@ class FileDownloadQueue(
             }
 
             val isManualRequest = priority >= 32
-            if (isManualRequest) manualDownloadIds.add(fileId)
+            if (isManualRequest) {
+                manualDownloadIds.add(fileId)
+                registerWithTdLibDownloadsList(fileId)
+            }
 
             val cooldownUntil = notFoundCooldownUntil[fileId]
             if (!isManualRequest && cooldownUntil != null && cooldownUntil > System.currentTimeMillis()) {
@@ -712,6 +715,24 @@ class FileDownloadQueue(
         if (suppressedAutoDownloadIds.remove(fileId)) {
             persistSuppressed()
             Log.d("DownloadDebug", "queue.suppression.cleared: fileId=$fileId")
+        }
+    }
+
+    /**
+     * Adds a manually-downloaded file to TDLib's own persistent "downloads"
+     * list (the same list shown by official Telegram's Downloads screen),
+     * so it shows up in the app's global Download tab and survives restarts.
+     * No-op for files that aren't attached to any known message (e.g. avatars).
+     */
+    private fun registerWithTdLibDownloadsList(fileId: Int) {
+        val target = registry.getMessages(fileId).firstOrNull() ?: return
+        val (chatId, messageId) = target
+        scope.launch(dispatcherProvider.io) {
+            coRunCatching {
+                gateway.execute(TdApi.AddFileToDownloads(fileId, chatId, messageId, 1))
+            }.onFailure {
+                Log.w("FileDownloadQueue", "AddFileToDownloads failed for fileId=$fileId: ${it.message}")
+            }
         }
     }
 
