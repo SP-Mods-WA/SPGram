@@ -49,6 +49,10 @@ interface ChatListComponent {
     fun onEditFoldersClicked()
     fun onDeleteFolder(folderId: Int)
     fun onEditFolder(folderId: Int)
+    fun onMarkAllAsReadClicked()
+    fun onDownloadsClicked()
+    fun onCreateGroupClicked()
+    fun onCreateChannelClicked()
 
     fun onOpenInstantView(url: String)
     fun onDismissInstantView()
