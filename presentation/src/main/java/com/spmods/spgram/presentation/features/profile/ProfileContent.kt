@@ -43,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,6 +90,7 @@ import com.spmods.spgram.presentation.features.profile.components.ProfileTOSDial
 import com.spmods.spgram.presentation.features.profile.components.ProfileTopBar
 import com.spmods.spgram.presentation.features.profile.components.StatisticsViewer
 import com.spmods.spgram.presentation.features.profile.components.profileMediaSection
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,6 +103,7 @@ fun ProfileContent(component: ProfileComponent) {
     val localClipboard = LocalClipboard.current
     val context = LocalContext.current
     val collapsingToolbarState = rememberCollapsingToolbarScaffoldState()
+    val storyActionScope = rememberCoroutineScope()
 
     val dateFormatManager: DateFormatManager = koinInject()
     val timeFormat = dateFormatManager.getHourMinuteFormat()
@@ -433,10 +436,31 @@ fun ProfileContent(component: ProfileComponent) {
             StoryViewerScreen(
                 stories = state.stories,
                 initialIndex = state.viewingStoryIndex,
+                posterName = profileUser?.firstName.orEmpty().let { first ->
+                    val last = profileUser?.lastName.orEmpty()
+                    if (last.isBlank()) first else "$first $last"
+                },
+                posterAvatarPath = profileUser?.avatarPath,
                 canDeleteStory = profileUser != null && profileUser.id == state.currentUser?.id,
                 onDelete = { storyId ->
                     component.onDeleteStory(storyId)
                     component.onDismissStory()
+                },
+                onSendReply = { story, text ->
+                    storyActionScope.launch {
+                        component.messageRepository.sendMessage(
+                            chatId = story.posterChatId,
+                            text = text
+                        )
+                    }
+                },
+                onLikeStory = { story ->
+                    storyActionScope.launch {
+                        component.messageRepository.sendMessage(
+                            chatId = story.posterChatId,
+                            text = "\u2764\ufe0f"
+                        )
+                    }
                 },
                 onDismiss = component::onDismissStory
             )
