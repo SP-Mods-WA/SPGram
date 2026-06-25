@@ -351,46 +351,48 @@ fun ChatListTopBar(
                             }
                         }
 
+                        Box {
+                            IconButton(
+                                onClick = onMoreMenuClick,
+                                shapes = iconButtonShapes,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.MoreVert,
+                                    contentDescription = "More options",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = titleColor
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showMoreMenu,
+                                onDismissRequest = onMoreMenuDismiss
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Mark all as read") },
+                                    onClick = onMarkAllAsRead
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Edit folder") },
+                                    onClick = onEditFolder
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Download") },
+                                    onClick = onDownloads
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Create Channel") },
+                                    onClick = onCreateChannel
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Create Group") },
+                                    onClick = onCreateGroup
+                                )
+                            }
+                        }
+
                         Spacer(modifier = Modifier.width(4.dp))
-
-                        IconButton(
-                            onClick = onMoreMenuClick,
-                            shapes = iconButtonShapes,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.MoreVert,
-                                contentDescription = "More options",
-                                modifier = Modifier.size(24.dp),
-                                tint = titleColor
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = showMoreMenu,
-                            onDismissRequest = onMoreMenuDismiss
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Mark all as read") },
-                                onClick = onMarkAllAsRead
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Edit folder") },
-                                onClick = onEditFolder
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Download") },
-                                onClick = onDownloads
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Create Channel") },
-                                onClick = onCreateChannel
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Create Group") },
-                                onClick = onCreateGroup
-                            )
-                        }
 
                         IconButton(
                             onClick = onMenuClick,
