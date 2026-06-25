@@ -60,6 +60,7 @@ internal class MessagePersistenceMapper(
         val content = extractCachedContent(msg.content)
         val entitiesEncoded = encodeEntities(msg.content)
         val replyToMessageId = (msg.replyTo as? TdApi.MessageReplyToMessage)?.messageId ?: 0L
+        val replyToStory = msg.replyTo as? TdApi.MessageReplyToStory
         val replyToPreview = buildReplyPreview(msg)
         val forwardOrigin = msg.forwardInfo?.origin?.let(::extractForwardOrigin)
 
@@ -79,6 +80,8 @@ internal class MessagePersistenceMapper(
             isOutgoing = msg.isOutgoing,
             isRead = false,
             replyToMessageId = replyToMessageId,
+            replyToStoryPosterChatId = replyToStory?.storyPosterChatId ?: 0L,
+            replyToStoryId = replyToStory?.storyId ?: 0,
             replyToPreview = replyToPreview?.let(::encodeReplyPreview),
             replyToPreviewType = replyToPreview?.contentType,
             replyToPreviewText = replyToPreview?.text,
@@ -311,6 +314,8 @@ internal class MessagePersistenceMapper(
         val mediaFileId = entity.mediaFileId.takeIf { it != 0 } ?: legacyFileId
         val mediaPath = entity.mediaPath?.takeIf { it.isNotBlank() } ?: legacyPath
         val replyToMsgId = entity.replyToMessageId.takeIf { it != 0L }
+        val replyToStoryPosterChatId = entity.replyToStoryPosterChatId.takeIf { it != 0L }
+        val replyToStoryId = entity.replyToStoryId.takeIf { it != 0 }
         val replyPreview = resolveReplyPreview(entity)
         val replyPreviewModel =
             if (replyToMsgId != null && replyPreview != null) createReplyPreviewModel(
@@ -617,6 +622,8 @@ internal class MessagePersistenceMapper(
             isRead = entity.isRead,
             replyToMsgId = replyToMsgId,
             replyToMsg = replyPreviewModel,
+            replyToStoryPosterChatId = replyToStoryPosterChatId,
+            replyToStoryId = replyToStoryId,
             forwardInfo = forwardInfo,
             mediaAlbumId = entity.mediaAlbumId,
             editDate = entity.editDate,
