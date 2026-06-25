@@ -69,6 +69,15 @@ interface MessageRemoteDataSource {
         sendOptions: MessageSendOptions
     ): TdApi.Message?
 
+    /** Sends a text message as a reply to a story (shows the "Replied to story" preview, like official Telegram). */
+    suspend fun sendStoryReply(
+        chatId: Long,
+        text: String,
+        storyPosterChatId: Long,
+        storyId: Int,
+        entities: List<MessageEntity> = emptyList()
+    ): TdApi.Message?
+
     suspend fun sendPhoto(
         chatId: Long,
         photoPath: String,
