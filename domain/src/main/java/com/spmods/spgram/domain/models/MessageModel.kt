@@ -16,6 +16,8 @@ data class MessageModel(
     val isRead: Boolean = false,
     val replyToMsgId: Long? = null,
     val replyToMsg: MessageModel? = null,
+    val replyToStoryPosterChatId: Long? = null,
+    val replyToStoryId: Int? = null,
     val forwardInfo: ForwardInfo? = null,
     val views: Int? = null,
     val viewCount: Int? = null,
