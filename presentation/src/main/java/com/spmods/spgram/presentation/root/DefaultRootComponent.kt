@@ -138,6 +138,13 @@ class DefaultRootComponent(
     private val _isBiometricEnabled = MutableStateFlow(false)
     override val isBiometricEnabled = _isBiometricEnabled.asStateFlow()
 
+    private val _downloadTabRequest = MutableStateFlow(0)
+    override val downloadTabRequest = _downloadTabRequest.asStateFlow()
+
+    override fun openDownloadTab() {
+        _downloadTabRequest.value += 1
+    }
+
     private val _activeChatId = MutableValue(0L)
     private val activeChatId: Value<Long> = _activeChatId
 
@@ -251,7 +258,7 @@ class DefaultRootComponent(
     }
 
     override fun onContactsClick() {
-        navigation.bringToFront(Config.NewChat)
+        navigation.bringToFront(Config.NewChat())
     }
 
     override fun onProfileClick() {
@@ -533,11 +540,11 @@ class DefaultRootComponent(
                         }
                     },
                     isForwarding = config.forwardingMessageIds != null,
-                    onNewChatClick = { navigation.bringToFront(Config.NewChat) },
+                    onNewChatClick = { navigation.bringToFront(Config.NewChat()) },
                     onEditFoldersClick = { navigation.bringToFront(Config.Folders) },
-                    onDownloadsClick = { navigation.bringToFront(Config.DataStorage) },
-                    onCreateGroupClick = { navigation.bringToFront(Config.NewChat) },
-                    onCreateChannelClick = { navigation.bringToFront(Config.NewChat) },
+                    onDownloadsClick = { openDownloadTab() },
+                    onCreateGroupClick = { navigation.bringToFront(Config.NewChat(action = "group")) },
+                    onCreateChannelClick = { navigation.bringToFront(Config.NewChat(action = "channel")) },
                     activeChatId = activeChatId
                 )
             )
@@ -551,6 +558,11 @@ class DefaultRootComponent(
                     },
                     onProfileClicked = { userId ->
                         navigation.bringToFront(Config.Profile(chatId = userId))
+                    },
+                    initialAction = when (config.action) {
+                        "group" -> DefaultNewChatComponent.InitialAction.CreateGroup
+                        "channel" -> DefaultNewChatComponent.InitialAction.CreateChannel
+                        else -> DefaultNewChatComponent.InitialAction.None
                     }
                 )
             )
@@ -794,7 +806,7 @@ class DefaultRootComponent(
             val forwardingMessageIds: List<Long>? = null,
             val activeChatId: Long? = null
         ) : Config()
-        @Parcelize @Serializable object NewChat : Config()
+        @Parcelize @Serializable data class NewChat(val action: String = "none") : Config()
         @Parcelize @Serializable object SessionsConfig : Config()
         @Parcelize @Serializable data class ChatDetail(val chatId: Long, val messageId: Long? = null) : Config()
         @Parcelize @Serializable object Settings : Config()
