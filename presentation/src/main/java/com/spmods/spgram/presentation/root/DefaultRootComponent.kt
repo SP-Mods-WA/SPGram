@@ -535,6 +535,9 @@ class DefaultRootComponent(
                     isForwarding = config.forwardingMessageIds != null,
                     onNewChatClick = { navigation.bringToFront(Config.NewChat) },
                     onEditFoldersClick = { navigation.bringToFront(Config.Folders) },
+                    onDownloadsClick = { navigation.bringToFront(Config.DataStorage) },
+                    onCreateGroupClick = { navigation.bringToFront(Config.NewChat) },
+                    onCreateChannelClick = { navigation.bringToFront(Config.NewChat) },
                     activeChatId = activeChatId
                 )
             )
