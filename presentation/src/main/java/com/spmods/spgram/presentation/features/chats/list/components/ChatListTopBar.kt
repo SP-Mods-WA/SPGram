@@ -33,6 +33,9 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.ShieldMoon
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -104,7 +107,15 @@ fun ChatListTopBar(
     onSearchQueryChange: (String) -> Unit,
     onSearchToggle: () -> Unit,
     onStatusClick: (Rect?) -> Unit,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    onMoreMenuClick: () -> Unit,
+    showMoreMenu: Boolean,
+    onMoreMenuDismiss: () -> Unit,
+    onMarkAllAsRead: () -> Unit,
+    onEditFolder: () -> Unit,
+    onDownloads: () -> Unit,
+    onCreateChannel: () -> Unit,
+    onCreateGroup: () -> Unit
 ) {
     var statusAnchorBounds by remember { mutableStateOf<Rect?>(null) }
     val iconButtonShapes = ExpressiveDefaults.iconButtonShapes()
@@ -341,6 +352,45 @@ fun ChatListTopBar(
                         }
 
                         Spacer(modifier = Modifier.width(4.dp))
+
+                        IconButton(
+                            onClick = onMoreMenuClick,
+                            shapes = iconButtonShapes,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.MoreVert,
+                                contentDescription = "More options",
+                                modifier = Modifier.size(24.dp),
+                                tint = titleColor
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = onMoreMenuDismiss
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Mark all as read") },
+                                onClick = onMarkAllAsRead
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Edit folder") },
+                                onClick = onEditFolder
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Download") },
+                                onClick = onDownloads
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Create Channel") },
+                                onClick = onCreateChannel
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Create Group") },
+                                onClick = onCreateGroup
+                            )
+                        }
 
                         IconButton(
                             onClick = onMenuClick,
