@@ -351,9 +351,11 @@ fun ChatListTopBar(
                             }
                         }
 
+                        var menuExpanded by remember { mutableStateOf(false) }
+
                         Box {
                             IconButton(
-                                onClick = onMoreMenuClick,
+                                onClick = { menuExpanded = true },
                                 shapes = iconButtonShapes,
                                 modifier = Modifier.size(40.dp)
                             ) {
@@ -366,28 +368,28 @@ fun ChatListTopBar(
                             }
 
                             DropdownMenu(
-                                expanded = showMoreMenu,
-                                onDismissRequest = onMoreMenuDismiss
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("Mark all as read") },
-                                    onClick = onMarkAllAsRead
+                                    onClick = { menuExpanded = false; onMarkAllAsRead() }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Edit folder") },
-                                    onClick = onEditFolder
+                                    onClick = { menuExpanded = false; onEditFolder() }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Download") },
-                                    onClick = onDownloads
+                                    onClick = { menuExpanded = false; onDownloads() }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Create Channel") },
-                                    onClick = onCreateChannel
+                                    onClick = { menuExpanded = false; onCreateChannel() }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Create Group") },
-                                    onClick = onCreateGroup
+                                    onClick = { menuExpanded = false; onCreateGroup() }
                                 )
                             }
                         }
