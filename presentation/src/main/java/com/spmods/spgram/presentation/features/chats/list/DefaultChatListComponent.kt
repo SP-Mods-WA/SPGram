@@ -47,6 +47,9 @@ class DefaultChatListComponent(
     internal val isForwarding: Boolean = false,
     private val onNewChatClick: () -> Unit = {},
     private val onEditFoldersClick: () -> Unit = {},
+    private val onDownloadsClick: () -> Unit = {},
+    private val onCreateGroupClick: () -> Unit = {},
+    private val onCreateChannelClick: () -> Unit = {},
     activeChatId: Value<Long>
 ) : ChatListComponent, AppComponentContext by context {
     private val isTelemtBuild = BuildConfig.ENABLE_TELEMT_DNS
@@ -360,6 +363,9 @@ class DefaultChatListComponent(
                     ChatListStore.Label.OpenNewChat -> onNewChatClick()
                     is ChatListStore.Label.ConfirmForward -> onConfirmForward(label.selectedChatIds)
                     is ChatListStore.Label.EditFolders -> onEditFoldersClick()
+                    ChatListStore.Label.OpenDownloads -> onDownloadsClick()
+                    ChatListStore.Label.OpenCreateGroup -> onCreateGroupClick()
+                    ChatListStore.Label.OpenCreateChannel -> onCreateChannelClick()
                 }
             }
             .launchIn(scope)
@@ -701,6 +707,22 @@ class DefaultChatListComponent(
     }
 
     override fun onEditFolder(folderId: Int) = store.accept(ChatListStore.Intent.EditFolder(folderId))
+
+    override fun onMarkAllAsReadClicked() = store.accept(ChatListStore.Intent.MarkAllAsReadClicked)
+
+    internal fun handleMarkAllAsRead() {
+        val chats = _state.value.chats
+        val unreadChatIds = chats.filter { it.unreadCount > 0 }.map { it.id }.toSet()
+        if (unreadChatIds.isNotEmpty()) {
+            chatOperationsRepository.toggleReadChats(unreadChatIds, markAsUnread = false)
+        }
+    }
+
+    override fun onDownloadsClicked() = store.accept(ChatListStore.Intent.DownloadsClicked)
+
+    override fun onCreateGroupClicked() = store.accept(ChatListStore.Intent.CreateGroupClicked)
+
+    override fun onCreateChannelClicked() = store.accept(ChatListStore.Intent.CreateChannelClicked)
 
     internal fun handleEditFolder(folderId: Int): ChatListStore.Label.EditFolders? {
         if (folderId <= 0) return null
