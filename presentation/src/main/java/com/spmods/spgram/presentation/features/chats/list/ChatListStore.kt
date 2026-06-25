@@ -41,6 +41,10 @@ interface ChatListStore : Store<ChatListStore.Intent, ChatListComponent.State, C
         object UpdateClicked : Intent()
         data class UpdateScrollPosition(val folderId: Int, val index: Int, val offset: Int) : Intent()
         data class UpdateState(val state: ChatListComponent.State) : Intent()
+        object MarkAllAsReadClicked : Intent()
+        object DownloadsClicked : Intent()
+        object CreateGroupClicked : Intent()
+        object CreateChannelClicked : Intent()
     }
 
     sealed class Label {
@@ -51,5 +55,8 @@ interface ChatListStore : Store<ChatListStore.Intent, ChatListComponent.State, C
         object OpenNewChat : Label()
         data class ConfirmForward(val selectedChatIds: Set<Long>) : Label()
         data class EditFolders(val folderId: Int? = null) : Label()
+        object OpenDownloads : Label()
+        object OpenCreateGroup : Label()
+        object OpenCreateChannel : Label()
     }
 }
