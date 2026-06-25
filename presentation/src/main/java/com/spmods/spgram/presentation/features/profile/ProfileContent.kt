@@ -448,17 +448,21 @@ fun ProfileContent(component: ProfileComponent) {
                 },
                 onSendReply = { story, text ->
                     storyActionScope.launch {
-                        component.messageRepository.sendMessage(
+                        component.messageRepository.sendStoryReply(
                             chatId = story.posterChatId,
-                            text = text
+                            text = text,
+                            storyPosterChatId = story.posterChatId,
+                            storyId = story.id
                         )
                     }
                 },
                 onLikeStory = { story ->
                     storyActionScope.launch {
-                        component.messageRepository.sendMessage(
+                        component.messageRepository.sendStoryReply(
                             chatId = story.posterChatId,
-                            text = "\u2764\ufe0f"
+                            text = "\u2764\ufe0f",
+                            storyPosterChatId = story.posterChatId,
+                            storyId = story.id
                         )
                     }
                 },
