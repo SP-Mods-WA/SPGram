@@ -45,5 +45,7 @@ data class MessageEntity(
     val forwardCount: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
     val isViewOnce: Boolean = false,
-    val isViewOnceOpened: Boolean = false
+    val isViewOnceOpened: Boolean = false,
+    val replyToStoryPosterChatId: Long = 0L,
+    val replyToStoryId: Int = 0
 )
