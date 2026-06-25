@@ -12,6 +12,19 @@ import com.spmods.spgram.presentation.features.chats.conversation.DefaultChatCom
 private const val REACTION_UPDATE_SUPPRESSION_MS = 1500L
 
 
+internal fun DefaultChatComponent.handleViewStoryReply(storyPosterChatId: Long, storyId: Int) {
+    _state.update { it.copy(isLoadingStoryReply = true) }
+    scope.launch {
+        val story = storyRepository.getStory(storyPosterChatId, storyId)
+        _state.update {
+            it.copy(
+                viewingStoryReply = story,
+                isLoadingStoryReply = false
+            )
+        }
+    }
+}
+
 internal fun DefaultChatComponent.handleMessageVisible(messageId: Long) {
     scope.launch {
         val visibleMessage = _state.value.messages.firstOrNull { it.id == messageId }
