@@ -119,6 +119,17 @@ fun ChannelTextMessageBubble(
                         onClick    = { onReplyClick(reply) }
                     )
                 }
+                if (msg.replyToMsg == null && msg.replyToStoryId != null) {
+                    val onStoryReplyClick = com.spmods.spgram.presentation.features.chats.conversation.ui.message.LocalStoryReplyClickHandler.current
+                    com.spmods.spgram.presentation.features.chats.conversation.ui.message.StoryReplyContent(
+                        isOutgoing = false,
+                        senderName = msg.senderName,
+                        onClick = {
+                            val posterChatId = msg.replyToStoryPosterChatId ?: msg.chatId
+                            onStoryReplyClick(posterChatId, msg.replyToStoryId)
+                        }
+                    )
+                }
 
                 val renderData = rememberMessageTextRenderData(
                     text             = content.text,
