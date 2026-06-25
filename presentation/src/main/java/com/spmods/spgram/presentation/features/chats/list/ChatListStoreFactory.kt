@@ -65,6 +65,10 @@ class ChatListStoreFactory(
                 )
 
                 is Intent.UpdateState -> dispatch(Message.UpdateState(intent.state))
+                Intent.MarkAllAsReadClicked -> component.handleMarkAllAsRead()
+                Intent.DownloadsClicked -> publish(Label.OpenDownloads)
+                Intent.CreateGroupClicked -> publish(Label.OpenCreateGroup)
+                Intent.CreateChannelClicked -> publish(Label.OpenCreateChannel)
             }
         }
     }
