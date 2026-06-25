@@ -53,6 +53,7 @@ import com.spmods.spgram.domain.repository.MessageRepository
 import com.spmods.spgram.domain.repository.PaymentRepository
 import com.spmods.spgram.domain.repository.PrivacyRepository
 import com.spmods.spgram.domain.repository.StickerRepository
+import com.spmods.spgram.domain.repository.StoryRepository
 import com.spmods.spgram.domain.repository.UserRepository
 import com.spmods.spgram.domain.repository.WallpaperRepository
 import com.spmods.spgram.presentation.core.util.AppPreferences
@@ -91,6 +92,7 @@ class DefaultChatComponent(
     internal val chatInfoRepository: ChatInfoRepository = container.repositories.chatInfoRepository
     internal val botRepository: BotRepository = container.repositories.botRepository
     override val stickerRepository: StickerRepository = container.repositories.stickerRepository
+    override val storyRepository: StoryRepository = container.repositories.storyRepository
     internal val gifRepository: GifRepository = container.repositories.gifRepository
     internal val privacyRepository: PrivacyRepository = container.repositories.privacyRepository
     internal val botPreferences: BotPreferencesProvider = container.preferences.botPreferencesProvider
@@ -406,6 +408,11 @@ class DefaultChatComponent(
     override fun onReplyMessage(message: MessageModel) = store.accept(ChatStore.Intent.ReplyMessage(message))
 
     override fun onCancelReply() = store.accept(ChatStore.Intent.CancelReply)
+
+    override fun onViewStoryReply(storyPosterChatId: Long, storyId: Int) =
+        store.accept(ChatStore.Intent.ViewStoryReply(storyPosterChatId, storyId))
+
+    override fun onDismissStoryReply() = store.accept(ChatStore.Intent.DismissStoryReply)
 
     override fun onCancelEdit() = store.accept(ChatStore.Intent.CancelEdit)
 
