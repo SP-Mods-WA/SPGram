@@ -562,6 +562,33 @@ class TdMessageRemoteDataSource(
         threadId = null, replyCount = 0, canGetMessageThread = false, replyMarkup = null
     )
 
+    override suspend fun sendStoryReply(
+        chatId: Long,
+        text: String,
+        storyPosterChatId: Long,
+        storyId: Int,
+        entities: List<MessageEntity>
+    ): TdApi.Message? {
+        val parsedText = TdApi.FormattedText(
+            text,
+            entities.toTdTextEntities(text)
+        )
+        val content = TdApi.InputMessageText().apply {
+            this.text = parsedText
+            this.clearDraft = true
+        }
+        val replyTo = TdApi.InputMessageReplyToStory(storyPosterChatId, storyId)
+        val topicId = resolveTopicId(chatId, null)
+        val req = TdApi.SendMessage().apply {
+            this.chatId = chatId
+            this.topicId = topicId
+            this.replyTo = replyTo
+            this.inputMessageContent = content
+            this.options = MessageSendOptions().toTdMessageSendOptions()
+        }
+        return safeExecute(req)
+    }
+
     override suspend fun sendMessage(
         chatId: Long,
         text: String,
