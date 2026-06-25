@@ -18,8 +18,11 @@ class DefaultNewChatComponent(
     context: AppComponentContext,
     private val onBackClicked: () -> Unit,
     private val onChatCreated: (Long) -> Unit,
-    private val onProfileClicked: (Long) -> Unit
+    private val onProfileClicked: (Long) -> Unit,
+    private val initialAction: InitialAction = InitialAction.None
 ) : NewChatComponent, AppComponentContext by context {
+
+    enum class InitialAction { None, CreateGroup, CreateChannel }
 
     private val userRepository: UserRepository = container.repositories.userRepository
     private val chatCreationRepository: ChatCreationRepository = container.repositories.chatCreationRepository
@@ -46,6 +49,16 @@ class DefaultNewChatComponent(
         _state.onEach {
             store.accept(NewChatStore.Intent.UpdateState(it))
         }.launchIn(scope)
+
+        if (initialAction != InitialAction.None) {
+            scope.launch {
+                when (initialAction) {
+                    InitialAction.CreateGroup -> store.accept(NewChatStore.Intent.CreateGroup)
+                    InitialAction.CreateChannel -> store.accept(NewChatStore.Intent.CreateChannel)
+                    InitialAction.None -> Unit
+                }
+            }
+        }
     }
 
     private fun loadContacts() {
