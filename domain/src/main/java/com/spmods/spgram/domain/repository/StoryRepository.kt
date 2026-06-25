@@ -24,6 +24,9 @@ interface StoryRepository {
      */
     fun observeActiveStories(chatId: Long): Flow<List<StoryModel>>
 
+    /** Get a single story by its poster chat id and story id (e.g. to open a story reply preview from a chat). */
+    suspend fun getStory(posterChatId: Long, storyId: Int): StoryModel?
+
     /** Post a photo story */
     suspend fun postPhotoStory(
         chatId: Long,
