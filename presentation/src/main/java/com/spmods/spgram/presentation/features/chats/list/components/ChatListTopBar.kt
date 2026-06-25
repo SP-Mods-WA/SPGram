@@ -383,14 +383,6 @@ fun ChatListTopBar(
                                     text = { Text("Download") },
                                     onClick = { onDownloads(); menuExpanded = false }
                                 )
-                                DropdownMenuItem(
-                                    text = { Text("Create Channel") },
-                                    onClick = { onCreateChannel(); menuExpanded = false }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Create Group") },
-                                    onClick = { onCreateGroup(); menuExpanded = false }
-                                )
                             }
                         }
 
