@@ -163,6 +163,10 @@ class ChatStoreFactory(
                 }
 
                 is Intent.CancelReply -> component._state.update { it.copy(replyMessage = null) }
+                is Intent.ViewStoryReply -> component.handleViewStoryReply(intent.storyPosterChatId, intent.storyId)
+                is Intent.DismissStoryReply -> component._state.update {
+                    it.copy(viewingStoryReply = null, isLoadingStoryReply = false)
+                }
                 is Intent.VideoRecorded -> component.handleVideoRecorded(intent.file)
                 is Intent.ForwardMessage -> publish(Label.Forward(component.chatId, listOf(intent.message.id)))
                 is Intent.ForwardSelectedMessages -> {
