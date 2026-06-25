@@ -33,6 +33,15 @@ internal val LocalMessageRenderDependencies = staticCompositionLocalOf {
     MessageRenderDependencies()
 }
 
+/**
+ * Provides the click handler invoked when a user taps a "Replied to story" preview
+ * inside a message bubble. Receives (storyPosterChatId, storyId) so the chat screen
+ * can open the story viewer overlay directly, without navigating to the profile screen.
+ */
+internal val LocalStoryReplyClickHandler = staticCompositionLocalOf<(Long, Int) -> Unit> {
+    { _, _ -> }
+}
+
 @Composable
 internal fun rememberChatMessageRenderDependencies(
     messages: List<MessageModel>,
