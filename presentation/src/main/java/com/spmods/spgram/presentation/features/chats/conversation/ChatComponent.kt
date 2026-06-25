@@ -18,6 +18,7 @@ import com.spmods.spgram.domain.models.MessageSendOptions
 import com.spmods.spgram.domain.models.MessageViewerModel
 import com.spmods.spgram.domain.models.PollDraft
 import com.spmods.spgram.domain.models.StickerSetModel
+import com.spmods.spgram.domain.models.StoryModel
 import com.spmods.spgram.domain.models.TopicModel
 import com.spmods.spgram.domain.models.UserModel
 import com.spmods.spgram.domain.models.WallpaperModel
@@ -32,6 +33,7 @@ import java.io.File
 interface ChatComponent {
     val appPreferences: AppPreferences
     val stickerRepository: StickerRepository
+    val storyRepository: com.spmods.spgram.domain.repository.StoryRepository
     val state: StateFlow<State>
     val repositoryMessage: MessageRepository
     val downloadUtils: IDownloadUtils
@@ -95,6 +97,8 @@ interface ChatComponent {
     fun onMessageVisible(messageId: Long)
     fun onReplyMessage(message: MessageModel)
     fun onCancelReply()
+    fun onViewStoryReply(storyPosterChatId: Long, storyId: Int)
+    fun onDismissStoryReply()
     fun onVideoRecorded(file: File)
     fun onForwardMessage(message: MessageModel)
     fun onForwardSelectedMessages()
@@ -257,6 +261,8 @@ interface ChatComponent {
         val editingMessage: MessageModel? = null,
         val editRequestTime: Long = 0L,
         val draftText: String = "",
+        val viewingStoryReply: StoryModel? = null,
+        val isLoadingStoryReply: Boolean = false,
         val pinnedMessage: MessageModel? = null,
         val allPinnedMessages: List<MessageModel> = emptyList(),
         val showPinnedMessagesList: Boolean = false,
