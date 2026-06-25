@@ -318,6 +318,16 @@ class MessageRepositoryImpl(
         messageRemoteDataSource.sendMessage(chatId, text, replyToMsgId, entities, threadId, sendOptions)
     }
 
+    override suspend fun sendStoryReply(
+        chatId: Long,
+        text: String,
+        storyPosterChatId: Long,
+        storyId: Int,
+        entities: List<MessageEntity>
+    ) {
+        messageRemoteDataSource.sendStoryReply(chatId, text, storyPosterChatId, storyId, entities)
+    }
+
     override suspend fun sendSticker(chatId: Long, stickerPath: String, replyToMsgId: Long?, threadId: Long?) {
         messageRemoteDataSource.sendSticker(chatId, stickerPath, replyToMsgId, threadId)
     }
