@@ -132,9 +132,14 @@ fun TextMessageBubble(
                     )
                 }
                 if (msg.replyToMsg == null && msg.replyToStoryId != null) {
+                    val onStoryReplyClick = LocalStoryReplyClickHandler.current
                     StoryReplyContent(
                         isOutgoing = isOutgoing,
-                        senderName = if (isOutgoing) "You" else msg.senderName
+                        senderName = if (isOutgoing) "You" else msg.senderName,
+                        onClick = {
+                            val posterChatId = msg.replyToStoryPosterChatId ?: msg.chatId
+                            onStoryReplyClick(posterChatId, msg.replyToStoryId)
+                        }
                     )
                 }
 
