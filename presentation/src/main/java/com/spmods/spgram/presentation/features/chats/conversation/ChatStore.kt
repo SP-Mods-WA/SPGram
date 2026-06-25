@@ -77,6 +77,8 @@ interface ChatStore : Store<ChatStore.Intent, ChatComponent.State, ChatStore.Lab
         data class MessageVisible(val messageId: Long) : Intent()
         data class ReplyMessage(val message: MessageModel) : Intent()
         object CancelReply : Intent()
+        data class ViewStoryReply(val storyPosterChatId: Long, val storyId: Int) : Intent()
+        object DismissStoryReply : Intent()
         data class VideoRecorded(val file: File) : Intent()
         data class ForwardMessage(val message: MessageModel) : Intent()
         object ForwardSelectedMessages : Intent()
