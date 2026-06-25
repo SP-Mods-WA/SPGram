@@ -373,23 +373,23 @@ fun ChatListTopBar(
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("Mark all as read") },
-                                    onClick = { menuExpanded = false; onMarkAllAsRead() }
+                                    onClick = { onMarkAllAsRead(); menuExpanded = false }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Edit folder") },
-                                    onClick = { menuExpanded = false; onEditFolder() }
+                                    onClick = { onEditFolder(); menuExpanded = false }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Download") },
-                                    onClick = { menuExpanded = false; onDownloads() }
+                                    onClick = { onDownloads(); menuExpanded = false }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Create Channel") },
-                                    onClick = { menuExpanded = false; onCreateChannel() }
+                                    onClick = { onCreateChannel(); menuExpanded = false }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Create Group") },
-                                    onClick = { menuExpanded = false; onCreateGroup() }
+                                    onClick = { onCreateGroup(); menuExpanded = false }
                                 )
                             }
                         }
