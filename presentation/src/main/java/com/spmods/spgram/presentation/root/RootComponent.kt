@@ -51,6 +51,7 @@ interface RootComponent {
     val isBiometricEnabled: StateFlow<Boolean>
     val videoPlayerPool: VideoPlayerPool
     val appPreferences: AppPreferences
+    val downloadTabRequest: StateFlow<Int>
 
     fun onBack()
     fun handleLink(link: String)
@@ -59,6 +60,7 @@ interface RootComponent {
     fun onChatsClick()
     fun onContactsClick()
     fun onProfileClick()
+    fun openDownloadTab()
     fun dismissProxyConfirm()
     fun confirmProxy(server: String, port: Int, type: ProxyTypeModel)
     fun recheckProxyPing()
