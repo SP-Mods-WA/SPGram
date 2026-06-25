@@ -69,6 +69,13 @@ fun MobileLayout(root: RootComponent) {
     var widthPx by remember { mutableFloatStateOf(0f) }
     var isSwipeBackBlocked by remember { mutableStateOf(false) }
     var selectedBottomTab by remember { mutableStateOf(MainTab.Chats) }
+
+    val downloadTabRequest by root.downloadTabRequest.collectAsState()
+    LaunchedEffect(downloadTabRequest) {
+        if (downloadTabRequest > 0) {
+            selectedBottomTab = MainTab.Download
+        }
+    }
     val canUseDragToBack =
         isDragToBackEnabled && isSwipeBackSupported(stack.active.instance) && !isSwipeBackBlocked
     val dragProgress = if (widthPx > 0f) (dragOffsetX / widthPx).coerceIn(0f, 1f) else 0f
