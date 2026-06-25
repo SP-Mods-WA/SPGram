@@ -131,6 +131,12 @@ fun TextMessageBubble(
                         onClick    = { onReplyClick(reply) }
                     )
                 }
+                if (msg.replyToMsg == null && msg.replyToStoryId != null) {
+                    StoryReplyContent(
+                        isOutgoing = isOutgoing,
+                        senderName = if (isOutgoing) "You" else msg.senderName
+                    )
+                }
 
                 val finalFontSize = if (renderData.isBigEmoji) fontSize * 5f else fontSize
 
