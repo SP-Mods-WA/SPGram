@@ -100,6 +100,12 @@ class StoryRepositoryImpl(
         return result.stories.mapNotNull { it.toModel() }
     }
 
+    override suspend fun getStory(posterChatId: Long, storyId: Int): StoryModel? {
+        return coRunCatching {
+            gateway.execute(TdApi.GetStory(posterChatId, storyId, false)) as? TdApi.Story
+        }.getOrNull()?.toModel()
+    }
+
     override suspend fun postPhotoStory(
         chatId: Long,
         photoPath: String,
