@@ -58,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -114,8 +115,10 @@ import com.spmods.spgram.presentation.features.chats.conversation.ui.content.rem
 import com.spmods.spgram.presentation.features.chats.conversation.ui.content.withUpdatedTextContent
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.LocalLinkHandler
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.LocalMessageRenderDependencies
+import com.spmods.spgram.presentation.features.chats.conversation.ui.message.LocalStoryReplyClickHandler
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.rememberChatMessageRenderDependencies
 import com.spmods.spgram.presentation.features.chats.conversation.ui.rememberVoicePlaybackController
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 
@@ -321,6 +324,7 @@ fun ChatContent(
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     var renderPinnedMessagesList by rememberSaveable { mutableStateOf(state.showPinnedMessagesList) }
     var pendingPinnedSheetAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     ChatContentEffects(
         component = component,
@@ -361,7 +365,10 @@ fun ChatContent(
     CompositionLocalProvider(
         LocalLinkHandler provides { component.onLinkClick(it) },
         LocalMessageRenderDependencies provides messageRenderDependencies,
-        LocalVoicePlaybackController provides voicePlaybackController
+        LocalVoicePlaybackController provides voicePlaybackController,
+        LocalStoryReplyClickHandler provides { posterChatId, storyId ->
+            component.onViewStoryReply(posterChatId, storyId)
+        }
     ) {
         val statusBarHeight = with(density) { WindowInsets.statusBars.getTop(this).toDp() }
         val headerOverlayHeight = statusBarHeight + 16.dp
@@ -916,6 +923,35 @@ fun ChatContent(
                         }
                     }
                 }
+            }
+            if (state.viewingStoryReply != null) {
+                val story = state.viewingStoryReply!!
+                com.spmods.spgram.presentation.features.profile.components.StoryViewerScreen(
+                    stories = listOf(story),
+                    initialIndex = 0,
+                    canDeleteStory = false,
+                    onSendReply = { storyClicked, text ->
+                        coroutineScope.launch {
+                            component.repositoryMessage.sendStoryReply(
+                                chatId = storyClicked.posterChatId,
+                                text = text,
+                                storyPosterChatId = storyClicked.posterChatId,
+                                storyId = storyClicked.id
+                            )
+                        }
+                    },
+                    onLikeStory = { storyClicked ->
+                        coroutineScope.launch {
+                            component.repositoryMessage.sendStoryReply(
+                                chatId = storyClicked.posterChatId,
+                                text = "\u2764\ufe0f",
+                                storyPosterChatId = storyClicked.posterChatId,
+                                storyId = storyClicked.id
+                            )
+                        }
+                    },
+                    onDismiss = { component.onDismissStoryReply() }
+                )
             }
             ChatContentOverlays(
                 state = state,
