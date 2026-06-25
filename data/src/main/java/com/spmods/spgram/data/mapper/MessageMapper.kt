@@ -52,7 +52,7 @@ class MessageMapper internal constructor(
         withTimeoutOrNull(MESSAGE_MAP_TIMEOUT_MS) {
             val sender = senderResolver.resolveSender(msg)
 
-            val (replyToMsgId, replyToMsg) = resolveReplyInfo(
+            val replyInfo = resolveReplyInfo(
                 msg = msg,
                 isChatOpen = isChatOpen,
                 isReply = isReply
@@ -72,8 +72,10 @@ class MessageMapper internal constructor(
                 senderId = sender.senderId,
                 senderAvatar = sender.senderAvatar,
                 isReadOverride = false,
-                replyToMsgId = replyToMsgId,
-                replyToMsg = replyToMsg,
+                replyToMsgId = replyInfo.messageId,
+                replyToMsg = replyInfo.message,
+                replyToStoryPosterChatId = replyInfo.storyPosterChatId,
+                replyToStoryId = replyInfo.storyId,
                 forwardInfo = forwardInfo,
                 views = views,
                 viewCount = views,
@@ -140,6 +142,8 @@ class MessageMapper internal constructor(
         isReadOverride: Boolean = false,
         replyToMsgId: Long? = null,
         replyToMsg: MessageModel? = null,
+        replyToStoryPosterChatId: Long? = null,
+        replyToStoryId: Int? = null,
         forwardInfo: ForwardInfo? = null,
         views: Int? = null,
         viewCount: Int? = null,
@@ -195,6 +199,8 @@ class MessageMapper internal constructor(
             isRead = isReadOverride,
             replyToMsgId = replyToMsgId,
             replyToMsg = replyToMsg,
+            replyToStoryPosterChatId = replyToStoryPosterChatId,
+            replyToStoryId = replyToStoryId,
             forwardInfo = forwardInfo,
             views = views,
             viewCount = viewCount,
@@ -239,14 +245,29 @@ class MessageMapper internal constructor(
         return persistenceMapper.mapEntityToModel(entity)
     }
 
+    private data class ReplyInfoResult(
+        val messageId: Long? = null,
+        val message: MessageModel? = null,
+        val storyPosterChatId: Long? = null,
+        val storyId: Int? = null
+    )
+
     private suspend fun resolveReplyInfo(
         msg: TdApi.Message,
         isChatOpen: Boolean,
         isReply: Boolean
-    ): Pair<Long?, MessageModel?> {
-        if (isReply || msg.replyTo == null) return null to null
+    ): ReplyInfoResult {
+        if (isReply || msg.replyTo == null) return ReplyInfoResult()
         val replyTo = msg.replyTo
-        if (replyTo !is TdApi.MessageReplyToMessage) return null to null
+
+        if (replyTo is TdApi.MessageReplyToStory) {
+            return ReplyInfoResult(
+                storyPosterChatId = replyTo.storyPosterChatId,
+                storyId = replyTo.storyId
+            )
+        }
+
+        if (replyTo !is TdApi.MessageReplyToMessage) return ReplyInfoResult()
 
         val replyToMsgId = replyTo.messageId
         val repliedMessage = try {
@@ -266,7 +287,7 @@ class MessageMapper internal constructor(
             ).copy(replyToMsg = null, replyToMsgId = null)
         }
 
-        return replyToMsgId to replyToMsg
+        return ReplyInfoResult(messageId = replyToMsgId, message = replyToMsg)
     }
 
     private suspend fun resolveForwardInfo(msg: TdApi.Message): ForwardInfo? {
