@@ -167,6 +167,7 @@ fun ChatListContent(component: ChatListComponent) {
     var showStatusMenu by remember { mutableStateOf(false) }
     var showAlphaSheet by remember { mutableStateOf(false) }
     var showDeleteChatsSheet by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
 
     // ── Update sheet ──────────────────────────────────────────────────────
     val updateState by component.updateState.collectAsState()
@@ -574,7 +575,30 @@ fun ChatListContent(component: ChatListComponent) {
                                 onStatusClick = { _ ->
                                     showAlphaSheet = true
                                 },
-                                onMenuClick = { component.onSettingsClicked() }
+                                onMenuClick = { component.onSettingsClicked() },
+                                onMoreMenuClick = { showMoreMenu = true },
+                                showMoreMenu = showMoreMenu,
+                                onMoreMenuDismiss = { showMoreMenu = false },
+                                onMarkAllAsRead = {
+                                    component.onMarkAllAsReadClicked()
+                                    showMoreMenu = false
+                                },
+                                onEditFolder = {
+                                    component.onEditFoldersClicked()
+                                    showMoreMenu = false
+                                },
+                                onDownloads = {
+                                    component.onDownloadsClicked()
+                                    showMoreMenu = false
+                                },
+                                onCreateChannel = {
+                                    component.onCreateChannelClicked()
+                                    showMoreMenu = false
+                                },
+                                onCreateGroup = {
+                                    component.onCreateGroupClicked()
+                                    showMoreMenu = false
+                                }
                             )
                         }
                     }
