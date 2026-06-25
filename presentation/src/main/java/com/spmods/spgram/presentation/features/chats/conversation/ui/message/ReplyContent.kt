@@ -17,6 +17,59 @@ import com.spmods.spgram.domain.models.MessageModel
 import com.spmods.spgram.presentation.R
 
 @Composable
+fun StoryReplyContent(
+    isOutgoing: Boolean,
+    senderName: String,
+    onClick: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .padding(bottom = 4.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(
+                if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+            )
+            .clickable { onClick() }
+            .padding(4.dp)
+            .fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .width(2.dp)
+                .height(32.dp)
+                .background(
+                    if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.primary,
+                    RoundedCornerShape(2.dp)
+                )
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Column {
+            Text(
+                text = senderName,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = stringResource(R.string.reply_content_story),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
 fun ReplyContent(
     replyToMsg: MessageModel,
     isOutgoing: Boolean,
