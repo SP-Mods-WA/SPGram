@@ -108,14 +108,14 @@ fun ChatListTopBar(
     onSearchToggle: () -> Unit,
     onStatusClick: (Rect?) -> Unit,
     onMenuClick: () -> Unit,
-    onMoreMenuClick: () -> Unit,
-    showMoreMenu: Boolean,
-    onMoreMenuDismiss: () -> Unit,
-    onMarkAllAsRead: () -> Unit,
-    onEditFolder: () -> Unit,
-    onDownloads: () -> Unit,
-    onCreateChannel: () -> Unit,
-    onCreateGroup: () -> Unit
+    onMoreMenuClick: () -> Unit = {},
+    showMoreMenu: Boolean = false,
+    onMoreMenuDismiss: () -> Unit = {},
+    onMarkAllAsRead: () -> Unit = {},
+    onEditFolder: () -> Unit = {},
+    onDownloads: () -> Unit = {},
+    onCreateChannel: () -> Unit = {},
+    onCreateGroup: () -> Unit = {}
 ) {
     var statusAnchorBounds by remember { mutableStateOf<Rect?>(null) }
     val iconButtonShapes = ExpressiveDefaults.iconButtonShapes()
