@@ -503,10 +503,13 @@ class FileDownloadQueue(
             } else if (manualDownloadIds.contains(file.id)) {
                 // For non-sticker manual downloads that become inactive without completing:
                 // only re-enqueue if they are still in the queue (i.e. not explicitly cancelled).
-                // cancelDownload() removes the id from pendingRequests/activeRequests, so
-                // hasPendingOrActiveRequest will be false for explicitly cancelled downloads.
+                // cancelDownload() now clears pendingRequests/activeRequests synchronously and
+                // sets suppressedAutoDownloadIds before returning, so hasPendingOrActiveRequest
+                // and the suppression check below are both reliable here — there's no longer a
+                // window where a just-cancelled file can look "still queued" to this callback.
                 scope.launch(dispatcherProvider.default) {
-                    val stillQueued = hasPendingOrActiveRequest(file.id)
+                    val isSuppressed = suppressedAutoDownloadIds.contains(file.id)
+                    val stillQueued = !isSuppressed && hasPendingOrActiveRequest(file.id)
                     if (stillQueued) {
                         enqueue(
                             fileId = file.id,
@@ -514,8 +517,16 @@ class FileDownloadQueue(
                             type = type ?: DownloadType.DEFAULT
                         )
                     } else {
-                        // Explicitly cancelled — remove manual flag so next tap starts fresh
+                        // Explicitly cancelled (or suppressed) — clear manual flag and make
+                        // sure the request is actually gone from the queues so a stray
+                        // dispatchTasks() pass can't pick it back up.
                         manualDownloadIds.remove(file.id)
+                        if (isSuppressed) {
+                            stateMutex.withLock {
+                                pendingRequests.remove(file.id)
+                                activeRequests.remove(file.id)
+                            }
+                        }
                     }
                 }
             }
@@ -693,22 +704,23 @@ class FileDownloadQueue(
         // Always clear manual flag on explicit cancel so a subsequent tap starts a fresh download
         manualDownloadIds.remove(fileId)
 
-        // Remove synchronously so isFileQueued() returns false immediately after cancel,
-        // preventing the UI from staying in "downloading" state
+        // Clear queue/progress state synchronously (these are ConcurrentHashMaps, safe without
+        // the mutex for plain removals) so that anything checking "is this file still queued?"
+        // right after cancelDownload() returns — including the updateFileCache() re-enqueue
+        // check — sees the cancelled state immediately, instead of racing the IO coroutine
+        // below that talks to TDLib over the network.
         pendingRequests.remove(fileId)
         activeRequests.remove(fileId)
         failedRequests.remove(fileId)
+        lastProgressAt.remove(fileId)
+        stalledRecoveryAt.remove(fileId)
+        notifyDownloadCancelled(fileId)
 
         scope.launch(dispatcherProvider.io) {
             try {
                 gateway.execute(TdApi.CancelDownloadFile(fileId, false))
             } catch (_: Exception) {
             }
-
-            lastProgressAt.remove(fileId)
-            stalledRecoveryAt.remove(fileId)
-            Log.d("DownloadDebug", "queue.cancel.cleared: fileId=$fileId")
-            notifyDownloadCancelled(fileId)
         }
     }
 
