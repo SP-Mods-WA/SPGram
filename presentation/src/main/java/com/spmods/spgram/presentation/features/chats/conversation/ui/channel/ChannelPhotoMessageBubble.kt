@@ -4,11 +4,11 @@ import androidx.compose.foundation.background
 import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -111,6 +111,7 @@ fun ChannelPhotoMessageBubble(
     }
     var isAutoDownloadSuppressed by remember(msg.id) { mutableStateOf(false) }
 
+    // Official style: wider aspect ratio range (0.3f - 3f)
     val stableAspectRatio = remember(msg.id, content.fileId) {
         if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
@@ -153,6 +154,7 @@ fun ChannelPhotoMessageBubble(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
+                // Headers (Forward/Reply)
                 if (msg.forwardInfo != null || msg.replyToMsg != null) {
                     Column(
                         modifier = Modifier
@@ -174,85 +176,31 @@ fun ChannelPhotoMessageBubble(
 
                 val mediaRatio = stableAspectRatio
 
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    // No forced height limits - use original aspect ratio
-                    val mediaHeight = maxWidth / mediaRatio
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(ratio)  // ✅ Original ratio, no limit!
-                            .clip(
-                                if (hasCaption) RoundedCornerShape(
-                                    topStart = topStart,
-                                    topEnd = topEnd
-                                ) else bubbleShape
-                            )
-                            .clipToBounds()
-                            .onGloballyPositioned { imagePosition = it.positionInWindow() }
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onTap = {
-                                        if (content.isDownloading) {
-                                            isAutoDownloadSuppressed = true
-                                            AutoDownloadSuppression.suppress(content.fileId)
-                                            onCancelDownload(content.fileId)
-                                        } else {
-                                            isAutoDownloadSuppressed = false
-                                            AutoDownloadSuppression.clear(content.fileId)
-                                            if (hasPath) {
-                                                onPhotoClick(msg)
-                                            } else {
-                                                onDownloadPhoto(content.fileId)
-                                            }
-                                        }
-                                    },
-                                    onLongPress = { offset -> onLongClick(imagePosition + offset) }
-                                )
-                            }
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (!hasPath) {
-                                MediaLoadingBackground(
-                                    previewData = content.minithumbnail,
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-
-                            if (hasPath) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(stablePath)
-                                        .apply {
-                                            photoCacheKey?.let {
-                                                memoryCacheKey(it)
-                                                diskCacheKey(it)
-                                            }
-                                        }
-                                        .crossfade(false)
-                                        .build(),
-                                    contentDescription = content.caption,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.FillWidth // No crop!
-                                )
-                            }
-
-                            if (!hasPath) {
-                                MediaLoadingAction(
-                                    isDownloading = content.isDownloading,
-                                    progress = content.downloadProgress,
-                                    idleIcon = Icons.Default.Download,
-                                    idleContentDescription = stringResource(R.string.cd_download),
-                                    showCancelOnDownload = content.isDownloading,
-                                    onCancelClick = {
+                // ✅ FIXED: Official style - min/max height with aspect ratio
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = 120.dp,  // Min height for small images
+                            max = 360.dp   // Max height for very tall images
+                        )
+                        .aspectRatio(mediaRatio)
+                        .clip(
+                            if (hasCaption) RoundedCornerShape(
+                                topStart = topStart,
+                                topEnd = topEnd
+                            ) else bubbleShape
+                        )
+                        .clipToBounds()
+                        .onGloballyPositioned { imagePosition = it.positionInWindow() }
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    if (content.isDownloading) {
                                         isAutoDownloadSuppressed = true
                                         AutoDownloadSuppression.suppress(content.fileId)
                                         onCancelDownload(content.fileId)
-                                    },
-                                    onIdleClick = {
+                                    } else {
                                         isAutoDownloadSuppressed = false
                                         AutoDownloadSuppression.clear(content.fileId)
                                         if (hasPath) {
@@ -261,27 +209,84 @@ fun ChannelPhotoMessageBubble(
                                             onDownloadPhoto(content.fileId)
                                         }
                                     }
-                                )
-                            }
+                                },
+                                onLongPress = { offset -> onLongClick(imagePosition + offset) }
+                            )
+                        }
+                ) {
+                    // Image content
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!hasPath) {
+                            MediaLoadingBackground(
+                                previewData = content.minithumbnail,
+                                contentScale = ContentScale.Crop
+                            )
                         }
 
-                        if (!hasCaption && showMetadata) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(6.dp)
-                                    .background(
-                                        Color.Black.copy(alpha = 0.45f),
-                                        RoundedCornerShape(10.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                MessageMetadata(msg, msg.isOutgoing, Color.White)
-                            }
+                        if (hasPath) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(stablePath)
+                                    .apply {
+                                        photoCacheKey?.let {
+                                            memoryCacheKey(it)
+                                            diskCacheKey(it)
+                                        }
+                                    }
+                                    .crossfade(false)
+                                    .build(),
+                                contentDescription = content.caption,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.FillWidth  // No crop!
+                            )
+                        }
+
+                        if (!hasPath) {
+                            MediaLoadingAction(
+                                isDownloading = content.isDownloading,
+                                progress = content.downloadProgress,
+                                idleIcon = Icons.Default.Download,
+                                idleContentDescription = stringResource(R.string.cd_download),
+                                showCancelOnDownload = content.isDownloading,
+                                onCancelClick = {
+                                    isAutoDownloadSuppressed = true
+                                    AutoDownloadSuppression.suppress(content.fileId)
+                                    onCancelDownload(content.fileId)
+                                },
+                                onIdleClick = {
+                                    isAutoDownloadSuppressed = false
+                                    AutoDownloadSuppression.clear(content.fileId)
+                                    if (hasPath) {
+                                        onPhotoClick(msg)
+                                    } else {
+                                        onDownloadPhoto(content.fileId)
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    // Metadata overlay (only when no caption)
+                    if (!hasCaption && showMetadata) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(6.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.45f),
+                                    RoundedCornerShape(10.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            MessageMetadata(msg, msg.isOutgoing, Color.White)
                         }
                     }
                 }
 
+                // Caption Section
                 if (hasCaption) {
                     Column(
                         modifier = Modifier
