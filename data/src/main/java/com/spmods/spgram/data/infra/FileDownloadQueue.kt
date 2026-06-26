@@ -693,17 +693,18 @@ class FileDownloadQueue(
         // Always clear manual flag on explicit cancel so a subsequent tap starts a fresh download
         manualDownloadIds.remove(fileId)
 
+        // Remove synchronously so isFileQueued() returns false immediately after cancel,
+        // preventing the UI from staying in "downloading" state
+        pendingRequests.remove(fileId)
+        activeRequests.remove(fileId)
+        failedRequests.remove(fileId)
+
         scope.launch(dispatcherProvider.io) {
             try {
                 gateway.execute(TdApi.CancelDownloadFile(fileId, false))
             } catch (_: Exception) {
             }
 
-            stateMutex.withLock {
-                pendingRequests.remove(fileId)
-                activeRequests.remove(fileId)
-                failedRequests.remove(fileId)
-            }
             lastProgressAt.remove(fileId)
             stalledRecoveryAt.remove(fileId)
             Log.d("DownloadDebug", "queue.cancel.cleared: fileId=$fileId")
