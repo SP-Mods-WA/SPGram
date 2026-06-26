@@ -11,25 +11,21 @@ import androidx.compose.foundation.background
 import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -133,6 +129,13 @@ fun ChannelGifMessageBubble(
     }
     var isAutoDownloadSuppressed by remember(msg.id) { mutableStateOf(false) }
 
+    // ✅ FIXED: Define mediaRatio properly
+    val mediaRatio = remember(content.width, content.height) {
+        if (content.width > 0 && content.height > 0)
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
+        else 1f
+    }
+
     LaunchedEffect(content.path) {
         if (!content.path.isNullOrBlank()) {
             stablePath = content.path
@@ -168,6 +171,7 @@ fun ChannelGifMessageBubble(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.animateContentSize()) {
+                // Headers
                 msg.forwardInfo?.let { forward ->
                     Box(
                         modifier = Modifier
@@ -195,193 +199,194 @@ fun ChannelGifMessageBubble(
                     }
                 }
 
-                val mediaRatio = if (content.width > 0 && content.height > 0)
-                    (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
-                else 1f
-
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val mediaHeight = (maxWidth / mediaRatio).coerceIn(160.dp, 320.dp)
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(ratio)  // ✅ Original ratio, no limit!
-                            .clipToBounds()
-                            .onGloballyPositioned { gifPosition = it.positionInWindow() }
-
-                    ) {
-                        if (hasPath) {
-                            if (autoplayGifs) {
-                                stablePath?.let { path ->
-                                    VideoStickerPlayer(
-                                        path = path,
-                                        type = VideoType.Gif,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Fit,
-                                        animate = !isAnyViewerOpen,
-                                        fileId = content.fileId,
-                                        thumbnailData = content.minithumbnail
-                                    )
-                                }
-                            } else {
-                                Image(
-                                    painter = rememberAsyncImagePainter(
-                                        model = ImageRequest.Builder(context)
-                                            .data(stablePath)
-                                            .apply {
-                                                gifCacheKey?.let {
-                                                    memoryCacheKey(it)
-                                                    diskCacheKey(it)
-                                                }
-                                            }
-                                            .crossfade(false)
-                                            .build()
-                                    ),
-                                    contentDescription = content.caption,
+                // ✅ FIXED: Use mediaRatio with heightIn and aspectRatio
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = 120.dp,
+                            max = 360.dp
+                        )
+                        .aspectRatio(mediaRatio)  // ✅ Now mediaRatio is defined!
+                        .clipToBounds()
+                        .onGloballyPositioned { gifPosition = it.positionInWindow() }
+                ) {
+                    if (hasPath) {
+                        if (autoplayGifs) {
+                            stablePath?.let { path ->
+                                VideoStickerPlayer(
+                                    path = path,
+                                    type = VideoType.Gif,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.Center)
-                                        .size(48.dp)
-                                        .background(Color.Black.copy(alpha = 0.45f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = stringResource(R.string.action_play),
-                                        tint = Color.White,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                }
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopStart)
-                                    .padding(8.dp)
-                                    .background(
-                                        Color.Black.copy(alpha = 0.45f),
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "GIF",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White
+                                    contentScale = ContentScale.Fit,
+                                    animate = !isAnyViewerOpen,
+                                    fileId = content.fileId,
+                                    thumbnailData = content.minithumbnail
                                 )
                             }
                         } else {
-                            Box(
+                            Image(
+                                painter = rememberAsyncImagePainter(
+                                    model = ImageRequest.Builder(context)
+                                        .data(stablePath)
+                                        .apply {
+                                            gifCacheKey?.let {
+                                                memoryCacheKey(it)
+                                                diskCacheKey(it)
+                                            }
+                                        }
+                                        .crossfade(false)
+                                        .build()
+                                ),
+                                contentDescription = content.caption,
                                 modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .size(48.dp)
+                                    .background(Color.Black.copy(alpha = 0.45f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                MediaLoadingBackground(
-                                    previewData = content.minithumbnail,
-                                    contentScale = ContentScale.Fit
-                                )
-
-                                MediaLoadingAction(
-                                    isDownloading = content.isDownloading,
-                                    progress = content.downloadProgress,
-                                    idleIcon = Icons.Default.Download,
-                                    idleContentDescription = stringResource(R.string.cd_download),
-                                    onCancelClick = {
-                                        isAutoDownloadSuppressed = true
-                                        AutoDownloadSuppression.suppress(content.fileId)
-                                        onCancelDownload(content.fileId)
-                                    },
-                                    onIdleClick = {
-                                        isAutoDownloadSuppressed = false
-                                        AutoDownloadSuppression.clear(content.fileId)
-                                        onGifClick(msg)
-                                    }
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = stringResource(R.string.action_play),
+                                    tint = Color.White,
+                                    modifier = Modifier.size(32.dp)
                                 )
                             }
                         }
 
+                        // GIF label
                         Box(
                             modifier = Modifier
-                                .matchParentSize()
-                                .pointerInput(content.isDownloading, content.fileId, stablePath) {
-                                    detectTapGestures(
-                                        onTap = {
-                                            if (content.isDownloading) {
-                                                isAutoDownloadSuppressed = true
-                                                AutoDownloadSuppression.suppress(content.fileId)
-                                                onCancelDownload(content.fileId)
-                                            } else {
-                                                isAutoDownloadSuppressed = false
-                                                AutoDownloadSuppression.clear(content.fileId)
-                                                onGifClick(msg)
-                                            }
-                                        },
-                                        onLongPress = { offset -> onLongClick(gifPosition + offset) }
-                                    )
+                                .align(Alignment.TopStart)
+                                .padding(8.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.45f),
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "GIF",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
+                        }
+                    } else {
+                        // Placeholder / Download State
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            MediaLoadingBackground(
+                                previewData = content.minithumbnail,
+                                contentScale = ContentScale.Fit
+                            )
+
+                            MediaLoadingAction(
+                                isDownloading = content.isDownloading,
+                                progress = content.downloadProgress,
+                                idleIcon = Icons.Default.Download,
+                                idleContentDescription = stringResource(R.string.cd_download),
+                                onCancelClick = {
+                                    isAutoDownloadSuppressed = true
+                                    AutoDownloadSuppression.suppress(content.fileId)
+                                    onCancelDownload(content.fileId)
+                                },
+                                onIdleClick = {
+                                    isAutoDownloadSuppressed = false
+                                    AutoDownloadSuppression.clear(content.fileId)
+                                    onGifClick(msg)
                                 }
-                        )
-                        if (content.caption.isEmpty() && (hasPath || msg.isOutgoing || content.minithumbnail != null) && showMetadata) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(6.dp)
-                                    .background(
-                                        Color.Black.copy(alpha = 0.45f),
-                                        RoundedCornerShape(10.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    msg.views?.let { viewsCount ->
-                                        if (viewsCount > 0) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Visibility,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(12.dp),
-                                                tint = Color.White
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = formatViews(context, viewsCount),
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                                color = Color.White
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
+                            )
+                        }
+                    }
+
+                    // Tap gesture overlay
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .pointerInput(content.isDownloading, content.fileId, stablePath) {
+                                detectTapGestures(
+                                    onTap = {
+                                        if (content.isDownloading) {
+                                            isAutoDownloadSuppressed = true
+                                            AutoDownloadSuppression.suppress(content.fileId)
+                                            onCancelDownload(content.fileId)
+                                        } else {
+                                            isAutoDownloadSuppressed = false
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            onGifClick(msg)
                                         }
-                                    }
-                                    Text(
-                                        text = formatTime(msg.date, timeFormat),
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                        color = Color.White
-                                    )
-                                    if (msg.isOutgoing) {
+                                    },
+                                    onLongPress = { offset -> onLongClick(gifPosition + offset) }
+                                )
+                            }
+                    )
+
+                    // Metadata overlay (only when no caption)
+                    if (content.caption.isEmpty() && (hasPath || msg.isOutgoing || content.minithumbnail != null) && showMetadata) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(6.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.45f),
+                                    RoundedCornerShape(10.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                msg.views?.let { viewsCount ->
+                                    if (viewsCount > 0) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Visibility,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(12.dp),
+                                            tint = Color.White
+                                        )
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        AnimatedContent(
-                                            targetState = msg.sendingState to msg.isRead,
-                                            transitionSpec = {
-                                                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(
-                                                    animationSpec = tween(
-                                                        300
-                                                    )
+                                        Text(
+                                            text = formatViews(context, viewsCount),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                            color = Color.White
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                    }
+                                }
+                                Text(
+                                    text = formatTime(msg.date, timeFormat),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    color = Color.White
+                                )
+                                if (msg.isOutgoing) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    AnimatedContent(
+                                        targetState = msg.sendingState to msg.isRead,
+                                        transitionSpec = {
+                                            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(
+                                                animationSpec = tween(
+                                                    300
                                                 )
-                                            },
-                                            label = "SendingState"
-                                        ) { (sendingState, isRead) ->
-                                            val statusIcon = when (sendingState) {
-                                                is MessageSendingState.Pending -> Icons.Default.Schedule
-                                                is MessageSendingState.Failed -> Icons.Default.Error
-                                                null -> if (isRead) Icons.Default.DoneAll else Icons.Default.Check
-                                            }
-                                            Icon(
-                                                imageVector = statusIcon,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(12.dp),
-                                                tint = if (sendingState is MessageSendingState.Failed) Color.Red else Color.White
                                             )
+                                        },
+                                        label = "SendingState"
+                                    ) { (sendingState, isRead) ->
+                                        val statusIcon = when (sendingState) {
+                                            is MessageSendingState.Pending -> Icons.Default.Schedule
+                                            is MessageSendingState.Failed -> Icons.Default.Error
+                                            null -> if (isRead) Icons.Default.DoneAll else Icons.Default.Check
                                         }
+                                        Icon(
+                                            imageVector = statusIcon,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(12.dp),
+                                            tint = if (sendingState is MessageSendingState.Failed) Color.Red else Color.White
+                                        )
                                     }
                                 }
                             }
@@ -389,6 +394,7 @@ fun ChannelGifMessageBubble(
                     }
                 }
 
+                // Caption Section
                 if (content.caption.isNotEmpty()) {
                     Column(
                         modifier = Modifier
@@ -504,7 +510,6 @@ fun ChannelGifMessageBubble(
             )
         }
 
-        // Reactions
         if (showReactions) {
             MessageReactionsView(
                 reactions = msg.reactions,
