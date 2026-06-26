@@ -138,7 +138,7 @@ fun ChannelVideoMessageBubble(
 
     val stableAspectRatio = remember(msg.id, content.fileId) {
         if (content.width > 0 && content.height > 0)
-            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
         else 1f
     }
     val hasCaption = content.caption.isNotEmpty()
@@ -180,10 +180,7 @@ fun ChannelVideoMessageBubble(
             tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier
-                .fillMaxWidth()
-            ) {
-                // Headers
+            Column(modifier = Modifier.fillMaxWidth()) {
                 if (msg.forwardInfo != null || msg.replyToMsg != null) {
                     Column(
                         modifier = Modifier
@@ -208,7 +205,7 @@ fun ChannelVideoMessageBubble(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 160.dp, max = 320.dp)
+                        .heightIn(min = 160.dp) // Only min, no max!
                         .aspectRatio(mediaRatio)
                         .clip(
                             if (hasCaption) RoundedCornerShape(
@@ -219,198 +216,193 @@ fun ChannelVideoMessageBubble(
                         .clipToBounds()
                         .onGloballyPositioned { videoPosition = it.positionInWindow() }
                 ) {
-                        if (hasPath || content.supportsStreaming) {
-                            if (autoplayVideos) {
-                                val videoPath = stablePath ?: "http://streaming/${content.fileId}"
-                                VideoStickerPlayer(
-                                    path = videoPath,
-                                    type = VideoType.Gif,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop,
-                                    animate = isVisible && !isAnyViewerOpen,
-                                    volume = if (isMuted) 0f else 1f,
-                                    reportProgress = true,
-                                    onProgressUpdate = {
-                                        val seconds = (it / 1000).toInt()
-                                        if (seconds != currentPositionSeconds) {
-                                            currentPositionSeconds = seconds
-                                        }
-                                    },
-                                    fileId = content.fileId,
-                                    thumbnailData = content.minithumbnail
-                                )
+                    if (hasPath || content.supportsStreaming) {
+                        if (autoplayVideos) {
+                            val videoPath = stablePath ?: "http://streaming/${content.fileId}"
+                            VideoStickerPlayer(
+                                path = videoPath,
+                                type = VideoType.Gif,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.FillWidth, // No crop!
+                                animate = isVisible && !isAnyViewerOpen,
+                                volume = if (isMuted) 0f else 1f,
+                                reportProgress = true,
+                                onProgressUpdate = {
+                                    val seconds = (it / 1000).toInt()
+                                    if (seconds != currentPositionSeconds) {
+                                        currentPositionSeconds = seconds
+                                    }
+                                },
+                                fileId = content.fileId,
+                                thumbnailData = content.minithumbnail
+                            )
 
-                                // Volume Toggle
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(8.dp)
-                                        .size(30.dp)
-                                        .background(Color.Black.copy(alpha = 0.45f), CircleShape)
-                                        .clickable { isMuted = !isMuted },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .size(30.dp)
+                                    .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                                    .clickable { isMuted = !isMuted },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        } else {
+                            if (hasPath) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(
+                                        model = ImageRequest.Builder(context)
+                                            .data(stablePath)
+                                            .apply {
+                                                videoCacheKey?.let {
+                                                    memoryCacheKey(it)
+                                                    diskCacheKey(it)
+                                                }
+                                            }
+                                            .crossfade(false)
+                                            .build()
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.FillWidth // No crop!
+                                )
                             } else {
-                                if (hasPath) {
+                                if (content.minithumbnail != null) {
                                     Image(
                                         painter = rememberAsyncImagePainter(
                                             model = ImageRequest.Builder(context)
-                                                .data(stablePath)
+                                                .data(content.minithumbnail)
                                                 .apply {
-                                                    videoCacheKey?.let {
+                                                    videoMiniCacheKey?.let {
                                                         memoryCacheKey(it)
                                                         diskCacheKey(it)
                                                     }
                                                 }
-                                                .crossfade(false)
                                                 .build()
                                         ),
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    if (content.minithumbnail != null) {
-                                        Image(
-                                            painter = rememberAsyncImagePainter(
-                                                model = ImageRequest.Builder(context)
-                                                    .data(content.minithumbnail)
-                                                    .apply {
-                                                        videoMiniCacheKey?.let {
-                                                            memoryCacheKey(it)
-                                                            diskCacheKey(it)
-                                                        }
-                                                    }
-                                                    .build()
-                                            ),
-                                            contentDescription = null,
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.Center)
-                                        .size(48.dp)
-                                        .background(Color.Black.copy(alpha = 0.45f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.PlayArrow,
-                                        null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(32.dp)
+                                        contentScale = ContentScale.FillWidth // No crop!
                                     )
                                 }
                             }
-
-                            // Duration Tag
                             Box(
                                 modifier = Modifier
-                                    .align(Alignment.TopStart)
-                                    .padding(8.dp)
-                                    .background(
-                                        Color.Black.copy(alpha = 0.45f),
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = if ((hasPath || content.supportsStreaming) && autoplayVideos) {
-                                        "${formatDuration(context, currentPositionSeconds)} / ${formatDuration(context, content.duration)}"
-                                    } else {
-                                        formatDuration(context, content.duration)
-                                    },
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White
-                                )
-                            }
-                        } else {
-                            // Placeholder / Download State
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
+                                    .align(Alignment.Center)
+                                    .size(48.dp)
+                                    .background(Color.Black.copy(alpha = 0.45f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                MediaLoadingBackground(
-                                    previewData = content.minithumbnail,
-                                    contentScale = ContentScale.Crop
-                                )
-
-                                MediaLoadingAction(
-                                    isDownloading = content.isDownloading,
-                                    progress = content.downloadProgress,
-                                    idleIcon = if (content.supportsStreaming) Icons.Rounded.Stream else Icons.Default.Download,
-                                    idleContentDescription = if (content.supportsStreaming) {
-                                        stringResource(R.string.cd_stream)
-                                    } else {
-                                        stringResource(R.string.cd_download)
-                                    },
-                                    onCancelClick = {
-                                        isAutoDownloadSuppressed = true
-                                        AutoDownloadSuppression.suppress(content.fileId)
-                                        onCancelDownload(content.fileId)
-                                    },
-                                    onIdleClick = {
-                                        isAutoDownloadSuppressed = false
-                                        AutoDownloadSuppression.clear(content.fileId)
-                                        onVideoClick(msg)
-                                    }
+                                Icon(
+                                    Icons.Default.PlayArrow,
+                                    null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(32.dp)
                                 )
                             }
-                    }
+                        }
 
                         Box(
                             modifier = Modifier
-                                .matchParentSize()
-                                .pointerInput(
-                                    content.isDownloading,
-                                    content.fileId,
-                                    stablePath,
-                                    content.supportsStreaming
-                                ) {
-                                    detectTapGestures(
-                                        onTap = {
-                                            if (content.isDownloading) {
-                                                isAutoDownloadSuppressed = true
-                                                AutoDownloadSuppression.suppress(content.fileId)
-                                                onCancelDownload(content.fileId)
-                                            } else {
-                                                isAutoDownloadSuppressed = false
-                                                AutoDownloadSuppression.clear(content.fileId)
-                                                onVideoClick(msg)
-                                            }
-                                        },
-                                        onLongPress = { offset -> onLongClick(videoPosition + offset) }
-                                    )
-                                }
-                        )
+                                .align(Alignment.TopStart)
+                                .padding(8.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.45f),
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if ((hasPath || content.supportsStreaming) && autoplayVideos) {
+                                    "${formatDuration(context, currentPositionSeconds)} / ${formatDuration(context, content.duration)}"
+                                } else {
+                                    formatDuration(context, content.duration)
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            MediaLoadingBackground(
+                                previewData = content.minithumbnail,
+                                contentScale = ContentScale.FillWidth // No crop!
+                            )
 
-                        if (!hasCaption && showMetadata) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(6.dp)
-                                    .background(
-                                        Color.Black.copy(alpha = 0.45f),
-                                        RoundedCornerShape(10.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            MediaLoadingAction(
+                                isDownloading = content.isDownloading,
+                                progress = content.downloadProgress,
+                                idleIcon = if (content.supportsStreaming) Icons.Rounded.Stream else Icons.Default.Download,
+                                idleContentDescription = if (content.supportsStreaming) {
+                                    stringResource(R.string.cd_stream)
+                                } else {
+                                    stringResource(R.string.cd_download)
+                                },
+                                onCancelClick = {
+                                    isAutoDownloadSuppressed = true
+                                    AutoDownloadSuppression.suppress(content.fileId)
+                                    onCancelDownload(content.fileId)
+                                },
+                                onIdleClick = {
+                                    isAutoDownloadSuppressed = false
+                                    AutoDownloadSuppression.clear(content.fileId)
+                                    onVideoClick(msg)
+                                }
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .pointerInput(
+                                content.isDownloading,
+                                content.fileId,
+                                stablePath,
+                                content.supportsStreaming
                             ) {
-                                MessageMetadata(msg, msg.isOutgoing, Color.White)
+                                detectTapGestures(
+                                    onTap = {
+                                        if (content.isDownloading) {
+                                            isAutoDownloadSuppressed = true
+                                            AutoDownloadSuppression.suppress(content.fileId)
+                                            onCancelDownload(content.fileId)
+                                        } else {
+                                            isAutoDownloadSuppressed = false
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            onVideoClick(msg)
+                                        }
+                                    },
+                                    onLongPress = { offset -> onLongClick(videoPosition + offset) }
+                                )
                             }
+                    )
+
+                    if (!hasCaption && showMetadata) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(6.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.45f),
+                                    RoundedCornerShape(10.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            MessageMetadata(msg, msg.isOutgoing, Color.White)
                         }
                     }
                 }
 
-                // Caption Section
                 if (hasCaption) {
                     Column(
                         modifier = Modifier
@@ -484,7 +476,6 @@ fun ChannelVideoMessageBubble(
             )
         }
 
-        // Reactions
         if (showReactions) {
             MessageReactionsView(
                 reactions = msg.reactions,
@@ -493,4 +484,4 @@ fun ChannelVideoMessageBubble(
             )
         }
     }
-
+}
