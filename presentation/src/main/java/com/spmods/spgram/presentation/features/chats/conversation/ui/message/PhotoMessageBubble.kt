@@ -98,10 +98,15 @@ fun PhotoMessageBubble(
         namespacedCacheKey("chat_photo:${content.fileId}", stablePath)
     }
 
+    // View Once: 1:1 aspect ratio, normal photos: original ratio with wider range
     val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
-        if (content.width > 0 && content.height > 0)
-            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
-        else if (content.isViewOnce) 0.75f else 1f
+        if (content.isViewOnce) {
+            1f // Square for view once
+        } else if (content.width > 0 && content.height > 0) {
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
+        } else {
+            1f
+        }
     }
 
     LaunchedEffect(content.path, content.fileId) {
@@ -194,15 +199,20 @@ fun PhotoMessageBubble(
                     }
                 }
 
+                // View Once: fixed size 160dp (square), centered
+                // Normal photos: fill width with original aspect ratio
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                     Modifier
-                        .size(160.dp)
+                        .fillMaxWidth()
+                        .padding(horizontal = 0.dp) // No extra padding
+                        .aspectRatio(1f) // Square
+                        .heightIn(max = 200.dp) // Max size to prevent being too large
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 } else {
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 160.dp, max = 320.dp)
+                        .heightIn(min = 120.dp) // No max!
                         .aspectRatio(stableAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
@@ -216,6 +226,9 @@ fun PhotoMessageBubble(
                                     when {
                                         content.isViewOnce && !content.isViewOnceOpened && content.path == null -> {
                                             onOpenViewOnce(msg)
+                                        }
+                                        content.isViewOnce && content.path != null && !content.isViewOnceOpened -> {
+                                            onPhotoClick(msg) // View once already downloaded - open directly
                                         }
                                         content.hasSpoiler -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
@@ -234,8 +247,9 @@ fun PhotoMessageBubble(
                             )
                         }
                 ) {
-                    // --- Background layer ---
+                    // --- Background / Preview layer ---
                     if (content.isViewOnce && !hasPath) {
+                        // View Once - show blurred thumbnail with flame icon
                         if (content.minithumbnail != null) {
                             MediaLoadingBackground(
                                 previewData = content.minithumbnail,
@@ -243,18 +257,15 @@ fun PhotoMessageBubble(
                                 previewBlur = 14.dp
                             )
                         } else {
-                            // No thumbnail — frosted glass effect with layered gradients
+                            // No thumbnail - frosted glass effect
                             Box(modifier = Modifier.fillMaxSize()) {
-                                // Base color
                                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF4A6FA5)))
-                                // Radial highlight top-left
                                 Box(modifier = Modifier.fillMaxSize().background(
                                     Brush.radialGradient(
                                         colors = listOf(Color(0x886B9FD4), Color.Transparent),
                                         radius = 400f
                                     )
                                 ))
-                                // Radial highlight bottom-right
                                 Box(modifier = Modifier.fillMaxSize().background(
                                     Brush.radialGradient(
                                         colors = listOf(Color(0x55A87FC1), Color.Transparent),
@@ -262,11 +273,33 @@ fun PhotoMessageBubble(
                                         radius = 500f
                                     )
                                 ))
-                                // Frosted overlay
                                 Box(modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.12f)))
                             }
                         }
-                    } else if (!hasPath) {
+                        
+                        // Flame icon overlay
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color.Black.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Whatshot,
+                                    contentDescription = stringResource(R.string.view_once_photo),
+                                    tint = Color.White,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                    } else if (!hasPath && !content.isViewOnce) {
+                        // Normal photo - not downloaded yet
                         MediaLoadingBackground(
                             previewData = content.minithumbnail,
                             contentScale = ContentScale.Crop
@@ -288,7 +321,7 @@ fun PhotoMessageBubble(
                                 .build(),
                             contentDescription = content.caption,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = if (content.isViewOnce) ContentScale.Crop else ContentScale.FillWidth
                         )
                     }
 
@@ -311,30 +344,6 @@ fun PhotoMessageBubble(
                         )
                     }
 
-                    // --- View once overlay: scrim + flame icon ---
-                    if (content.isViewOnce && !content.isViewOnceOpened) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Whatshot,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                        }
-                    }
-
                     // --- Upload progress ---
                     if (content.isUploading) {
                         Box(
@@ -355,15 +364,15 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // --- hasSpoiler overlay (unchanged) ---
+                    // --- Spoiler overlay ---
                     if (content.hasSpoiler) {
                         SpoilerWrapper(isRevealed = isMediaSpoilerRevealed) {
                             Box(modifier = Modifier.fillMaxSize())
                         }
                     }
 
-                    // --- Metadata overlay ---
-                    if (content.caption.isEmpty() && showMetadata) {
+                    // --- Metadata overlay (only for normal photos without caption) ---
+                    if (!content.isViewOnce && content.caption.isEmpty() && showMetadata) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
@@ -379,7 +388,8 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                if (content.caption.isNotEmpty()) {
+                // --- Caption (only for normal photos) ---
+                if (!content.isViewOnce && content.caption.isNotEmpty()) {
                     val timeColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(alpha = 0.7f)
 
                     Column(
