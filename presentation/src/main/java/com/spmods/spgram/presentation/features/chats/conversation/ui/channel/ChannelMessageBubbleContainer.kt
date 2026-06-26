@@ -207,7 +207,7 @@ internal fun ChannelMessageBubbleContainer(
                                 showComments = showComments,
                                 toProfile = toProfile,
                                 onForwardOriginClick = onForwardOriginClick,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.wrapContentWidth()
                             )
                         }
 
