@@ -1,5 +1,7 @@
 package com.spmods.spgram.data.infra
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -27,7 +29,8 @@ class FileDownloadQueue(
     val registry: FileMessageRegistry,
     private val cache: ChatCache,
     private val scope: CoroutineScope,
-    private val dispatcherProvider: DispatcherProvider
+    private val dispatcherProvider: DispatcherProvider,
+    context: Context
 ) {
     enum class DownloadType { VIDEO, GIF, STICKER, VIDEO_NOTE, DEFAULT }
 
@@ -60,7 +63,16 @@ class FileDownloadQueue(
 
     private val fileDownloadTypes = ConcurrentHashMap<Int, DownloadType>()
     private val manualDownloadIds = ConcurrentHashMap.newKeySet<Int>()
-    private val suppressedAutoDownloadIds = ConcurrentHashMap.newKeySet<Int>()
+    private val suppressPrefs: SharedPreferences =
+        context.getSharedPreferences("spgram_cancelled_downloads", Context.MODE_PRIVATE)
+
+    // Persisted across app restarts so TDLib auto-resume is blocked for user-cancelled files.
+    // In-memory copy for fast reads; SharedPreferences is the source of truth on startup.
+    private val suppressedAutoDownloadIds: MutableSet<Int> = ConcurrentHashMap.newKeySet<Int>().also { set ->
+        suppressPrefs.getStringSet("cancelled_file_ids", emptySet())
+            ?.mapNotNull { it.toIntOrNull() }
+            ?.let { set.addAll(it) }
+    }
     private val downloadWaiters = ConcurrentHashMap<Int, CompletableDeferred<Unit>>()
     private val uploadWaiters = ConcurrentHashMap<Int, CompletableDeferred<Unit>>()
     private val lastProgressAt = ConcurrentHashMap<Int, Long>()
@@ -242,11 +254,36 @@ class FileDownloadQueue(
             try {
                 val finalFile = withTimeoutOrNull(10000) { gateway.execute(TdApi.GetFile(fileId)) }
                 if (finalFile != null) {
-                    cache.fileCache[fileId] = finalFile
                     if (finalFile.local.isDownloadingCompleted) {
+                        // Fully downloaded — store as-is and notify success
+                        cache.fileCache[fileId] = finalFile
                         notifyDownloadComplete(fileId)
-                    } else if (!finalFile.local.isDownloadingActive && !hasPendingOrActiveRequest(fileId)) {
-                        notifyDownloadCancelled(fileId)
+                    } else {
+                        // Not completed (cancelled, failed, or stalled).
+                        // Build a clean copy so stale temp/partial paths are never cached
+                        // as valid paths. Mutating the original TdApi.File is unsafe because
+                        // TDLib may hold the same reference internally.
+                        val cleanLocal = TdApi.LocalFile().apply {
+                            path = ""
+                            canBeDownloaded = finalFile.local.canBeDownloaded
+                            canBeDeleted = finalFile.local.canBeDeleted
+                            isDownloadingActive = false
+                            isDownloadingCompleted = false
+                            downloadOffset = 0
+                            downloadedPrefixSize = 0
+                            downloadedSize = 0
+                        }
+                        val cleanFile = TdApi.File().apply {
+                            id = finalFile.id
+                            size = finalFile.size
+                            expectedSize = finalFile.expectedSize
+                            local = cleanLocal
+                            remote = finalFile.remote
+                        }
+                        cache.fileCache[fileId] = cleanFile
+                        if (!finalFile.local.isDownloadingActive && !hasPendingOrActiveRequest(fileId)) {
+                            notifyDownloadCancelled(fileId)
+                        }
                     }
                 } else if (!hasPendingOrActiveRequest(fileId)) {
                     notifyDownloadCancelled(fileId)
@@ -432,6 +469,17 @@ class FileDownloadQueue(
             lastProgressAt[file.id] = now
         }
 
+        // If TDLib auto-resumed a download that the user previously cancelled (e.g. after
+        // app restart), cancel it immediately. The suppression set is persisted to disk so
+        // it survives restarts.
+        if (file.local.isDownloadingActive && suppressedAutoDownloadIds.contains(file.id)) {
+            Log.d("DownloadDebug", "updateFileCache: blocking TDLib auto-resume for suppressed fileId=${file.id}")
+            scope.launch(dispatcherProvider.io) {
+                try { gateway.execute(TdApi.CancelDownloadFile(file.id, false)) } catch (_: Exception) { }
+            }
+            return
+        }
+
         if (file.local.isDownloadingCompleted) {
             manualDownloadIds.remove(file.id)
             failedRequests.remove(file.id)
@@ -443,17 +491,36 @@ class FileDownloadQueue(
             notifyDownloadComplete(file.id)
         } else if (oldFile?.local?.isDownloadingActive == true && !file.local.isDownloadingActive) {
             val type = fileDownloadTypes[file.id]
-            if (type == DownloadType.STICKER || manualDownloadIds.contains(file.id)) {
+            if (type == DownloadType.STICKER) {
+                // Stickers always retry automatically
                 scope.launch(dispatcherProvider.default) {
                     enqueue(
                         fileId = file.id,
-                        priority = if (type == DownloadType.STICKER) 32 else calculatePriority(file.id),
-                        type = type ?: DownloadType.DEFAULT
+                        priority = 32,
+                        type = DownloadType.STICKER
                     )
                 }
-            } else {
-                manualDownloadIds.remove(file.id)
+            } else if (manualDownloadIds.contains(file.id)) {
+                // For non-sticker manual downloads that become inactive without completing:
+                // only re-enqueue if they are still in the queue (i.e. not explicitly cancelled).
+                // cancelDownload() removes the id from pendingRequests/activeRequests, so
+                // hasPendingOrActiveRequest will be false for explicitly cancelled downloads.
+                scope.launch(dispatcherProvider.default) {
+                    val stillQueued = hasPendingOrActiveRequest(file.id)
+                    if (stillQueued) {
+                        enqueue(
+                            fileId = file.id,
+                            priority = calculatePriority(file.id),
+                            type = type ?: DownloadType.DEFAULT
+                        )
+                    } else {
+                        // Explicitly cancelled — remove manual flag so next tap starts fresh
+                        manualDownloadIds.remove(file.id)
+                    }
+                }
             }
+            // Do NOT remove manualDownloadIds here when re-enqueuing — removal happens on
+            // completion or on explicit cancel (see above).
         }
 
         if (file.remote.isUploadingCompleted) {
@@ -462,6 +529,14 @@ class FileDownloadQueue(
     }
 
     fun isFileQueued(fileId: Int) = pendingRequests.containsKey(fileId) || activeRequests.containsKey(fileId)
+
+    /** Suppress auto-download for a file without going through cancelDownload flow. Used for view-once content. */
+    fun suppressDownload(fileId: Int) {
+        if (fileId != 0) {
+            suppressedAutoDownloadIds.add(fileId)
+            persistSuppressed()
+        }
+    }
 
     fun getCachedFile(fileId: Int): TdApi.File? = cache.fileCache[fileId]
 
@@ -609,7 +684,11 @@ class FileDownloadQueue(
 
         if (suppress) {
             suppressedAutoDownloadIds.add(fileId)
+            persistSuppressed()
         }
+
+        // Always clear manual flag on explicit cancel so a subsequent tap starts a fresh download
+        manualDownloadIds.remove(fileId)
 
         scope.launch(dispatcherProvider.io) {
             try {
@@ -622,6 +701,8 @@ class FileDownloadQueue(
                 activeRequests.remove(fileId)
                 failedRequests.remove(fileId)
             }
+            lastProgressAt.remove(fileId)
+            stalledRecoveryAt.remove(fileId)
             Log.d("DownloadDebug", "queue.cancel.cleared: fileId=$fileId")
             notifyDownloadCancelled(fileId)
         }
@@ -629,8 +710,15 @@ class FileDownloadQueue(
 
     fun clearSuppression(fileId: Int) {
         if (suppressedAutoDownloadIds.remove(fileId)) {
+            persistSuppressed()
             Log.d("DownloadDebug", "queue.suppression.cleared: fileId=$fileId")
         }
+    }
+
+    private fun persistSuppressed() {
+        suppressPrefs.edit()
+            .putStringSet("cancelled_file_ids", suppressedAutoDownloadIds.map { it.toString() }.toSet())
+            .apply()
     }
 
     fun waitForDownload(fileId: Int): CompletableDeferred<Unit> {
@@ -646,6 +734,9 @@ class FileDownloadQueue(
 
     fun notifyDownloadComplete(fileId: Int) {
         downloadWaiters.remove(fileId)?.complete(Unit)
+        if (suppressedAutoDownloadIds.remove(fileId)) {
+            persistSuppressed()
+        }
     }
 
     fun notifyDownloadCancelled(fileId: Int) {
