@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -90,7 +89,6 @@ fun ChannelPhotoMessageBubble(
     val smallCorner = (bubbleRadius / 4f).coerceAtLeast(4f).dp
     val tailCorner = 0.dp
 
-    // Corner definitions
     val topStart = if (isSameSenderAbove) smallCorner else cornerRadius
     val topEnd = cornerRadius
     val bottomStart = if (isSameSenderBelow) smallCorner else tailCorner
@@ -113,11 +111,9 @@ fun ChannelPhotoMessageBubble(
     }
     var isAutoDownloadSuppressed by remember(msg.id) { mutableStateOf(false) }
 
-    // Lock aspect ratio from first valid dimensions to prevent bubble size jumps
-    // during download state changes (isDownloading/progress recompositions).
     val stableAspectRatio = remember(msg.id, content.fileId) {
         if (content.width > 0 && content.height > 0)
-            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.5f, 2f)
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
         else 1f
     }
 
@@ -156,10 +152,7 @@ fun ChannelPhotoMessageBubble(
             tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier
-                .fillMaxWidth()
-            ) {
-                // Headers (Forward/Reply)
+            Column(modifier = Modifier.fillMaxWidth()) {
                 if (msg.forwardInfo != null || msg.replyToMsg != null) {
                     Column(
                         modifier = Modifier
@@ -182,7 +175,8 @@ fun ChannelPhotoMessageBubble(
                 val mediaRatio = stableAspectRatio
 
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val mediaHeight = (maxWidth / mediaRatio).coerceIn(160.dp, 320.dp)
+                    // No forced height limits - use original aspect ratio
+                    val mediaHeight = maxWidth / mediaRatio
 
                     Box(
                         modifier = Modifier
@@ -242,7 +236,7 @@ fun ChannelPhotoMessageBubble(
                                         .build(),
                                     contentDescription = content.caption,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
+                                    contentScale = ContentScale.FillWidth // No crop!
                                 )
                             }
 
@@ -266,10 +260,10 @@ fun ChannelPhotoMessageBubble(
                                         } else {
                                             onDownloadPhoto(content.fileId)
                                         }
-                                }
+                                    }
                                 )
+                            }
                         }
-                    }
 
                         if (!hasCaption && showMetadata) {
                             Box(
@@ -288,7 +282,6 @@ fun ChannelPhotoMessageBubble(
                     }
                 }
 
-                // Caption Section
                 if (hasCaption) {
                     Column(
                         modifier = Modifier
