@@ -1,6 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -98,10 +100,10 @@ fun PhotoMessageBubble(
         namespacedCacheKey("chat_photo:${content.fileId}", stablePath)
     }
 
-    // View Once: 1:1 aspect ratio, normal photos: original ratio with wider range
+    // View Once: 1:1, normal: original ratio
     val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
         if (content.isViewOnce) {
-            1f // Square for view once
+            1f
         } else if (content.width > 0 && content.height > 0) {
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
         } else {
@@ -199,20 +201,18 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                // View Once: fixed size 160dp (square), centered
-                // Normal photos: fill width with original aspect ratio
+                // View Once: square with max size, normal: original ratio
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 0.dp) // No extra padding
-                        .aspectRatio(1f) // Square
-                        .heightIn(max = 200.dp) // Max size to prevent being too large
+                        .aspectRatio(1f)
+                        .heightIn(max = 200.dp)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 } else {
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 120.dp) // No max!
+                        .heightIn(min = 120.dp)
                         .aspectRatio(stableAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
@@ -228,7 +228,7 @@ fun PhotoMessageBubble(
                                             onOpenViewOnce(msg)
                                         }
                                         content.isViewOnce && content.path != null && !content.isViewOnceOpened -> {
-                                            onPhotoClick(msg) // View once already downloaded - open directly
+                                            onPhotoClick(msg)
                                         }
                                         content.hasSpoiler -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
@@ -247,9 +247,8 @@ fun PhotoMessageBubble(
                             )
                         }
                 ) {
-                    // --- Background / Preview layer ---
+                    // --- Background / Preview ---
                     if (content.isViewOnce && !hasPath) {
-                        // View Once - show blurred thumbnail with flame icon
                         if (content.minithumbnail != null) {
                             MediaLoadingBackground(
                                 previewData = content.minithumbnail,
@@ -257,7 +256,6 @@ fun PhotoMessageBubble(
                                 previewBlur = 14.dp
                             )
                         } else {
-                            // No thumbnail - frosted glass effect
                             Box(modifier = Modifier.fillMaxSize()) {
                                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF4A6FA5)))
                                 Box(modifier = Modifier.fillMaxSize().background(
@@ -299,14 +297,13 @@ fun PhotoMessageBubble(
                             }
                         }
                     } else if (!hasPath && !content.isViewOnce) {
-                        // Normal photo - not downloaded yet
                         MediaLoadingBackground(
                             previewData = content.minithumbnail,
                             contentScale = ContentScale.Crop
                         )
                     }
 
-                    // --- Actual image (after download) ---
+                    // --- Actual image ---
                     if (hasPath) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -325,23 +322,53 @@ fun PhotoMessageBubble(
                         )
                     }
 
-                    // --- Download action (non-view-once only) ---
+                    // --- Download action (CENTER - like your current design!) ---
                     if (!hasPath && !content.isViewOnce) {
-                        MediaLoadingAction(
-                            isDownloading = content.isDownloading,
-                            progress = content.downloadProgress,
-                            idleIcon = Icons.Default.Download,
-                            idleContentDescription = stringResource(R.string.cd_download),
-                            showCancelOnDownload = content.isDownloading,
-                            onCancelClick = {
-                                AutoDownloadSuppression.suppress(content.fileId)
-                                onCancelDownload(content.fileId)
-                            },
-                            onIdleClick = {
-                                AutoDownloadSuppression.clear(content.fileId)
-                                if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
+                        Box(
+                            modifier = Modifier.matchParentSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (content.isDownloading) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(Color.Black.copy(alpha = 0.6f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularWavyProgressIndicator(
+                                        progress = { content.downloadProgress },
+                                        color = Color.White,
+                                        trackColor = Color.White.copy(alpha = 0.25f),
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.cancel_button),
+                                        tint = Color.White,
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .clickable {
+                                                AutoDownloadSuppression.suppress(content.fileId)
+                                                onCancelDownload(content.fileId)
+                                            }
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = stringResource(R.string.cd_download),
+                                    tint = Color.White,
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                        .padding(10.dp)
+                                        .clickable {
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            onDownloadPhoto(content.fileId)
+                                        }
+                                )
                             }
-                        )
+                        }
                     }
 
                     // --- Upload progress ---
@@ -371,7 +398,7 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // --- Metadata overlay (only for normal photos without caption) ---
+                    // --- Metadata overlay ---
                     if (!content.isViewOnce && content.caption.isEmpty() && showMetadata) {
                         Box(
                             modifier = Modifier
@@ -388,7 +415,7 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                // --- Caption (only for normal photos) ---
+                // --- Caption ---
                 if (!content.isViewOnce && content.caption.isNotEmpty()) {
                     val timeColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(alpha = 0.7f)
 
