@@ -181,7 +181,7 @@ fun ChannelPhotoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(mediaHeight)
+                            .aspectRatio(ratio)  // ✅ Original ratio, no limit!
                             .clip(
                                 if (hasCaption) RoundedCornerShape(
                                     topStart = topStart,
