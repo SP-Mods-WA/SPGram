@@ -231,7 +231,7 @@ fun CompactMediaMosaic(
                         .fillMaxWidth()
                         .heightIn(
                             min = 120.dp,  // Min height for small images
-                            max = 380.dp   // Max height for very tall images
+                            max = 400.dp   // Max height for very tall images
                         )
                         .aspectRatio(ratio)  // Original aspect ratio!
                 ) {
