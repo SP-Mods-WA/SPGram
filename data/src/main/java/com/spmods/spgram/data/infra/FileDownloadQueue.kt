@@ -253,6 +253,18 @@ class FileDownloadQueue(
 
             try {
                 val finalFile = withTimeoutOrNull(10000) { gateway.execute(TdApi.GetFile(fileId)) }
+                // If cancelDownload() already removed this fileId from the queue while we were
+                // awaiting the download/timeout above, this was an explicit cancel — not a
+                // failure or stall. In that case GetFile() can race the CancelDownloadFile
+                // request still in flight and report isDownloadingActive=true even though the
+                // user already cancelled. Trusting that stale flag here is what let the
+                // download silently keep going (and the next updateFileCache() callback would
+                // then see isDownloadingActive=true and treat it as "resumed", re-enqueuing it).
+                // So: once we know it was an explicit cancel, always force the cached state to
+                // not-downloading and re-issue the cancel to TDLib, regardless of what this
+                // particular GetFile() snapshot says.
+                val wasExplicitlyCancelled = !hasPendingOrActiveRequest(fileId)
+
                 if (finalFile != null) {
                     if (finalFile.local.isDownloadingCompleted) {
                         // Fully downloaded — store as-is and notify success
@@ -281,11 +293,17 @@ class FileDownloadQueue(
                             remote = finalFile.remote
                         }
                         cache.fileCache[fileId] = cleanFile
-                        if (!finalFile.local.isDownloadingActive && !hasPendingOrActiveRequest(fileId)) {
+                        if (wasExplicitlyCancelled) {
+                            if (finalFile.local.isDownloadingActive) {
+                                // GetFile() raced the in-flight CancelDownloadFile request and
+                                // returned a stale "still active" snapshot. Re-issue the cancel
+                                // so TDLib actually stops, instead of letting it keep running.
+                                gateway.execute(TdApi.CancelDownloadFile(fileId, false))
+                            }
                             notifyDownloadCancelled(fileId)
                         }
                     }
-                } else if (!hasPendingOrActiveRequest(fileId)) {
+                } else if (wasExplicitlyCancelled) {
                     notifyDownloadCancelled(fileId)
                 }
             } catch (_: Exception) {
