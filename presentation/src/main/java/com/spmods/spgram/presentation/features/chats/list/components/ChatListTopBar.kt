@@ -34,6 +34,9 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.ShieldMoon
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.DoneAll
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -351,43 +354,6 @@ fun ChatListTopBar(
                             }
                         }
 
-                        var menuExpanded by remember { mutableStateOf(false) }
-
-                        Box {
-                            IconButton(
-                                onClick = { menuExpanded = true },
-                                shapes = iconButtonShapes,
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.MoreVert,
-                                    contentDescription = "More options",
-                                    modifier = Modifier.size(24.dp),
-                                    tint = titleColor
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = menuExpanded,
-                                onDismissRequest = { menuExpanded = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Mark all as read") },
-                                    onClick = { onMarkAllAsRead(); menuExpanded = false }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Edit folder") },
-                                    onClick = { onEditFolder(); menuExpanded = false }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Download") },
-                                    onClick = { onDownloads(); menuExpanded = false }
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(4.dp))
-
                         IconButton(
                             onClick = onMenuClick,
                             shapes = iconButtonShapes,
@@ -401,6 +367,59 @@ fun ChatListTopBar(
                                 name = user?.firstName ?: "",
                                 size = 36.dp
                             )
+                        }
+
+                        var menuExpanded by remember { mutableStateOf(false) }
+
+                        Box {
+                            IconButton(
+                                onClick = { menuExpanded = true },
+                                shapes = iconButtonShapes,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.MoreVert,
+                                    contentDescription = "More options",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Mark all as read") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Rounded.DoneAll,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = { onMarkAllAsRead(); menuExpanded = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Edit folder") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Rounded.FolderOpen,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = { onEditFolder(); menuExpanded = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Download") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Download,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = { onDownloads(); menuExpanded = false }
+                                )
+                            }
                         }
                     }
                 }
