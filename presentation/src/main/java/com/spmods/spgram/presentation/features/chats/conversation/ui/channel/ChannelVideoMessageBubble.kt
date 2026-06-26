@@ -210,7 +210,7 @@ fun ChannelVideoMessageBubble(
                         .fillMaxWidth()
                         .heightIn(
                             min = 120.dp,  // Min height for small videos
-                            max = 360.dp   // Max height for very tall videos
+                            max = 380.dp   // Max height for very tall videos
                         )
                         .aspectRatio(mediaRatio)
                         .clip(
