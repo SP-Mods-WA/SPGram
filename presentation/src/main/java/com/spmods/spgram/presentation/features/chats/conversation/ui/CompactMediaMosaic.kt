@@ -198,104 +198,121 @@ fun CompactMediaMosaic(
         }
     }
 
+    // Helper function to get aspect ratio from a message
+    fun getAspectRatio(msg: MessageModel): Float {
+        return when (val content = msg.content) {
+            is MessageContent.Photo -> {
+                if (content.width > 0 && content.height > 0)
+                    content.width.toFloat() / content.height.toFloat()
+                else 1f
+            }
+            is MessageContent.Video -> {
+                if (content.width > 0 && content.height > 0)
+                    content.width.toFloat() / content.height.toFloat()
+                else 1f
+            }
+            is MessageContent.Gif -> {
+                if (content.width > 0 && content.height > 0)
+                    content.width.toFloat() / content.height.toFloat()
+                else 1f
+            }
+            else -> 1f
+        }.coerceIn(0.3f, 3f) // Prevent extreme ratios
+    }
+
     Column(Modifier.fillMaxWidth()) {
         when (count) {
             1 -> {
-                Box(Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1.0f.coerceIn(0.8f, 1.5f))) {
-                    Item(0, Modifier.fillMaxSize(), ContentScale.Fit)
+                val ratio = getAspectRatio(messages[0])
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(ratio) // Original aspect ratio!
+                ) {
+                    Item(0, Modifier.fillMaxSize(), ContentScale.FillWidth) // No crop for single media
                 }
             }
 
             2 -> {
-                Row(Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)) {
+                Row(Modifier.fillMaxWidth()) {
                     Item(0, Modifier
                         .weight(1f)
-                        .fillMaxHeight())
+                        .fillMaxWidth()
+                        .aspectRatio(1f), ContentScale.Crop)
                     Spacer(Modifier.width(spacing))
                     Item(1, Modifier
                         .weight(1f)
-                        .fillMaxHeight())
+                        .fillMaxWidth()
+                        .aspectRatio(1f), ContentScale.Crop)
                 }
             }
 
             3 -> {
-                Column(Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)) {
+                Column(Modifier.fillMaxWidth()) {
                     Item(0, Modifier
-                        .weight(1.5f)
-                        .fillMaxWidth())
+                        .fillMaxWidth()
+                        .height(200.dp), ContentScale.Crop)
                     Spacer(Modifier.height(spacing))
-                    Row(Modifier
-                        .weight(1f)
-                        .fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth()) {
                         Item(1, Modifier
                             .weight(1f)
-                            .fillMaxHeight())
+                            .height(150.dp), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(2, Modifier
                             .weight(1f)
-                            .fillMaxHeight())
+                            .height(150.dp), ContentScale.Crop)
                     }
                 }
             }
 
             4 -> {
-                Column(Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)) {
-                    Row(Modifier.weight(1f)) {
+                Column(Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth()) {
                         Item(0, Modifier
                             .weight(1f)
-                            .fillMaxHeight())
+                            .aspectRatio(1f), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(1, Modifier
                             .weight(1f)
-                            .fillMaxHeight())
+                            .aspectRatio(1f), ContentScale.Crop)
                     }
                     Spacer(Modifier.height(spacing))
-                    Row(Modifier.weight(1f)) {
+                    Row(Modifier.fillMaxWidth()) {
                         Item(2, Modifier
                             .weight(1f)
-                            .fillMaxHeight())
+                            .aspectRatio(1f), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(3, Modifier
                             .weight(1f)
-                            .fillMaxHeight())
+                            .aspectRatio(1f), ContentScale.Crop)
                     }
                 }
             }
 
             else -> {
-                Column(Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(0.9f)) {
-                    Row(Modifier.weight(1f)) {
+                Column(Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth()) {
                         Item(0, Modifier
                             .weight(1f)
-                            .fillMaxHeight())
+                            .aspectRatio(1f), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(1, Modifier
                             .weight(1f)
-                            .fillMaxHeight())
+                            .aspectRatio(1f), ContentScale.Crop)
                     }
                     Spacer(Modifier.height(spacing))
-                    Row(Modifier.weight(1f)) {
+                    Row(Modifier.fillMaxWidth()) {
                         Item(2, Modifier
                             .weight(1f)
-                            .fillMaxHeight())
+                            .aspectRatio(1f), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(3, Modifier
                             .weight(1f)
-                            .fillMaxHeight())
+                            .aspectRatio(1f), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(4, Modifier
                             .weight(1f)
-                            .fillMaxHeight())
+                            .aspectRatio(1f), ContentScale.Crop)
                     }
                 }
             }
@@ -303,6 +320,8 @@ fun CompactMediaMosaic(
     }
 }
 
+// PhotoItem, VideoItem, VideoNoteItem, GifItem, TimestampPill functions remain the same
+// (they are unchanged from your original file)
 @Composable
 fun PhotoItem(
     msg: MessageModel,
