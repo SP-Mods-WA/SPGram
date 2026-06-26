@@ -46,6 +46,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.spmods.spgram.presentation.root.RootComponent
+import androidx.activity.compose.BackHandler
 import com.spmods.spgram.presentation.features.calls.CallsContent
 import com.spmods.spgram.presentation.features.download.DownloadContent
 import com.spmods.spgram.presentation.features.chats.list.ChatListComponent
@@ -128,13 +129,15 @@ fun MobileLayout(root: RootComponent) {
         }
     }
 
-    // Reset to Chats tab when user navigates into a chat or other screen
     val showBottomBar by remember(activeChild) {
         derivedStateOf {
-            when (activeChild) {
-                is RootComponent.Child.ChatsChild -> true
-                else -> { false }
-            }
+            false
+        }
+    }
+
+    if (selectedBottomTab != MainTab.Chats) {
+        BackHandler {
+            selectedBottomTab = MainTab.Chats
         }
     }
 
