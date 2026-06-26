@@ -7,9 +7,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -57,11 +57,11 @@ import com.spmods.spgram.domain.models.ForwardInfo
 import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageModel
 import com.spmods.spgram.presentation.R
+import com.spmods.spgram.presentation.core.media.VideoStickerPlayer
+import com.spmods.spgram.presentation.core.media.VideoType
 import com.spmods.spgram.presentation.core.util.IDownloadUtils
 import com.spmods.spgram.presentation.core.util.namespacedCacheKey
 import com.spmods.spgram.presentation.features.chats.conversation.AutoDownloadSuppression
-import com.spmods.spgram.presentation.core.media.VideoStickerPlayer
-import com.spmods.spgram.presentation.core.media.VideoType
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.BigEmojiContent
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.ForwardContent
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.MediaLoadingAction
@@ -136,6 +136,7 @@ fun ChannelVideoMessageBubble(
     }
     var isAutoDownloadSuppressed by remember(msg.id) { mutableStateOf(false) }
 
+    // Official style: wider aspect ratio range (0.3f - 3f)
     val stableAspectRatio = remember(msg.id, content.fileId) {
         if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
@@ -181,6 +182,7 @@ fun ChannelVideoMessageBubble(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
+                // Headers
                 if (msg.forwardInfo != null || msg.replyToMsg != null) {
                     Column(
                         modifier = Modifier
@@ -202,9 +204,14 @@ fun ChannelVideoMessageBubble(
 
                 val mediaRatio = stableAspectRatio
 
+                // ✅ FIXED: Official style - min/max height with aspect ratio
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .heightIn(
+                            min = 120.dp,  // Min height for small videos
+                            max = 360.dp   // Max height for very tall videos
+                        )
                         .aspectRatio(mediaRatio)
                         .clip(
                             if (hasCaption) RoundedCornerShape(
@@ -222,7 +229,7 @@ fun ChannelVideoMessageBubble(
                                 path = videoPath,
                                 type = VideoType.Gif,
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.FillWidth, // No crop!
+                                contentScale = ContentScale.FillWidth,  // No crop!
                                 animate = isVisible && !isAnyViewerOpen,
                                 volume = if (isMuted) 0f else 1f,
                                 reportProgress = true,
@@ -236,6 +243,7 @@ fun ChannelVideoMessageBubble(
                                 thumbnailData = content.minithumbnail
                             )
 
+                            // Volume Toggle
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
@@ -269,7 +277,7 @@ fun ChannelVideoMessageBubble(
                                     ),
                                     contentDescription = null,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.FillWidth // No crop!
+                                    contentScale = ContentScale.FillWidth  // No crop!
                                 )
                             } else {
                                 if (content.minithumbnail != null) {
@@ -287,7 +295,7 @@ fun ChannelVideoMessageBubble(
                                         ),
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.FillWidth // No crop!
+                                        contentScale = ContentScale.FillWidth  // No crop!
                                     )
                                 }
                             }
@@ -307,6 +315,7 @@ fun ChannelVideoMessageBubble(
                             }
                         }
 
+                        // Duration Tag
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
@@ -328,13 +337,14 @@ fun ChannelVideoMessageBubble(
                             )
                         }
                     } else {
+                        // Placeholder / Download State
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
                             MediaLoadingBackground(
                                 previewData = content.minithumbnail,
-                                contentScale = ContentScale.FillWidth // No crop!
+                                contentScale = ContentScale.FillWidth  // No crop!
                             )
 
                             MediaLoadingAction(
@@ -360,6 +370,7 @@ fun ChannelVideoMessageBubble(
                         }
                     }
 
+                    // Tap gesture overlay
                     Box(
                         modifier = Modifier
                             .matchParentSize()
@@ -402,6 +413,7 @@ fun ChannelVideoMessageBubble(
                     }
                 }
 
+                // Caption Section
                 if (hasCaption) {
                     Column(
                         modifier = Modifier
