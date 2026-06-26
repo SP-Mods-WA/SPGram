@@ -205,7 +205,6 @@ fun ChannelVideoMessageBubble(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 160.dp) // Only min, no max!
                         .aspectRatio(mediaRatio)
                         .clip(
                             if (hasCaption) RoundedCornerShape(
