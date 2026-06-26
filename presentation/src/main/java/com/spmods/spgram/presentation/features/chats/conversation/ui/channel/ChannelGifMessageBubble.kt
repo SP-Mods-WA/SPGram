@@ -209,7 +209,7 @@ fun ChannelGifMessageBubble(
                         .fillMaxWidth()
                         .heightIn(
                             min = 120.dp,
-                            max = 380.dp
+                            max = 400.dp
                         )
                         .aspectRatio(mediaRatio)  // ✅ Now mediaRatio is defined!
                         .clipToBounds()
