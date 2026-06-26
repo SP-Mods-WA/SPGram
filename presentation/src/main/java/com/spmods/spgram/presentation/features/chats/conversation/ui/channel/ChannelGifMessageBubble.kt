@@ -205,7 +205,7 @@ fun ChannelGifMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(mediaHeight)
+                            .aspectRatio(ratio)  // ✅ Original ratio, no limit!
                             .clipToBounds()
                             .onGloballyPositioned { gifPosition = it.positionInWindow() }
 
