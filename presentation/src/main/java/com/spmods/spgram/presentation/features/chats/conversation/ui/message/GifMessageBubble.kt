@@ -198,12 +198,12 @@ fun GifMessageBubble(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 160.dp, max = 360.dp)
+                        .heightIn(min = 120.dp)
                         .aspectRatio(
                             if (content.width > 0 && content.height > 0)
                                 (content.width.toFloat() / content.height.toFloat()).coerceIn(
-                                    0.5f,
-                                    2f
+                                    0.3f,
+                                    3f
                                 )
                             else 1f
                         )
