@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -203,115 +204,138 @@ fun CompactMediaMosaic(
         return when (val content = msg.content) {
             is MessageContent.Photo -> {
                 if (content.width > 0 && content.height > 0)
-                    content.width.toFloat() / content.height.toFloat()
+                    (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
                 else 1f
             }
             is MessageContent.Video -> {
                 if (content.width > 0 && content.height > 0)
-                    content.width.toFloat() / content.height.toFloat()
+                    (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
                 else 1f
             }
             is MessageContent.Gif -> {
                 if (content.width > 0 && content.height > 0)
-                    content.width.toFloat() / content.height.toFloat()
+                    (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
                 else 1f
             }
             else -> 1f
-        }.coerceIn(0.3f, 3f) // Prevent extreme ratios
+        }
     }
 
     Column(Modifier.fillMaxWidth()) {
         when (count) {
             1 -> {
                 val ratio = getAspectRatio(messages[0])
+                // ✅ FIXED: Official style - min/max height with original aspect ratio
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .aspectRatio(ratio) // Original aspect ratio!
+                        .heightIn(
+                            min = 120.dp,  // Min height for small images
+                            max = 360.dp   // Max height for very tall images
+                        )
+                        .aspectRatio(ratio)  // Original aspect ratio!
                 ) {
                     Item(0, Modifier.fillMaxSize(), ContentScale.FillWidth) // No crop for single media
                 }
             }
 
             2 -> {
+                // ✅ FIXED: No fixed height - use fillMaxWidth with aspect ratio
                 Row(Modifier.fillMaxWidth()) {
                     Item(0, Modifier
                         .weight(1f)
                         .fillMaxWidth()
+                        .heightIn(min = 100.dp, max = 300.dp)
                         .aspectRatio(1f), ContentScale.Crop)
                     Spacer(Modifier.width(spacing))
                     Item(1, Modifier
                         .weight(1f)
                         .fillMaxWidth()
+                        .heightIn(min = 100.dp, max = 300.dp)
                         .aspectRatio(1f), ContentScale.Crop)
                 }
             }
 
             3 -> {
+                // ✅ FIXED: No container aspect ratio limit
                 Column(Modifier.fillMaxWidth()) {
                     Item(0, Modifier
                         .fillMaxWidth()
-                        .height(200.dp), ContentScale.Crop)
+                        .heightIn(min = 120.dp, max = 300.dp)
+                        .aspectRatio(1.5f), ContentScale.Crop)  // Top item taller
                     Spacer(Modifier.height(spacing))
                     Row(Modifier.fillMaxWidth()) {
                         Item(1, Modifier
                             .weight(1f)
-                            .height(150.dp), ContentScale.Crop)
+                            .heightIn(min = 80.dp, max = 200.dp)
+                            .aspectRatio(1f), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(2, Modifier
                             .weight(1f)
-                            .height(150.dp), ContentScale.Crop)
+                            .heightIn(min = 80.dp, max = 200.dp)
+                            .aspectRatio(1f), ContentScale.Crop)
                     }
                 }
             }
 
             4 -> {
+                // ✅ FIXED: No container aspect ratio limit
                 Column(Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth()) {
                         Item(0, Modifier
                             .weight(1f)
+                            .heightIn(min = 100.dp, max = 250.dp)
                             .aspectRatio(1f), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(1, Modifier
                             .weight(1f)
+                            .heightIn(min = 100.dp, max = 250.dp)
                             .aspectRatio(1f), ContentScale.Crop)
                     }
                     Spacer(Modifier.height(spacing))
                     Row(Modifier.fillMaxWidth()) {
                         Item(2, Modifier
                             .weight(1f)
+                            .heightIn(min = 100.dp, max = 250.dp)
                             .aspectRatio(1f), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(3, Modifier
                             .weight(1f)
+                            .heightIn(min = 100.dp, max = 250.dp)
                             .aspectRatio(1f), ContentScale.Crop)
                     }
                 }
             }
 
             else -> {
+                // ✅ FIXED: No container aspect ratio limit
                 Column(Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth()) {
                         Item(0, Modifier
                             .weight(1f)
+                            .heightIn(min = 100.dp, max = 250.dp)
                             .aspectRatio(1f), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(1, Modifier
                             .weight(1f)
+                            .heightIn(min = 100.dp, max = 250.dp)
                             .aspectRatio(1f), ContentScale.Crop)
                     }
                     Spacer(Modifier.height(spacing))
                     Row(Modifier.fillMaxWidth()) {
                         Item(2, Modifier
                             .weight(1f)
+                            .heightIn(min = 80.dp, max = 200.dp)
                             .aspectRatio(1f), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(3, Modifier
                             .weight(1f)
+                            .heightIn(min = 80.dp, max = 200.dp)
                             .aspectRatio(1f), ContentScale.Crop)
                         Spacer(Modifier.width(spacing))
                         Item(4, Modifier
                             .weight(1f)
+                            .heightIn(min = 80.dp, max = 200.dp)
                             .aspectRatio(1f), ContentScale.Crop)
                     }
                 }
@@ -320,8 +344,7 @@ fun CompactMediaMosaic(
     }
 }
 
-// PhotoItem, VideoItem, VideoNoteItem, GifItem, TimestampPill functions remain the same
-// (they are unchanged from your original file)
+// ==================== PhotoItem ====================
 @Composable
 fun PhotoItem(
     msg: MessageModel,
@@ -460,6 +483,7 @@ fun PhotoItem(
     }
 }
 
+// ==================== VideoItem ====================
 @Composable
 fun VideoItem(
     msg: MessageModel,
@@ -683,6 +707,7 @@ fun VideoItem(
     }
 }
 
+// ==================== VideoNoteItem ====================
 @Composable
 fun VideoNoteItem(
     msg: MessageModel,
@@ -862,6 +887,7 @@ fun VideoNoteItem(
     }
 }
 
+// ==================== GifItem ====================
 @Composable
 fun GifItem(
     msg: MessageModel,
@@ -1020,6 +1046,7 @@ fun GifItem(
     }
 }
 
+// ==================== TimestampPill ====================
 @Composable
 fun TimestampPill(
     time: String,
