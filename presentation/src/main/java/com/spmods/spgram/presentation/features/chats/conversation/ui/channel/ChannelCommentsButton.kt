@@ -5,7 +5,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Chat
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -29,58 +28,47 @@ fun ChannelCommentsButton(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val isDark = LocalDarkTheme.current
-    val bubbleColor = if (isDark) Color(0xFF182533) else Color(0xFFFFFFFF)
-    // Telegram uses a very subtle divider between bubble body and comments row
-    val dividerColor = if (isDark) Color(0xFF243447) else Color(0xFFE8E8E8)
-
-    Column(modifier = modifier) {
-        // Thin separator line — same color family as the bubble, just slightly darker/lighter
-        Divider(
-            color     = dividerColor,
-            thickness = 0.5.dp
-        )
-        Surface(
-            color = bubbleColor,
-            shape = RoundedCornerShape(
-                topStart    = 0.dp,
-                topEnd      = 0.dp,
-                bottomStart = if (isSameSenderBelow) 4.dp else bubbleRadius.dp,
-                bottomEnd   = bubbleRadius.dp,
-            ),
-            onClick = onClick
+    Surface(
+        modifier = modifier,
+        color = if (LocalDarkTheme.current) Color(0xFF182533) else Color(0xFFFFFFFF),
+        shape = RoundedCornerShape(
+            topStart = 4.dp,
+            topEnd = 4.dp,
+            bottomStart = if (isSameSenderBelow) 4.dp else bubbleRadius.dp,
+            bottomEnd = bubbleRadius.dp,
+        ),
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector        = Icons.AutoMirrored.Rounded.Chat,
-                        contentDescription = null,
-                        modifier           = Modifier.size(17.dp),
-                        tint               = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text  = formatCommentsCount(context, replyCount),
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontSize   = 14.sp,
-                            color      = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Normal
-                        )
-                    )
-                }
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector        = Icons.Default.ChevronRight,
+                    imageVector = Icons.AutoMirrored.Rounded.Chat,
                     contentDescription = null,
-                    modifier           = Modifier.size(18.dp),
-                    tint               = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = formatCommentsCount(context, replyCount),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
                 )
             }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+            )
         }
     }
 }
