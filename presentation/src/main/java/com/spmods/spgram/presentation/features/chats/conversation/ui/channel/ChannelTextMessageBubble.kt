@@ -120,13 +120,16 @@ fun ChannelTextMessageBubble(
                     )
                 }
                 if (msg.replyToMsg == null && msg.replyToStoryId != null) {
+                    val storyId = msg.replyToStoryId
                     val onStoryReplyClick = com.spmods.spgram.presentation.features.chats.conversation.ui.message.LocalStoryReplyClickHandler.current
                     com.spmods.spgram.presentation.features.chats.conversation.ui.message.StoryReplyContent(
                         isOutgoing = false,
                         senderName = msg.senderName,
                         onClick = {
-                            val posterChatId = msg.replyToStoryPosterChatId ?: msg.chatId
-                            onStoryReplyClick(posterChatId, msg.replyToStoryId)
+                            if (storyId != null) {
+                                val posterChatId = msg.replyToStoryPosterChatId ?: msg.chatId
+                                onStoryReplyClick(posterChatId, storyId)
+                            }
                         }
                     )
                 }
