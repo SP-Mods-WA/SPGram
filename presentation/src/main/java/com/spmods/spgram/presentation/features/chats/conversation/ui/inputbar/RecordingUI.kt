@@ -43,6 +43,7 @@ fun RecordingUI(
     onStop: () -> Unit,
     onCancel: () -> Unit,
     onToggleViewOnce: () -> Unit,
+    showViewOnce: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val slideToCancelAlpha by animateFloatAsState(
@@ -163,38 +164,6 @@ fun RecordingUI(
                         .padding(horizontal = 12.dp)
                 )
             }
-        }
-
-        if (voiceRecorderState.isLocked) {
-            IconButton(
-                onClick = onToggleViewOnce,
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (voiceRecorderState.isViewOnce) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            Color.Transparent
-                        }
-                    )
-            ) {
-                Icon(
-                    imageVector = if (voiceRecorderState.isViewOnce) {
-                        Icons.Outlined.Visibility
-                    } else {
-                        Icons.Outlined.VisibilityOff
-                    },
-                    contentDescription = stringResource(R.string.action_send_view_once),
-                    tint = if (voiceRecorderState.isViewOnce) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(4.dp))
         }
 
         AnimatedContent(
