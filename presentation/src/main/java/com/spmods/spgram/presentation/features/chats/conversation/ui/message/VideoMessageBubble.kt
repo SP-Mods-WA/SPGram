@@ -106,7 +106,16 @@ fun VideoMessageBubble(
     val tailCorner = 0.dp
 
     val context = LocalContext.current
-    var stablePath by remember(msg.id, content.fileId) { mutableStateOf(content.path) }
+    // ✅ FIX: Use thumbnailPath as fallback so the bubble shows a clear preview
+    // immediately — even before the full video is downloaded. Official Telegram
+    // always shows the thumbnail in the bubble; full video only opens in the viewer.
+    var stablePath by remember(msg.id, content.fileId) {
+        mutableStateOf(
+            content.path?.takeIf { it.isNotBlank() }
+                ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
+        )
+    }
+    val hasFullVideo = !content.path.isNullOrBlank()
     val hasPath = !stablePath.isNullOrBlank()
     val videoCacheKey = remember(stablePath, content.fileId) {
         namespacedCacheKey("chat_video:${content.fileId}", stablePath)
@@ -116,16 +125,18 @@ fun VideoMessageBubble(
     }
     var isAutoDownloadSuppressed by remember(msg.id, content.fileId) { mutableStateOf(false) }
 
-    // ✅ FIXED: Official style - wider aspect ratio range (0.3f - 3f)
-    val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
+    // ✅ FIX: Lock aspect ratio at first composition (keyed on msg.id + fileId only).
+    val stableAspectRatio = remember(msg.id, content.fileId) {
         if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
-        else 1f
+        else 1.3f
     }
 
-    LaunchedEffect(content.path, content.fileId) {
+    LaunchedEffect(content.path, content.thumbnailPath, content.fileId) {
+        val best = content.path?.takeIf { it.isNotBlank() }
+            ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
+        if (best != null) stablePath = best
         if (!content.path.isNullOrBlank()) {
-            stablePath = content.path
             isAutoDownloadSuppressed = false
             AutoDownloadSuppression.clear(content.fileId)
         }
@@ -242,14 +253,14 @@ fun VideoMessageBubble(
                 }
 
                 Box(modifier = boxModifier) {
-                    if ((hasPath || content.supportsStreaming) && content.isViewOnce && !content.isViewOnceOpened) {
+                    if ((hasFullVideo || content.supportsStreaming) && content.isViewOnce && !content.isViewOnceOpened) {
                         VideoLoadingLayer(
                             content = content,
                             isViewOnce = true,
                             onCancelDownload = {},
                             onStartDownload = { onOpenViewOnce(msg) }
                         )
-                    } else if (hasPath || content.supportsStreaming) {
+                    } else if (hasFullVideo || content.supportsStreaming) {
                             if (autoplayVideos) {
                                 val videoPath = stablePath ?: "http://streaming/${content.fileId}"
                                 VideoStickerPlayer(
@@ -378,7 +389,7 @@ fun VideoMessageBubble(
                             .padding(8.dp),
                         durationSeconds = content.duration,
                         currentPositionSeconds = currentPositionSeconds,
-                        showCurrentProgress = (hasPath || content.supportsStreaming) && autoplayVideos
+                        showCurrentProgress = (hasFullVideo || content.supportsStreaming) && autoplayVideos
                     )
 
                     VideoUploadOverlay(
