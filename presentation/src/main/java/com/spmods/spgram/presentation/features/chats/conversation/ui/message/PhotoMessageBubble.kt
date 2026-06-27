@@ -94,40 +94,40 @@ fun PhotoMessageBubble(
     val smallCorner = 6.dp
     val tailCorner = 0.dp
 
-    // ✅ FIX: Track the best available path — full photo first, thumbnail as fallback.
-    // Official Telegram shows the thumbnail immediately in the bubble (clear, correct
-    // size) and crossfades to the full photo when download completes. Without the
-    // thumbnail fallback, hasPath=false after returning to chat and the bubble shows
-    // only a blurry placeholder until the full photo is re-rendered.
-    var stablePath by remember(msg.id, content.fileId) {
-        mutableStateOf(
-            content.path?.takeIf { it.isNotBlank() }
-                ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
-        )
-    }
-    // hasFullPhoto drives the download button: only hide it once the FULL photo is ready.
+    // ✅ ROOT FIX: Compute display path directly from content on every recompose.
+    // Previously used remember{} + LaunchedEffect to track stablePath, but that caused
+    // a one-frame delay: remember initialises once (path=null → hasPath=false → tiny
+    // bubble), and LaunchedEffect only fires after composition, so the bubble was tiny
+    // on the first frame after re-entering the chat.
+    //
+    // Solution: val (not var/remember) so Compose recomputes it every time content
+    // changes — exactly like official Telegram clients do. Full photo takes priority;
+    // thumbnail is the fallback so something always shows even before full download.
+    val displayPath: String? = content.path?.takeIf { it.isNotBlank() }
+        ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
     val hasFullPhoto = !content.path.isNullOrBlank()
-    val hasPath = !stablePath.isNullOrBlank()
+    val hasPath = !displayPath.isNullOrBlank()
 
-    val photoCacheKey = remember(stablePath, content.fileId) {
-        namespacedCacheKey("chat_photo:${content.fileId}", stablePath)
+    val photoCacheKey = remember(displayPath, content.fileId) {
+        namespacedCacheKey("chat_photo:${content.fileId}", displayPath)
     }
 
-    // ✅ FIX: Lock aspect ratio at first composition — never recalculates on recompose.
-    val stableAspectRatio = remember(msg.id, content.fileId) {
+    // Aspect ratio must be recomputed whenever real width/height arrive. TDLib can
+    // report width=0/height=0 for a brief moment before the photo's metadata (or even
+    // the thumbnail) is loaded — if we lock onto the 1.3f fallback at that instant and
+    // key remember() only on msg.id/fileId, the bubble is stuck at the wrong aspect
+    // ratio for the rest of that screen's lifetime, even after the real dimensions
+    // arrive. Re-entering the chat recreates the composable, which is why the bug
+    // appeared to "fix itself" on navigating back. Keying on width/height as well
+    // ensures we recompute the instant real data shows up, while still avoiding
+    // recomputation (and any layout jump) once the real ratio is known and stable.
+    val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
         if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
         else 1.3f
     }
 
-    LaunchedEffect(content.path, content.thumbnailPath, content.fileId) {
-        // Always prefer the full photo; fall back to thumbnail so the bubble
-        // never goes blank while the full photo is still being fetched.
-        val best = content.path?.takeIf { it.isNotBlank() }
-            ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
-        if (best != null) {
-            stablePath = best
-        }
+    LaunchedEffect(content.path, content.fileId) {
         if (!content.path.isNullOrBlank()) {
             AutoDownloadSuppression.clear(content.fileId)
         }
@@ -298,7 +298,7 @@ fun PhotoMessageBubble(
                     if (hasPath) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
-                                .data(stablePath)
+                                .data(displayPath)
                                 .apply {
                                     photoCacheKey?.let {
                                         memoryCacheKey(it)
