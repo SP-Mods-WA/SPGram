@@ -735,6 +735,7 @@ fun ChatInputBar(
                         canPasteMediaFromClipboard = canUseMediaPicker && state.editingMessage == null,
                         voiceRecorder = voiceRecorder,
                         stickerRepository = stickerRepository,
+                        isChannel = state.isChannel,
                         onCancelEdit = actions.onCancelEdit,
                         onCancelReply = actions.onCancelReply,
                         onCancelMedia = actions.onCancelMedia,
