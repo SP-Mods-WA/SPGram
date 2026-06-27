@@ -121,11 +121,16 @@ internal class MessageContentMapper(
                         TdMessageRemoteDataSource.DownloadType.DEFAULT, 0, 0, false
                     )
                 }
+                val bestWidth = sizes.maxByOrNull { it.width * it.height }?.width
+                    ?: photoSize?.width ?: 0
+                val bestHeight = sizes.maxByOrNull { it.width * it.height }?.height
+                    ?: photoSize?.height ?: 0
+
                 MessageContent.Photo(
                     path = path,
                     thumbnailPath = thumbnailPath,
-                    width = photoSize?.width ?: 0,
-                    height = photoSize?.height ?: 0,
+                    width = bestWidth,
+                    height = bestHeight,
                     caption = content.caption.text,
                     entities = mapEntities(
                         entities = content.caption.entities,
