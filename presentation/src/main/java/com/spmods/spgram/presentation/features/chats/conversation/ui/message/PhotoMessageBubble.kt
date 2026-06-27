@@ -242,10 +242,10 @@ fun PhotoMessageBubble(
                     if (content.isViewOnce && !hasPath) {
                         if (content.minithumbnail != null) {
                             MediaLoadingBackground(
-                                previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop,
-                                previewBlur = 14.dp
-                            )
+    previewData = content.thumbnailPath ?: content.minithumbnail,
+    contentScale = ContentScale.Crop,
+    previewBlur = 14.dp
+)
                         } else {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF4A6FA5)))
@@ -267,9 +267,9 @@ fun PhotoMessageBubble(
                         }
                     } else if (!hasPath) {
                         MediaLoadingBackground(
-                            previewData = content.minithumbnail,
-                            contentScale = ContentScale.Crop
-                        )
+    previewData = content.thumbnailPath ?: content.minithumbnail,
+    contentScale = ContentScale.Crop
+)
                     }
 
                     // --- Actual image (after download) ---
