@@ -91,18 +91,18 @@ internal class MessageContentMapper(
                 }
 
                 if (thumbnailFile != null) {
-                    fileHelper.registerCachedFile(thumbnailFile.id, context.chatId, context.messageId)
-                    if (thumbnailPath == null && context.networkAutoDownload) {
-                        fileHelper.enqueueDownload(
-                            thumbnailFile.id,
-                            1,
-                            TdMessageRemoteDataSource.DownloadType.DEFAULT,
-                            0,
-                            0,
-                            false
-                        )
-                    }
-                }
+    fileHelper.registerCachedFile(thumbnailFile.id, context.chatId, context.messageId)
+    if (thumbnailPath == null) {
+        fileHelper.enqueueDownload(
+            thumbnailFile.id,
+            32,
+            TdMessageRemoteDataSource.DownloadType.DEFAULT,
+            0,
+            0,
+            false
+        )
+    }
+}
 
                 val isDownloading = photoFile?.local?.isDownloadingActive ?: false
                 val isQueued = photoFile?.let { fileHelper.isFileQueued(it.id) } ?: false
