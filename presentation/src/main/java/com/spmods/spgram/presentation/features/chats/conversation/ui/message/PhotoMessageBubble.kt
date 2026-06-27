@@ -288,6 +288,7 @@ fun PhotoMessageBubble(
                             contentDescription = content.caption,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
+                            ) 
                     }
 
                     // --- Download action (CENTER - fixed clickable) ---
