@@ -1,5 +1,6 @@
 package com.spmods.spgram.data.datasource.remote
 
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.CancellationException
@@ -628,6 +629,14 @@ class TdMessageRemoteDataSource(
     ): TdApi.Message? {
         val content = TdApi.InputMessagePhoto().apply {
             this.photo = TdApi.InputFileLocal(photoPath)
+            try {
+                val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(photoPath, opts)
+                if (opts.outWidth > 0 && opts.outHeight > 0) {
+                    this.width = opts.outWidth
+                    this.height = opts.outHeight
+                }
+            } catch (_: Exception) {}
             this.caption = TdApi.FormattedText(caption, captionEntities.toTdTextEntities(caption))
             if (sendOptions.selfDestructImmediately) {
                 this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
@@ -881,6 +890,14 @@ class TdMessageRemoteDataSource(
                 }
                 else TdApi.InputMessagePhoto().apply {
                     this.photo = TdApi.InputFileLocal(path)
+                    try {
+                        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        BitmapFactory.decodeFile(path, opts)
+                        if (opts.outWidth > 0 && opts.outHeight > 0) {
+                            this.width = opts.outWidth
+                            this.height = opts.outHeight
+                        }
+                    } catch (_: Exception) {}
                     this.caption = cap
                     if (sendOptions.selfDestructImmediately) {
                         this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
