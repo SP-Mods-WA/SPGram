@@ -1415,6 +1415,19 @@ class TdMessageRemoteDataSource(
                         newMessageFlow.emit(model)
                     } catch (e: Exception) { Log.e("TdMessageRemote", "Error mapping NewMessage", e) }
                 }
+                // If incoming photo has no size dimensions yet, refresh after a short
+                // delay so TDLib has time to populate photo.sizes with real dimensions.
+                if (message.content is TdApi.MessagePhoto) {
+                    val sizes = (message.content as TdApi.MessagePhoto).photo.sizes
+                    val hasDimensions = sizes.any { it.width > 0 && it.height > 0 }
+                    if (!hasDimensions) {
+                        scope.launch(dispatcherProvider.io) {
+                            delay(500)
+                            cache.removeMessage(message.chatId, message.id)
+                            refreshMessageDebounced(message.chatId, message.id)
+                        }
+                    }
+                }
             }
             is TdApi.UpdateMessageSendSucceeded -> {
                 val message = update.message
