@@ -1819,6 +1819,7 @@ class TdMessageRemoteDataSource(
             messageUpdateJobs[key]?.cancel()
             val job = scope.launch {
                 delay(150)
+                cache.removeMessage(chatId, messageId)
                 val msg = getMessage(chatId, messageId) ?: return@launch
                 try {
                     messageEditedFlow.emit(mapMessageToModel(msg))
