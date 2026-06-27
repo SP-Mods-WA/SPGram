@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -102,7 +103,7 @@ fun PhotoMessageBubble(
     val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
         if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
-        else if (content.isViewOnce) 1f else 1f  // View Once: square
+        else if (content.isViewOnce) 1f else 1f
     }
 
     LaunchedEffect(content.path, content.fileId) {
@@ -199,14 +200,14 @@ fun PhotoMessageBubble(
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)  // Padding around view once
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                         .aspectRatio(1f)  // Square
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 } else {
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 120.dp, max = 420.dp)  // ✅ Min 120, Max 360
+                        .heightIn(min = 120.dp, max = 360.dp)  // ✅ Official style limits
                         .aspectRatio(stableAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
@@ -272,7 +273,7 @@ fun PhotoMessageBubble(
                         )
                     }
 
-                    // --- Actual image (after download) ---
+                    // --- Actual image (after download) - ✅ No crop! ---
                     if (hasPath) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -287,27 +288,57 @@ fun PhotoMessageBubble(
                                 .build(),
                             contentDescription = content.caption,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = if (content.isViewOnce) ContentScale.Crop else ContentScale.FillWidth  // ✅ No crop for normal
+                            contentScale = if (content.isViewOnce) ContentScale.Crop else ContentScale.FillWidth
                         )
                     }
 
-                    // --- Download action (non-view-once only) ---
+                    // --- Download action (CENTER - like your current design) ---
                     if (!hasPath && !content.isViewOnce) {
-                        MediaLoadingAction(
-                            isDownloading = content.isDownloading,
-                            progress = content.downloadProgress,
-                            idleIcon = Icons.Default.Download,
-                            idleContentDescription = stringResource(R.string.cd_download),
-                            showCancelOnDownload = content.isDownloading,
-                            onCancelClick = {
-                                AutoDownloadSuppression.suppress(content.fileId)
-                                onCancelDownload(content.fileId)
-                            },
-                            onIdleClick = {
-                                AutoDownloadSuppression.clear(content.fileId)
-                                if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
+                        Box(
+                            modifier = Modifier.matchParentSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (content.isDownloading) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(Color.Black.copy(alpha = 0.6f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularWavyProgressIndicator(
+                                        progress = { content.downloadProgress },
+                                        color = Color.White,
+                                        trackColor = Color.White.copy(alpha = 0.25f),
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.cancel_button),
+                                        tint = Color.White,
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .clickable {
+                                                AutoDownloadSuppression.suppress(content.fileId)
+                                                onCancelDownload(content.fileId)
+                                            }
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = stringResource(R.string.cd_download),
+                                    tint = Color.White,
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                        .padding(10.dp)
+                                        .clickable {
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            onDownloadPhoto(content.fileId)
+                                        }
+                                )
                             }
-                        )
+                        }
                     }
 
                     // --- View once overlay: scrim + flame icon ---
@@ -354,7 +385,7 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // --- hasSpoiler overlay (unchanged) ---
+                    // --- Spoiler overlay ---
                     if (content.hasSpoiler) {
                         SpoilerWrapper(isRevealed = isMediaSpoilerRevealed) {
                             Box(modifier = Modifier.fillMaxSize())
@@ -362,7 +393,7 @@ fun PhotoMessageBubble(
                     }
 
                     // --- Metadata overlay ---
-                    if (content.caption.isEmpty() && showMetadata) {
+                    if (!content.isViewOnce && content.caption.isEmpty() && showMetadata) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
@@ -378,7 +409,8 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                if (content.caption.isNotEmpty()) {
+                // --- Caption ---
+                if (!content.isViewOnce && content.caption.isNotEmpty()) {
                     val timeColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(alpha = 0.7f)
 
                     Column(
