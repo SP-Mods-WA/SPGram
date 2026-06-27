@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material.icons.rounded.Stream
@@ -115,15 +116,11 @@ fun VideoMessageBubble(
     }
     var isAutoDownloadSuppressed by remember(msg.id, content.fileId) { mutableStateOf(false) }
 
-    // View Once: 1:1, normal: original ratio
+    // ✅ FIXED: Official style - wider aspect ratio range (0.3f - 3f)
     val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
-        if (content.isViewOnce) {
-            1f
-        } else if (content.width > 0 && content.height > 0) {
+        if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
-        } else {
-            1f
-        }
+        else 1f
     }
 
     LaunchedEffect(content.path, content.fileId) {
@@ -191,7 +188,9 @@ fun VideoMessageBubble(
             color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
-            Column(modifier = Modifier.widthIn(max = 280.dp)) {
+            Column(modifier = Modifier
+                .widthIn(max = 280.dp)
+            ) {
                 msg.forwardInfo?.let { forward ->
                     Box(
                         modifier = Modifier
@@ -221,12 +220,12 @@ fun VideoMessageBubble(
 
                 val ratio = stableAspectRatio
 
-                // View Once: square (1:1) with max size, normal: original ratio
+                // ✅ FIXED: Official style - View Once: square with padding, Normal: min/max height
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                     Modifier
                         .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .heightIn(max = 200.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)  // Padding around view once
+                        .aspectRatio(1f)  // Square
                         .clipToBounds()
                         .onGloballyPositioned {
                             layoutTracker.videoPosition = it.positionInWindow()
@@ -234,7 +233,7 @@ fun VideoMessageBubble(
                 } else {
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 120.dp) // max removed!
+                        .heightIn(min = 120.dp, max = 420.dp)  // ✅ Min 120, Max 360
                         .aspectRatio(ratio)
                         .clipToBounds()
                         .onGloballyPositioned {
@@ -243,138 +242,97 @@ fun VideoMessageBubble(
                 }
 
                 Box(modifier = boxModifier) {
-                    // --- View Once: Flame icon + blurred thumbnail ---
-                    if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Show blurred thumbnail or placeholder
-                        if (content.minithumbnail != null) {
-                            MediaLoadingBackground(
-                                previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop,
-                                previewBlur = 14.dp
-                            )
-                        } else {
-                            Box(modifier = Modifier.fillMaxSize().background(Color(0xFF4A6FA5)))
-                        }
-                        
-                        // Flame icon overlay
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Whatshot,
-                                    contentDescription = stringResource(R.string.view_once_video),
-                                    tint = Color.White,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                        }
-                        
-                        // Tap to open
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onTap = { onOpenViewOnce(msg) },
-                                        onLongPress = { offset -> onLongClick(layoutTracker.videoPosition + offset) }
-                                    )
-                                }
+                    if ((hasPath || content.supportsStreaming) && content.isViewOnce && !content.isViewOnceOpened) {
+                        VideoLoadingLayer(
+                            content = content,
+                            isViewOnce = true,
+                            onCancelDownload = {},
+                            onStartDownload = { onOpenViewOnce(msg) }
                         )
                     } else if (hasPath || content.supportsStreaming) {
-                        // --- Normal video playback ---
-                        if (autoplayVideos) {
-                            val videoPath = stablePath ?: "http://streaming/${content.fileId}"
-                            VideoStickerPlayer(
-                                path = videoPath,
-                                type = VideoType.Gif,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                                animate = isVisible && !isAnyViewerOpen,
-                                volume = if (isMuted) 0f else 1f,
-                                reportProgress = true,
-                                onProgressUpdate = { pos ->
-                                    val seconds = (pos / 1000).toInt()
-                                    if (seconds != currentPositionSecondsState.intValue) {
-                                        currentPositionSecondsState.intValue = seconds
-                                    }
-                                },
-                                fileId = content.fileId,
-                                thumbnailData = content.minithumbnail
-                            )
-
-                            VideoMuteToggle(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(8.dp),
-                                isMuted = isMuted,
-                                onToggle = { isMuted = !isMuted }
-                            )
-                        } else {
-                            if (hasPath) {
-                                Image(
-                                    painter = rememberAsyncImagePainter(
-                                        model = ImageRequest.Builder(context)
-                                            .data(stablePath)
-                                            .apply {
-                                                videoCacheKey?.let {
-                                                    memoryCacheKey(it)
-                                                    diskCacheKey(it)
-                                                }
-                                            }
-                                            .crossfade(false)
-                                            .build()
-                                    ),
-                                    contentDescription = content.caption,
+                            if (autoplayVideos) {
+                                val videoPath = stablePath ?: "http://streaming/${content.fileId}"
+                                VideoStickerPlayer(
+                                    path = videoPath,
+                                    type = VideoType.Gif,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
+                                    contentScale = ContentScale.FillWidth,  // ✅ No crop!
+                                    animate = isVisible && !isAnyViewerOpen,
+                                    volume = if (isMuted) 0f else 1f,
+                                    reportProgress = true,
+                                    onProgressUpdate = { pos ->
+                                        val seconds = (pos / 1000).toInt()
+                                        if (seconds != currentPositionSecondsState.intValue) {
+                                            currentPositionSecondsState.intValue = seconds
+                                        }
+                                    },
+                                    fileId = content.fileId,
+                                    thumbnailData = content.minithumbnail
+                                )
+
+                                VideoMuteToggle(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(8.dp),
+                                    isMuted = isMuted,
+                                    onToggle = { isMuted = !isMuted }
                                 )
                             } else {
-                                if (content.minithumbnail != null) {
+                                if (hasPath) {
                                     Image(
                                         painter = rememberAsyncImagePainter(
                                             model = ImageRequest.Builder(context)
-                                                .data(content.minithumbnail)
+                                                .data(stablePath)
                                                 .apply {
-                                                    videoMiniCacheKey?.let {
+                                                    videoCacheKey?.let {
                                                         memoryCacheKey(it)
                                                         diskCacheKey(it)
                                                     }
                                                 }
+                                                .crossfade(false)
                                                 .build()
                                         ),
-                                        contentDescription = null,
+                                        contentDescription = content.caption,
                                         modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
+                                        contentScale = ContentScale.FillWidth  // ✅ No crop!
+                                    )
+                                } else {
+                                    if (content.minithumbnail != null) {
+                                        Image(
+                                            painter = rememberAsyncImagePainter(
+                                                model = ImageRequest.Builder(context)
+                                                    .data(content.minithumbnail)
+                                                    .apply {
+                                                        videoMiniCacheKey?.let {
+                                                            memoryCacheKey(it)
+                                                            diskCacheKey(it)
+                                                        }
+                                                    }
+                                                    .build()
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.FillWidth  // ✅ No crop!
+                                        )
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .size(48.dp)
+                                        .background(Color.Black.copy(alpha = 0.45f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = stringResource(R.string.action_play),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(32.dp)
                                     )
                                 }
                             }
-
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.Center)
-                                    .size(48.dp)
-                                    .background(Color.Black.copy(alpha = 0.45f), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = stringResource(R.string.action_play),
-                                    tint = Color.White,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                        }
                     } else {
-                        // --- Not downloaded yet ---
                         VideoLoadingLayer(
                             content = content,
                             isViewOnce = content.isViewOnce && !content.isViewOnceOpened,
@@ -395,27 +353,24 @@ fun VideoMessageBubble(
                         )
                     }
 
-                    // --- Interaction overlay (tap to play/pause for normal videos) ---
-                    if (!content.isViewOnce || content.isViewOnceOpened) {
-                        VideoInteractionOverlay(
-                            modifier = Modifier.matchParentSize(),
-                            content = content,
-                            isMediaSpoilerRevealed = isMediaSpoilerRevealed,
-                            videoPosition = { layoutTracker.videoPosition },
-                            onRevealSpoiler = { isMediaSpoilerRevealed = true },
-                            onCancelDownload = {
-                                isAutoDownloadSuppressed = true
-                                AutoDownloadSuppression.suppress(content.fileId)
-                                onCancelDownloadState(content.fileId)
-                            },
-                            onOpenVideo = {
-                                isAutoDownloadSuppressed = false
-                                AutoDownloadSuppression.clear(content.fileId)
-                                onVideoClickState(msg)
-                            },
-                            onLongClick = { anchor -> onLongClickState(anchor) }
-                        )
-                    }
+                    VideoInteractionOverlay(
+                        modifier = Modifier.matchParentSize(),
+                        content = content,
+                        isMediaSpoilerRevealed = isMediaSpoilerRevealed,
+                        videoPosition = { layoutTracker.videoPosition },
+                        onRevealSpoiler = { isMediaSpoilerRevealed = true },
+                        onCancelDownload = {
+                            isAutoDownloadSuppressed = true
+                            AutoDownloadSuppression.suppress(content.fileId)
+                            onCancelDownloadState(content.fileId)
+                        },
+                        onOpenVideo = {
+                            isAutoDownloadSuppressed = false
+                            AutoDownloadSuppression.clear(content.fileId)
+                            onVideoClickState(msg)
+                        },
+                        onLongClick = { anchor -> onLongClickState(anchor) }
+                    )
 
                     VideoPlaybackBadge(
                         modifier = Modifier
@@ -435,7 +390,7 @@ fun VideoMessageBubble(
                         isRevealed = isMediaSpoilerRevealed
                     )
 
-                    if (!content.isViewOnce && content.caption.isEmpty() && showMetadata) {
+                    if (content.caption.isEmpty() && showMetadata) {
                         VideoMetadataBadge(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
@@ -451,8 +406,7 @@ fun VideoMessageBubble(
                     }
                 }
 
-                // --- Caption (only for normal videos) ---
-                if (!content.isViewOnce && content.caption.isNotEmpty()) {
+                if (content.caption.isNotEmpty()) {
                     val timeColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF212121).copy(alpha = 0.7f)
 
                     Column(
@@ -519,7 +473,8 @@ fun VideoMessageBubble(
     }
 }
 
-// Helper composables (same as before)
+// ==================== Helper Composables (unchanged) ====================
+
 @Composable
 private fun VideoMuteToggle(
     modifier: Modifier = Modifier,
