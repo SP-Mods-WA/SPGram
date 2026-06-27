@@ -23,14 +23,15 @@ class TdFileHelper(
     }
 
     fun resolveLocalFilePath(file: TdApi.File?): String? {
-        if (file == null) return null
-        // Only accept paths for fully-completed downloads. TDLib may expose a non-.part
-        // temp path during an in-progress download, which isValidPath alone cannot reject.
-        if (file.local.isDownloadingCompleted && isValidPath(file.local.path)) return file.local.path
-        val cached = cache.fileCache[file.id] ?: return null
-        return if (cached.local.isDownloadingCompleted) cached.local.path.takeIf { isValidPath(it) } else null
+    if (file == null) return null
+    val updated = cache.fileCache[file.id] ?: file  // ✅ cache first
+    if (updated.local.isDownloadingCompleted && isValidPath(updated.local.path)) {
+        return updated.local.path
+    }
+    return null
     }
 
+    
     fun findBestAvailablePath(mainFile: TdApi.File?, sizes: Array<TdApi.PhotoSize>? = null): String? {
         if (mainFile != null && mainFile.local.isDownloadingCompleted && isValidPath(mainFile.local.path)) {
             return mainFile.local.path
