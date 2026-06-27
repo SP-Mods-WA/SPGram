@@ -106,36 +106,32 @@ fun VideoMessageBubble(
     val tailCorner = 0.dp
 
     val context = LocalContext.current
-    // ✅ FIX: Use thumbnailPath as fallback so the bubble shows a clear preview
-    // immediately — even before the full video is downloaded. Official Telegram
-    // always shows the thumbnail in the bubble; full video only opens in the viewer.
-    var stablePath by remember(msg.id, content.fileId) {
-        mutableStateOf(
-            content.path?.takeIf { it.isNotBlank() }
-                ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
-        )
-    }
+    // ✅ ROOT FIX: val (not remember+var) so displayPath is recomputed every recompose.
+    // Full video path takes priority; thumbnailPath is fallback for the static preview.
+    // This ensures the bubble shows the correct thumbnail immediately on re-entry to
+    // the chat — no LaunchedEffect delay, no one-frame blank/tiny-bubble flash.
+    val displayPath: String? = content.path?.takeIf { it.isNotBlank() }
+        ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
     val hasFullVideo = !content.path.isNullOrBlank()
-    val hasPath = !stablePath.isNullOrBlank()
-    val videoCacheKey = remember(stablePath, content.fileId) {
-        namespacedCacheKey("chat_video:${content.fileId}", stablePath)
+    val hasPath = !displayPath.isNullOrBlank()
+    val videoCacheKey = remember(displayPath, content.fileId) {
+        namespacedCacheKey("chat_video:${content.fileId}", displayPath)
     }
     val videoMiniCacheKey = remember(content.minithumbnail, content.fileId) {
         content.minithumbnail?.let { namespacedCacheKey("chat_video_mini:${content.fileId}", it) }
     }
     var isAutoDownloadSuppressed by remember(msg.id, content.fileId) { mutableStateOf(false) }
 
-    // ✅ FIX: Lock aspect ratio at first composition (keyed on msg.id + fileId only).
-    val stableAspectRatio = remember(msg.id, content.fileId) {
+    // Aspect ratio must be recomputed whenever real width/height arrive (same fix as
+    // PhotoMessageBubble) — keying only on msg.id/fileId locks the 1.3f fallback in
+    // permanently if width/height are 0 on the first composition.
+    val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
         if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
         else 1.3f
     }
 
-    LaunchedEffect(content.path, content.thumbnailPath, content.fileId) {
-        val best = content.path?.takeIf { it.isNotBlank() }
-            ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
-        if (best != null) stablePath = best
+    LaunchedEffect(content.path, content.fileId) {
         if (!content.path.isNullOrBlank()) {
             isAutoDownloadSuppressed = false
             AutoDownloadSuppression.clear(content.fileId)
@@ -262,7 +258,7 @@ fun VideoMessageBubble(
                         )
                     } else if (hasFullVideo || content.supportsStreaming) {
                             if (autoplayVideos) {
-                                val videoPath = stablePath ?: "http://streaming/${content.fileId}"
+                                val videoPath = displayPath ?: "http://streaming/${content.fileId}"
                                 VideoStickerPlayer(
                                     path = videoPath,
                                     type = VideoType.Gif,
@@ -293,7 +289,7 @@ fun VideoMessageBubble(
                                     Image(
                                         painter = rememberAsyncImagePainter(
                                             model = ImageRequest.Builder(context)
-                                                .data(stablePath)
+                                                .data(displayPath)
                                                 .apply {
                                                     videoCacheKey?.let {
                                                         memoryCacheKey(it)
