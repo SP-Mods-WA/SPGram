@@ -103,7 +103,7 @@ fun PhotoMessageBubble(
     val stableAspectRatio = if (content.width > 0 && content.height > 0)
     (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
 else 1.3f
-}
+
 
     LaunchedEffect(content.path, content.fileId) {
         if (!content.path.isNullOrBlank()) {
