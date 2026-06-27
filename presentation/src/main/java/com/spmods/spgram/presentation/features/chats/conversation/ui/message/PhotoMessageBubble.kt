@@ -94,20 +94,41 @@ fun PhotoMessageBubble(
     val smallCorner = 6.dp
     val tailCorner = 0.dp
 
-    var stablePath by remember(msg.id, content.fileId) { mutableStateOf(content.path) }
+    // ✅ FIX: Track the best available path — full photo first, thumbnail as fallback.
+    // Official Telegram shows the thumbnail immediately in the bubble (clear, correct
+    // size) and crossfades to the full photo when download completes. Without the
+    // thumbnail fallback, hasPath=false after returning to chat and the bubble shows
+    // only a blurry placeholder until the full photo is re-rendered.
+    var stablePath by remember(msg.id, content.fileId) {
+        mutableStateOf(
+            content.path?.takeIf { it.isNotBlank() }
+                ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
+        )
+    }
+    // hasFullPhoto drives the download button: only hide it once the FULL photo is ready.
+    val hasFullPhoto = !content.path.isNullOrBlank()
     val hasPath = !stablePath.isNullOrBlank()
+
     val photoCacheKey = remember(stablePath, content.fileId) {
         namespacedCacheKey("chat_photo:${content.fileId}", stablePath)
     }
 
-    val stableAspectRatio = if (content.width > 0 && content.height > 0)
-    (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
-else 1.3f
+    // ✅ FIX: Lock aspect ratio at first composition — never recalculates on recompose.
+    val stableAspectRatio = remember(msg.id, content.fileId) {
+        if (content.width > 0 && content.height > 0)
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
+        else 1.3f
+    }
 
-
-    LaunchedEffect(content.path, content.fileId) {
+    LaunchedEffect(content.path, content.thumbnailPath, content.fileId) {
+        // Always prefer the full photo; fall back to thumbnail so the bubble
+        // never goes blank while the full photo is still being fetched.
+        val best = content.path?.takeIf { it.isNotBlank() }
+            ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
+        if (best != null) {
+            stablePath = best
+        }
         if (!content.path.isNullOrBlank()) {
-            stablePath = content.path
             AutoDownloadSuppression.clear(content.fileId)
         }
     }
@@ -229,7 +250,9 @@ else 1.3f
                                         }
                                         else -> {
                                             AutoDownloadSuppression.clear(content.fileId)
-                                            if (hasPath) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
+                                            // If full photo is ready open the viewer; if only
+                                            // thumbnail is available start downloading the full photo.
+                                            if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
                                         }
                                     }
                                 },
@@ -238,7 +261,7 @@ else 1.3f
                         }
                 ) {
                     // --- Background layer ---
-                    if (content.isViewOnce && !hasPath) {
+                    if (content.isViewOnce && !hasFullPhoto) {
                         if (content.minithumbnail != null) {
                             MediaLoadingBackground(
     previewData = content.thumbnailPath ?: content.minithumbnail,
@@ -291,7 +314,11 @@ else 1.3f
                     }
 
                     // --- Download action (CENTER - fixed clickable) ---
-                    if (!hasPath && !content.isViewOnce) {
+                    // Show the download/cancel button only when the full-resolution photo
+                    // is not yet available. If we already have the thumbnail (hasPath=true
+                    // but hasFullPhoto=false) the button still shows so the user can fetch
+                    // the full photo; it just sits on top of the thumbnail preview.
+                    if (!hasFullPhoto && !content.isViewOnce) {
                         Box(
                             modifier = Modifier.matchParentSize(),
                             contentAlignment = Alignment.Center
