@@ -1,5 +1,6 @@
 package com.spmods.spgram.presentation.features.chats.conversation.logic
 
+import android.graphics.BitmapFactory
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,36 @@ import kotlin.math.abs
 
 private const val PAGE_SIZE = 50
 private const val MAX_DOWNLOAD_RETRIES = 3
+
+// BUG FIX: MessageDownloadEvent.Completed only carries (chatId, messageId, fileId, path) —
+// no width/height. The live in-memory content.copy(path = ...) calls below never touched
+// width/height, so once a photo/video finished downloading the bubble kept whatever
+// (possibly wrong/placeholder) dimensions it was first created with, until the chat
+// screen was destroyed and recreated. Reading real bounds straight from the just-downloaded
+// file gives an instant, accurate fix with no extra TDLib round-trip.
+private fun realImageBounds(path: String): Pair<Int, Int>? = try {
+    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(path, opts)
+    if (opts.outWidth > 0 && opts.outHeight > 0) opts.outWidth to opts.outHeight else null
+} catch (_: Exception) {
+    null
+}
+
+private fun realVideoBounds(path: String): Triple<Int, Int, Int>? = try {
+    val retriever = android.media.MediaMetadataRetriever()
+    retriever.setDataSource(path)
+    val w = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+    val h = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+    val rotation = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+    retriever.release()
+    if (w > 0 && h > 0) {
+        // Swap dimensions if the video is rotated 90/270 so aspect ratio matches what's displayed.
+        if (rotation == 90 || rotation == 270) Triple(h, w, rotation) else Triple(w, h, rotation)
+    } else null
+} catch (_: Exception) {
+    null
+}
+
 private fun isUsableAvatarPath(path: String?): Boolean {
     if (path.isNullOrBlank()) return false
     return when {
@@ -1066,8 +1097,11 @@ internal fun DefaultChatComponent.setupMessageCollectors() {
                                     mainFileId = content.fileId
                                     mainPathUpdated = true
                                     if (isError) fileIdToRetry = content.fileId
+                                    val bounds = finalPath?.let(::realImageBounds)
                                     content.copy(
                                         path = finalPath,
+                                        width = bounds?.first ?: content.width,
+                                        height = bounds?.second ?: content.height,
                                         isDownloading = false,
                                         downloadError = isError
                                     )
@@ -1081,8 +1115,11 @@ internal fun DefaultChatComponent.setupMessageCollectors() {
                                     mainFileId = content.fileId
                                     mainPathUpdated = true
                                     if (isError) fileIdToRetry = content.fileId
+                                    val bounds = finalPath?.let(::realVideoBounds)
                                     content.copy(
                                         path = finalPath,
+                                        width = bounds?.first ?: content.width,
+                                        height = bounds?.second ?: content.height,
                                         isDownloading = false,
                                         downloadError = isError
                                     )
