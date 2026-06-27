@@ -283,12 +283,11 @@ fun PhotoMessageBubble(
                                         diskCacheKey(it)
                                     }
                                 }
-                                .crossfade(false)
+                                .crossfade(true)
                                 .build(),
                             contentDescription = content.caption,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = if (content.isViewOnce) ContentScale.Crop else ContentScale.FillWidth
-                        )
+                            contentScale = ContentScale.Crop
                     }
 
                     // --- Download action (CENTER - fixed clickable) ---
