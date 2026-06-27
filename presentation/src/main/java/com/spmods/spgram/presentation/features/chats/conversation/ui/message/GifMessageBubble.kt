@@ -156,6 +156,13 @@ fun GifMessageBubble(
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
     var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
 
+    // ✅ FIXED: Official style - wider aspect ratio range (0.3f - 3f)
+    val mediaRatio = remember(content.width, content.height) {
+        if (content.width > 0 && content.height > 0)
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
+        else 1f
+    }
+
     Column(
         modifier = modifier.width(IntrinsicSize.Max),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
@@ -195,18 +202,12 @@ fun GifMessageBubble(
                     }
                 }
 
+                // ✅ FIXED: Official style - min/max height with aspect ratio
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 120.dp)
-                        .aspectRatio(
-                            if (content.width > 0 && content.height > 0)
-                                (content.width.toFloat() / content.height.toFloat()).coerceIn(
-                                    0.3f,
-                                    3f
-                                )
-                            else 1f
-                        )
+                        .heightIn(min = 120.dp, max = 420.dp)  // ✅ Min 120, Max 360
+                        .aspectRatio(mediaRatio)  // ✅ Original ratio (0.3f - 3f)
                         .clipToBounds()
                         .onGloballyPositioned { gifPosition = it.positionInWindow() }
 
