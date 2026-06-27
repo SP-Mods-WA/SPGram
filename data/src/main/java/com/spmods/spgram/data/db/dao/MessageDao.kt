@@ -45,8 +45,15 @@ interface MessageDao {
     )
     suspend fun updateMediaPathForMessage(chatId: Long, messageId: Long, fileId: Int, path: String)
 
+    // BUG FIX: Only clear the main media path and fileId on startup.
+    // mediaThumbnailPath intentionally preserved — thumbnail files live on disk
+    // across restarts (TDLib never deletes them). If we NULL it, the first load
+    // after re-entering a chat has path=null + thumbnailPath=null + only minithumbnail
+    // available, so the bubble renders at minimum height (tiny). Keeping the thumbnail
+    // path lets the bubble show the correct size immediately; the full-res path is
+    // re-hydrated lazily from fileCache / TDLib as before.
     @Query(
-        "UPDATE messages SET mediaFileId = 0, mediaPath = NULL, mediaThumbnailPath = NULL WHERE (mediaFileId != 0 OR mediaPath IS NOT NULL OR mediaThumbnailPath IS NOT NULL) AND contentType IN ('photo', 'video', 'video_note', 'document', 'gif', 'voice', 'sticker', 'audio')"
+        "UPDATE messages SET mediaFileId = 0, mediaPath = NULL WHERE (mediaFileId != 0 OR mediaPath IS NOT NULL) AND contentType IN ('photo', 'video', 'video_note', 'document', 'gif', 'voice', 'sticker', 'audio')"
     )
     suspend fun clearCachedMediaPaths()
 
