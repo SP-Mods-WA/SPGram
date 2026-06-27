@@ -95,6 +95,7 @@ fun StoryViewerScreen(
     var currentIndex by remember { mutableIntStateOf(initialIndex.coerceIn(0, stories.lastIndex)) }
     var progress by remember { mutableFloatStateOf(0f) }
     var isPaused by remember { mutableStateOf(false) }
+    var videoDurationMs by remember { mutableStateOf<Long?>(null) }
     var replyText by remember { mutableStateOf("") }
     var isReplyFieldFocused by remember { mutableStateOf(false) }
     val likedStoryIds = remember { mutableStateOf(setOf<Int>()) }
@@ -104,9 +105,37 @@ fun StoryViewerScreen(
     val story = stories.getOrNull(currentIndex) ?: run { onDismiss(); return }
     val isLiked = likedStoryIds.value.contains(story.id)
 
+    // For video stories, drive the progress bar from real elapsed playback time
+    // instead of the fixed-duration timer (video length varies per story).
+    LaunchedEffect(currentIndex, videoDurationMs) {
+        if (story.content !is StoryContentModel.Video) return@LaunchedEffect
+        progress = 0f
+        val duration = videoDurationMs ?: return@LaunchedEffect
+        val startedAt = System.currentTimeMillis()
+        var elapsedWhilePaused = 0L
+        var pauseStartedAt: Long? = null
+        while (progress < 1f) {
+            if (isPaused || isReplyFieldFocused) {
+                if (pauseStartedAt == null) pauseStartedAt = System.currentTimeMillis()
+                delay(50)
+            } else {
+                pauseStartedAt?.let {
+                    elapsedWhilePaused += System.currentTimeMillis() - it
+                    pauseStartedAt = null
+                }
+                val elapsed = System.currentTimeMillis() - startedAt - elapsedWhilePaused
+                progress = (elapsed.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                delay(50)
+            }
+        }
+    }
+
     // Auto-advance timer — pauses while isPaused is true or the reply field has focus,
     // and resumes from the exact progress value where it left off (no restart).
+    // For video stories, advancement is driven by onPlaybackEnded instead, since video
+    // length varies; this loop is skipped for videos so it doesn't fight with playback.
     LaunchedEffect(currentIndex) {
+        if (story.content is StoryContentModel.Video) return@LaunchedEffect
         progress = 0f
         val steps = 100
         val stepDelay = STORY_DURATION_MS / steps
@@ -143,12 +172,21 @@ fun StoryViewerScreen(
                 )
             }
             is StoryContentModel.Video -> {
-                // Thumbnail as placeholder while video support is added
-                SubcomposeAsyncImage(
-                    model = content.thumbnailPath.ifEmpty { content.filePath },
-                    contentDescription = null,
+                com.spmods.spgram.presentation.core.media.VideoStickerPlayer(
+                    path = content.filePath,
+                    type = com.spmods.spgram.presentation.core.media.VideoType.Gif,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
+                    animate = !isPaused && !isReplyFieldFocused,
+                    shouldLoop = false,
+                    volume = 1f,
+                    contentScale = ContentScale.Fit,
+                    thumbnailData = content.thumbnailPath.ifEmpty { null },
+                    onDurationKnown = { durationMs ->
+                        if (durationMs > 0L) videoDurationMs = durationMs
+                    },
+                    onPlaybackEnded = {
+                        if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
+                    }
                 )
             }
             is StoryContentModel.Unsupported -> {
@@ -166,9 +204,11 @@ fun StoryViewerScreen(
         }
 
         // Tap left/right to navigate + press-and-hold anywhere to pause.
-        // A single pointerInput per side handles both gestures so a long press
-        // doesn't fire the tap-to-navigate action, and lifting the finger
-        // resumes the timer exactly where it paused.
+        // A single pointerInput per side handles both gestures. We only treat the
+        // gesture as "tap to navigate" if the finger was released quickly; a long
+        // press-and-hold (used to pause) should just resume playback on release,
+        // not navigate or dismiss the story.
+        val tapMaxDurationMs = 250L
         Row(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
@@ -178,9 +218,11 @@ fun StoryViewerScreen(
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             isPaused = true
+                            val pressStart = System.currentTimeMillis()
                             val up = waitForUpOrCancellation()
                             isPaused = false
-                            if (up != null) {
+                            val heldMs = System.currentTimeMillis() - pressStart
+                            if (up != null && heldMs < tapMaxDurationMs) {
                                 if (currentIndex > 0) currentIndex-- else onDismiss()
                             }
                         }
@@ -194,9 +236,11 @@ fun StoryViewerScreen(
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             isPaused = true
+                            val pressStart = System.currentTimeMillis()
                             val up = waitForUpOrCancellation()
                             isPaused = false
-                            if (up != null) {
+                            val heldMs = System.currentTimeMillis() - pressStart
+                            if (up != null && heldMs < tapMaxDurationMs) {
                                 if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
                             }
                         }
