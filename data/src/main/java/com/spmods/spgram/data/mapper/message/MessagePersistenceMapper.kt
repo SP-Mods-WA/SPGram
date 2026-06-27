@@ -108,10 +108,10 @@ internal class MessagePersistenceMapper(
             is TdApi.MessageText -> CachedMessageContent("text", content.text.text, null)
             is TdApi.MessagePhoto -> {
                 val sizes = content.photo.sizes
-                val best = sizes.find { it.type == "x" }
-                    ?: sizes.find { it.type == "m" }
-                    ?: sizes.getOrNull(sizes.size / 2)
-                    ?: sizes.lastOrNull()
+                val best = sizes.find { it.type == "y" }
+    ?: sizes.find { it.type == "x" }
+    ?: sizes.find { it.type == "w" }
+    ?: sizes.maxByOrNull { it.width * it.height }
                 val thumbnail = sizes.find { it.type == "m" }
                     ?: sizes.find { it.type == "s" }
                 val fileId = best?.photo?.id ?: 0
