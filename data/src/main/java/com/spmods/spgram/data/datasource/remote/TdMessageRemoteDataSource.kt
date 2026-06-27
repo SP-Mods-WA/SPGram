@@ -1559,14 +1559,26 @@ class TdMessageRemoteDataSource(
         }
     }
 
+    // BUG FIX: previously this fired getMessage() exactly once after a fixed delay and
+    // accepted whatever it got, even if photo.sizes still had no real width/height (very
+    // common on slow connections — TDLib hadn't backfilled the dimensions yet). The bubble
+    // would then be stuck with zero/placeholder dimensions until the chat was closed and
+    // reopened, which forces a fresh getMessage() with no time pressure. Retrying with
+    // backoff and only stopping once real dimensions are confirmed (or attempts run out)
+    // fixes this without needing to leave the chat.
     private fun refreshMessageDebounced(chatId: Long, messageId: Long) {
         if (messageId == 0L) return
         val key = chatId to messageId
         refreshJobs[key]?.cancel()
         val job = scope.launch(dispatcherProvider.io) {
-            delay(200)
-            try { refreshAndEmitMessage(chatId, messageId) }
-            finally {
+            val delays = longArrayOf(200, 500, 1000, 2000, 4000)
+            try {
+                for (attemptDelay in delays) {
+                    delay(attemptDelay)
+                    val gotRealDimensions = refreshAndEmitMessage(chatId, messageId)
+                    if (gotRealDimensions) break
+                }
+            } finally {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) refreshJobs.remove(key, coroutineContext[Job])
                 else refreshJobs.remove(key)
             }
@@ -1574,11 +1586,15 @@ class TdMessageRemoteDataSource(
         refreshJobs[key] = job
     }
 
-    private suspend fun refreshAndEmitMessage(chatId: Long, messageId: Long) {
-        if (messageId == 0L) return
-        val msg = getMessage(chatId, messageId) ?: return
+    /** Returns true if the refreshed message now has real (non-zero) photo dimensions,
+     *  or isn't a photo at all — i.e. true means "no further retry needed." */
+    private suspend fun refreshAndEmitMessage(chatId: Long, messageId: Long): Boolean {
+        if (messageId == 0L) return true
+        val msg = getMessage(chatId, messageId) ?: return true
         val model = mapMessageToModel(msg)
         messageEditedFlow.emit(model)
+        val photoContent = msg.content as? TdApi.MessagePhoto ?: return true
+        return photoContent.photo.sizes.any { it.width > 0 && it.height > 0 }
     }
 
     private suspend fun mapMessageToModel(message: TdApi.Message): MessageModel {
