@@ -145,12 +145,29 @@ class MessageRepositoryImpl(
         scope.launch(dispatcherProvider.io) {
             messageDownloadFlow.collect { event ->
                 if (event is MessageDownloadEvent.Completed && event.fileId != 0 && event.path.isNotBlank()) {
-                    chatLocalDataSource.updateMediaPath(
-                        chatId = event.chatId,
-                        messageId = event.messageId,
-                        fileId = event.fileId,
-                        path = event.path
-                    )
+                    // BUG FIX: updateMediaPath only ever wrote the `mediaPath` column.
+                    // The cached `contentMeta` (which encodes width/height, set once when
+                    // the message was first inserted from whatever photo size TDLib had
+                    // at the time) was never refreshed here. So when a photo/video finished
+                    // downloading, the bubble got the new path but kept the stale/initial
+                    // dimensions — wrong aspect ratio — until the chat screen was torn down
+                    // and recreated, at which point a fresh getMessage() call rebuilt
+                    // contentMeta correctly. Re-fetching and re-caching the full message
+                    // content here (same pattern used in the UpdateMessageContent handler
+                    // above) fixes it without needing to leave the chat.
+                    val refreshed = messageRemoteDataSource.getMessage(event.chatId, event.messageId)
+                    if (refreshed != null) {
+                        chatLocalDataSource.insertMessage(
+                            messageMapper.mapToEntity(refreshed, ::resolveSenderName)
+                        )
+                    } else {
+                        chatLocalDataSource.updateMediaPath(
+                            chatId = event.chatId,
+                            messageId = event.messageId,
+                            fileId = event.fileId,
+                            path = event.path
+                        )
+                    }
                 }
             }
         }
