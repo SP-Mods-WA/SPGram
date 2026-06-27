@@ -1,6 +1,7 @@
 package com.spmods.spgram.data.datasource.remote
 
 import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.CancellationException
@@ -618,6 +619,26 @@ class TdMessageRemoteDataSource(
         return safeExecute(req)
     }
 
+    // Mirrors the BitmapFactory approach already used for photos below: read the real
+    // dimensions (and duration) straight from the local video file before sending, so
+    // the video bubble gets the correct size immediately instead of waiting on TDLib
+    // to report it back later.
+    private fun readLocalVideoMeta(path: String): Triple<Int, Int, Int>? = try {
+        val retriever = MediaMetadataRetriever()
+        retriever.setDataSource(path)
+        val w = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+        val h = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+        val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+        val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+        retriever.release()
+        if (w > 0 && h > 0) {
+            val (finalW, finalH) = if (rotation == 90 || rotation == 270) h to w else w to h
+            Triple(finalW, finalH, (durationMs / 1000).toInt())
+        } else null
+    } catch (_: Exception) {
+        null
+    }
+
     override suspend fun sendPhoto(
         chatId: Long,
         photoPath: String,
@@ -673,6 +694,11 @@ class TdMessageRemoteDataSource(
     ): TdApi.Message? {
         val content = TdApi.InputMessageVideo().apply {
             this.video = TdApi.InputFileLocal(videoPath)
+            readLocalVideoMeta(videoPath)?.let { (w, h, dur) ->
+                this.width = w
+                this.height = h
+                this.duration = dur
+            }
             this.caption = TdApi.FormattedText(caption, captionEntities.toTdTextEntities(caption))
             if (sendOptions.selfDestructImmediately) {
                 this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
@@ -883,6 +909,11 @@ class TdMessageRemoteDataSource(
                 val isVideo = path.endsWith(".mp4", ignoreCase = true)
                 if (isVideo) TdApi.InputMessageVideo().apply {
                     this.video = TdApi.InputFileLocal(path)
+                    readLocalVideoMeta(path)?.let { (w, h, dur) ->
+                        this.width = w
+                        this.height = h
+                        this.duration = dur
+                    }
                     this.caption = cap
                     if (sendOptions.selfDestructImmediately) {
                         this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
