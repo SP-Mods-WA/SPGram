@@ -182,7 +182,7 @@ fun ChannelPhotoMessageBubble(
                         .fillMaxWidth()
                         .heightIn(
                             min = 120.dp,  // Min height for small images
-                            max = 400.dp   // Max height for very tall images
+                            max = 420.dp   // Max height for very tall images
                         )
                         .aspectRatio(mediaRatio)
                         .clip(
