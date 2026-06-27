@@ -1,6 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable  // ✅ මෙතන add කරන්න!
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -99,7 +100,6 @@ fun PhotoMessageBubble(
         namespacedCacheKey("chat_photo:${content.fileId}", stablePath)
     }
 
-    // ✅ FIXED: Official style - wider aspect ratio range (0.3f - 3f)
     val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
         if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
@@ -196,18 +196,17 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                // ✅ FIXED: Official style - View Once: square with padding, Normal: min/max height
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .aspectRatio(1f)  // Square
+                        .aspectRatio(1f)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 } else {
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 120.dp, max = 360.dp)  // ✅ Official style limits
+                        .heightIn(min = 120.dp, max = 360.dp)
                         .aspectRatio(stableAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
@@ -273,7 +272,7 @@ fun PhotoMessageBubble(
                         )
                     }
 
-                    // --- Actual image (after download) - ✅ No crop! ---
+                    // --- Actual image (after download) ---
                     if (hasPath) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -292,7 +291,7 @@ fun PhotoMessageBubble(
                         )
                     }
 
-                    // --- Download action (CENTER - like your current design) ---
+                    // --- Download action (CENTER - fixed clickable) ---
                     if (!hasPath && !content.isViewOnce) {
                         Box(
                             modifier = Modifier.matchParentSize(),
@@ -311,37 +310,48 @@ fun PhotoMessageBubble(
                                         trackColor = Color.White.copy(alpha = 0.25f),
                                         modifier = Modifier.size(40.dp)
                                     )
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = stringResource(R.string.cancel_button),
-                                        tint = Color.White,
+                                    // Cancel button
+                                    Box(
                                         modifier = Modifier
-                                            .size(16.dp)
+                                            .size(48.dp)
                                             .clickable {
                                                 AutoDownloadSuppression.suppress(content.fileId)
                                                 onCancelDownload(content.fileId)
-                                            }
-                                    )
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = stringResource(R.string.cancel_button),
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
                                 }
                             } else {
-                                Icon(
-                                    imageVector = Icons.Default.Download,
-                                    contentDescription = stringResource(R.string.cd_download),
-                                    tint = Color.White,
+                                // Download button
+                                Box(
                                     modifier = Modifier
                                         .size(48.dp)
                                         .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                                        .padding(10.dp)
                                         .clickable {
                                             AutoDownloadSuppression.clear(content.fileId)
                                             onDownloadPhoto(content.fileId)
-                                        }
-                                )
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Download,
+                                        contentDescription = stringResource(R.string.cd_download),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }
 
-                    // --- View once overlay: scrim + flame icon ---
+                    // --- View once overlay ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
                         Box(
                             modifier = Modifier
