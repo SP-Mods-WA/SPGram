@@ -1105,8 +1105,21 @@ internal fun DefaultChatComponent.setupMessageCollectors() {
                                         isDownloading = false,
                                         downloadError = isError
                                     )
+                                } else if (finalPath != null) {
+                                    // Thumbnail finished downloading. This fires immediately
+                                    // on receive, well before the user opens/downloads the full
+                                    // photo — so this is the only place that can correct the
+                                    // bubble's box size in real time for a message the user
+                                    // hasn't tapped on yet. Thumbnail aspect ratio always
+                                    // matches the full photo, so it's safe to use here.
+                                    val bounds = realImageBounds(finalPath)
+                                    content.copy(
+                                        thumbnailPath = finalPath,
+                                        width = bounds?.first ?: content.width,
+                                        height = bounds?.second ?: content.height
+                                    )
                                 } else {
-                                    if (finalPath != null) content.copy(thumbnailPath = finalPath) else content
+                                    content
                                 }
                             }
 
@@ -1123,8 +1136,17 @@ internal fun DefaultChatComponent.setupMessageCollectors() {
                                         isDownloading = false,
                                         downloadError = isError
                                     )
+                                } else if (finalPath != null) {
+                                    // Video thumbnail is a still image, so its aspect ratio
+                                    // matches the video and BitmapFactory can read it directly.
+                                    val bounds = realImageBounds(finalPath)
+                                    content.copy(
+                                        thumbnailPath = finalPath,
+                                        width = bounds?.first ?: content.width,
+                                        height = bounds?.second ?: content.height
+                                    )
                                 } else {
-                                    if (finalPath != null) content.copy(thumbnailPath = finalPath) else content
+                                    content
                                 }
                             }
 
