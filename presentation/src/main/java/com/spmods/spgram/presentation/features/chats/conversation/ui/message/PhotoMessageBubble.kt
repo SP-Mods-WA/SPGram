@@ -206,7 +206,7 @@ fun PhotoMessageBubble(
                 } else {
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 120.dp, max = 360.dp)
+                        .heightIn(min = 120.dp, max = 420.dp)
                         .aspectRatio(stableAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
