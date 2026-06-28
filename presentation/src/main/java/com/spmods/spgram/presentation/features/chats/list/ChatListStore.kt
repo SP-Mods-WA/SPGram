@@ -24,7 +24,7 @@ interface ChatListStore : Store<ChatListStore.Intent, ChatListComponent.State, C
         data class ArchiveSelected(val archive: Boolean) : Intent()
         object PinSelected : Intent()
         object ToggleReadSelected : Intent()
-        object DeleteSelected : Intent()
+        data class DeleteSelected(val revoke: Boolean = false) : Intent()
         object ArchivePinToggle : Intent()
         object ConfirmForwarding : Intent()
         object NewChatClicked : Intent()
