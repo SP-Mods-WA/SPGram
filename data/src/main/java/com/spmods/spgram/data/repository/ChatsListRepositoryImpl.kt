@@ -163,7 +163,8 @@ class ChatsListRepositoryImpl(
         appPreferences = appPreferences,
         userFullInfoDao = userFullInfoDao,
         triggerUpdate = { chatId -> triggerUpdate(chatId) },
-        fetchUser = { userId -> fetchUser(userId) }
+        fetchUser = { userId -> fetchUser(userId) },
+        myUserIdProvider = { myUserId }
     )
 
     private val persistenceManager = ChatPersistenceManager(
