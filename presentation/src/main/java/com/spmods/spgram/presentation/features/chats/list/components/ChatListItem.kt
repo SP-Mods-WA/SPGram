@@ -680,20 +680,13 @@ private data class PreviewPayload(
 )
 
 private fun shouldShowMediaThumbnail(contentType: String, paths: List<String>): Boolean {
-    if (paths.isEmpty()) return false
-    return contentType == "photo" ||
-            contentType == "video" ||
-            contentType == "gif" ||
-            contentType == "sticker" ||
-            contentType == "video_note"
+    // Media thumbnails are intentionally disabled in the chat list for privacy —
+    // always fall back to the text label (e.g. "Photo", "Video", "Sticker") instead.
+    return false
 }
 
 private fun shouldHideMediaLabelWhenThumbnailShown(contentType: String): Boolean {
-    return contentType == "photo" ||
-            contentType == "video" ||
-            contentType == "gif" ||
-            contentType == "sticker" ||
-            contentType == "video_note"
+    return false
 }
 
 private fun hasLastMessagePreview(chat: ChatModel): Boolean {
