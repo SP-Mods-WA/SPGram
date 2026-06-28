@@ -36,7 +36,8 @@ class ChatModelFactory(
     private val userFullInfoDao: UserFullInfoDao,
     private val muteResolver: NotificationMuteResolver = NotificationMuteResolver(),
     private val triggerUpdate: (Long?) -> Unit,
-    private val fetchUser: (Long) -> Unit
+    private val fetchUser: (Long) -> Unit,
+    private val myUserIdProvider: () -> Long = { 0L }
 ) {
     private val missingUserFullInfoUntilMs = ConcurrentHashMap<Long, Long>()
     private val userFullInfoSemaphore = Semaphore(permits = 3)
@@ -280,6 +281,7 @@ class ChatModelFactory(
         )
         val lastMessagePreviewPath = previewPaths.firstOrNull()
         val lastMessageSenderName = resolveLastMessageSenderName(chat)
+        val lastMessageIsStoryReply = resolveLastMessageIsStoryReply(chat.lastMessage)
 
         val scopeState = NotificationScopeState(
             loadedScopes = setOf(
@@ -332,6 +334,7 @@ class ChatModelFactory(
             lastMessageEntities = preview.entities,
             lastMessageContentType = preview.contentType,
             lastMessageSenderName = lastMessageSenderName,
+            lastMessageIsStoryReply = lastMessageIsStoryReply,
             lastMessagePreviewPath = lastMessagePreviewPath,
             lastMessagePreviewPaths = previewPaths,
             lastMessageTime = preview.time,
@@ -346,6 +349,12 @@ class ChatModelFactory(
             hasAutomaticTranslation = hasAutomaticTranslation,
             personalAvatarPath = personalAvatarPath
         )
+    }
+
+    private fun resolveLastMessageIsStoryReply(lastMessage: TdApi.Message?): Boolean {
+        val replyTo = lastMessage?.replyTo as? TdApi.MessageReplyToStory ?: return false
+        val myChatId = cache.userIdToChatId[myUserIdProvider()] ?: return false
+        return replyTo.storyPosterChatId == myChatId
     }
 
     private fun resolveLastMessagePreview(
