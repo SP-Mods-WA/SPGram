@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AlternateEmail
+import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Done
@@ -476,6 +477,16 @@ private fun ChatListMessagePreview(
                 paths = previewPaths
             )
             Spacer(Modifier.width(8.dp))
+        }
+
+        if (chat.lastMessageIsStoryReply) {
+            Icon(
+                imageVector = Icons.Rounded.AutoStories,
+                contentDescription = stringResource(R.string.chat_list_story_reply_indicator),
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.width(4.dp))
         }
 
         Text(
