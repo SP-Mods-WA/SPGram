@@ -47,7 +47,7 @@ interface ProfileComponent {
     fun onDismissQRCode()
     fun onSendMessage()
     fun onToggleBlockUser()
-    fun onDeleteChat()
+    fun onDeleteChat(revoke: Boolean = false)
     fun onEditContact(firstName: String, lastName: String)
     fun onToggleContact()
     fun onLeave()
