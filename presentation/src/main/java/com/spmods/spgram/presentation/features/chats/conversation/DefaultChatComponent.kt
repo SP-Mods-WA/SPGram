@@ -616,7 +616,7 @@ class DefaultChatComponent(
         store.accept(ChatStore.Intent.SearchDateRangeChange(fromEpochSeconds, toEpochSeconds))
 
     override fun onClearHistory() = store.accept(ChatStore.Intent.ClearHistory)
-    override fun onDeleteChat() = store.accept(ChatStore.Intent.DeleteChat)
+    override fun onDeleteChat(revoke: Boolean) = store.accept(ChatStore.Intent.DeleteChat(revoke))
 
     override fun onReport() = store.accept(ChatStore.Intent.Report)
 
