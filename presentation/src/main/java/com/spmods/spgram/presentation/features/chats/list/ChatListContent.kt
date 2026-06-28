@@ -66,7 +66,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -135,7 +134,6 @@ import com.spmods.spgram.domain.repository.ConnectionStatus
 import com.spmods.spgram.domain.repository.StickerRepository
 import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.ui.Avatar
-import com.spmods.spgram.presentation.core.ui.ConfirmationSheet
 import com.spmods.spgram.presentation.core.util.LocalTabletInterfaceEnabled
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.getEmojiFontFamily
 import com.spmods.spgram.presentation.features.chats.list.components.ArchiveHeaderCard
@@ -1675,13 +1673,13 @@ fun ChatListContent(component: ChatListComponent) {
     }
 
     if (showDeleteChatsSheet) {
-        ConfirmationSheet(
-            icon = Icons.Rounded.Delete,
+        com.spmods.spgram.presentation.features.chats.conversation.ui.content.DeleteMessagesSheet(
+            count = selectionState.selectedChatIds.size,
+            canRevoke = selectionState.capabilities.canDeleteForEveryone,
             title = stringResource(R.string.delete_chats_title, selectionState.selectedChatIds.size),
             description = stringResource(R.string.delete_chats_confirmation),
-            confirmText = stringResource(R.string.action_delete_chats),
-            onConfirm = {
-                component.onDeleteSelected()
+            onDelete = { revoke ->
+                component.onDeleteSelected(revoke)
                 showDeleteChatsSheet = false
             },
             onDismiss = { showDeleteChatsSheet = false }
