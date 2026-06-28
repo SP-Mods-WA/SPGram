@@ -22,15 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -77,8 +69,6 @@ internal fun ChatInputBarComposerSection(
     canPasteMediaFromClipboard: Boolean,
     voiceRecorder: VoiceRecorderState,
     stickerRepository: StickerRepository,
-    isChannel: Boolean = false,
-    isGroup: Boolean = false,
     isTablet: Boolean = false,
     onCancelEdit: () -> Unit,
     onCancelReply: () -> Unit,
@@ -281,16 +271,14 @@ internal fun ChatInputBarComposerSection(
                     onVideoModeToggle = onVideoModeToggle,
                     onVoiceStart = onVoiceStart,
                     onVoiceStop = onVoiceStop,
-                    onVoiceLock = onVoiceLock,
-                    isChannel = isChannel,
-                    isGroup = isGroup
+                    onVoiceLock = onVoiceLock
                 )
 
                 ComposerSendOptionsPopup(
                     expanded = rowState.showSendOptionsSheet,
                     scheduledMessagesCount = attachments.scheduledMessagesCount,
                     showSendAsDocument = attachments.pendingMediaPaths.isNotEmpty(),
-                    showSendViewOnce = attachments.pendingMediaPaths.size == 1 && !isChannel && !isGroup,
+                    showSendViewOnce = attachments.pendingMediaPaths.size == 1,
                     onDismiss = onDismissSendOptions,
                     onSendAsDocument = onSendAsDocument,
                     onSendViewOnce = onSendViewOnce,
@@ -395,8 +383,6 @@ private fun ComposerMainRow(
     onVoiceStart: () -> Unit,
     onVoiceStop: (Boolean) -> Unit,
     onVoiceLock: () -> Unit,
-    isChannel: Boolean = false,
-    isGroup: Boolean = false,
 ) {
     Row(
         modifier = Modifier
@@ -409,8 +395,6 @@ private fun ComposerMainRow(
             uiState = inputUiState,
             attachments = attachments,
             voiceRecorder = voiceRecorder,
-            isChannel = isChannel,
-            isGroup = isGroup,
             knownCustomEmojis = knownCustomEmojis,
             emojiFontFamily = emojiFontFamily,
             focusRequester = focusRequester,
@@ -429,8 +413,6 @@ private fun ComposerMainRow(
             attachments = attachments,
             sendButtonState = sendButtonState,
             voiceRecorder = voiceRecorder,
-            isChannel = isChannel,
-            isGroup = isGroup,
             onOpenScheduledMessages = onOpenScheduledMessages,
             onSendWithOptions = onSendWithOptions,
             onShowSendOptionsMenu = onShowSendOptionsMenu,
@@ -449,8 +431,6 @@ private fun ComposerInputSlot(
     uiState: InputTextFieldUiState,
     attachments: ComposerAttachmentState,
     voiceRecorder: VoiceRecorderState,
-    isChannel: Boolean = false,
-    isGroup: Boolean = false,
     knownCustomEmojis: MutableMap<Long, StickerModel>,
     emojiFontFamily: FontFamily,
     focusRequester: FocusRequester,
@@ -479,7 +459,6 @@ private fun ComposerInputSlot(
                     onStop = { onVoiceStop(false) },
                     onCancel = { onVoiceStop(true) },
                     onToggleViewOnce = { voiceRecorder.toggleViewOnce() },
-                    showViewOnce = !isChannel && !isGroup,
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
@@ -518,8 +497,6 @@ private fun ComposerActionsSlot(
     attachments: ComposerAttachmentState,
     sendButtonState: InputBarSendButtonState,
     voiceRecorder: VoiceRecorderState,
-    isChannel: Boolean = false,
-    isGroup: Boolean = false,
     onOpenScheduledMessages: () -> Unit,
     onSendWithOptions: (MessageSendOptions) -> Unit,
     onShowSendOptionsMenu: () -> Unit,
@@ -529,75 +506,7 @@ private fun ComposerActionsSlot(
     onVoiceStop: (Boolean) -> Unit,
     onVoiceLock: () -> Unit
 ) {
-    if (voiceRecorder.isLocked) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(end = 4.dp)
-        ) {
-            IconButton(
-                onClick = { voiceRecorder.togglePause() },
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant,
-                        CircleShape
-                    )
-            ) {
-                Icon(
-                    imageVector = if (voiceRecorder.isPaused)
-                        Icons.Default.PlayArrow
-                    else
-                        Icons.Default.Pause,
-                    contentDescription = if (voiceRecorder.isPaused)
-                        stringResource(R.string.recording_resume)
-                    else
-                        stringResource(R.string.recording_pause),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            if (!isChannel && !isGroup) {
-                IconButton(
-                    onClick = { voiceRecorder.toggleViewOnce() },
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(
-                            if (voiceRecorder.isViewOnce)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.surfaceVariant,
-                            CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = if (voiceRecorder.isViewOnce)
-                            Icons.Outlined.Visibility
-                        else
-                            Icons.Outlined.VisibilityOff,
-                        contentDescription = stringResource(R.string.action_send_view_once),
-                        tint = if (voiceRecorder.isViewOnce)
-                            MaterialTheme.colorScheme.onPrimary
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-
-            InputBarSendButton(
-                state = sendButtonState,
-                onSendWithOptions = onSendWithOptions,
-                onShowSendOptionsMenu = onShowSendOptionsMenu,
-                onCameraClick = onCameraClick,
-                onVideoModeToggle = onVideoModeToggle,
-                onVoiceStart = onVoiceStart,
-                onVoiceStop = onVoiceStop,
-                onVoiceLock = onVoiceLock
-            )
-        }
-    } else if (!voiceRecorder.isRecording) {
+    if (!voiceRecorder.isLocked) {
         if (attachments.scheduledMessagesCount > 0) {
             IconButton(onClick = onOpenScheduledMessages) {
                 Icon(
