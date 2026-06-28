@@ -124,7 +124,10 @@ class ChatUpdateHandler(
             }
 
             is TdApi.UpdateChatReadInbox -> {
-                cache.updateChat(update.chatId) { it.unreadCount = update.unreadCount }
+                cache.updateChat(update.chatId) {
+                    it.unreadCount = update.unreadCount
+                    it.lastReadInboxMessageId = update.lastReadInboxMessageId
+                }
                 onSaveChat(update.chatId)
                 onTriggerUpdate(update.chatId)
             }
