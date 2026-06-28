@@ -752,10 +752,10 @@ class ChatsListRepositoryImpl(
         }
     }
 
-    override fun deleteChats(chatIds: Set<Long>) {
+    override fun deleteChats(chatIds: Set<Long>, revoke: Boolean) {
         chatIds.forEach { chatId ->
             scope.launch(dispatchers.io) {
-                chatRemoteSource.deleteChat(chatId)
+                chatRemoteSource.deleteChatHistory(chatId, removeFromChatList = true, revoke = revoke)
             }
         }
     }
