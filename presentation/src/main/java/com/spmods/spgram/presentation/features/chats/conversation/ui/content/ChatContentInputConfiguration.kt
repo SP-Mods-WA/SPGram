@@ -31,7 +31,6 @@ internal fun rememberChatInputBarState(
             restrictedUntilDate = state.restrictedUntilDate,
             isAdmin = state.isAdmin,
             isChannel = state.isChannel,
-            isGroup = state.isGroup,
             isBot = state.isBot,
             botCommands = state.botCommands,
             botMenuButton = state.botMenuButton,
