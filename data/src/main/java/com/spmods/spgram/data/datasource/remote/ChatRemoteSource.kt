@@ -29,6 +29,7 @@ interface ChatRemoteSource {
     suspend fun toggleChatIsMarkedAsUnread(chatId: Long, isMarkedAsUnread: Boolean)
     suspend fun markChatAsRead(chatId: Long)
     suspend fun deleteChat(chatId: Long)
+    suspend fun deleteChatHistory(chatId: Long, removeFromChatList: Boolean, revoke: Boolean)
     suspend fun leaveChat(chatId: Long)
     suspend fun clearChatHistory(chatId: Long, revoke: Boolean)
     suspend fun reportChat(chatId: Long, reason: String, messageIds: List<Long>)
