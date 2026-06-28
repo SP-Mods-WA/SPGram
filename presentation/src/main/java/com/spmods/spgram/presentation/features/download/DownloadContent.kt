@@ -1,5 +1,11 @@
 package com.spmods.spgram.presentation.features.download
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,11 +40,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,23 +63,27 @@ import com.spmods.spgram.presentation.features.chats.conversation.ui.message.for
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.formatFileSize
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import java.util.Calendar
+import java.util.Date
 
-private data class DownloadTabSpec(val filter: DownloadsFilter, val label: String)
+private data class DownloadTabSpec(val filter: DownloadsFilter, val label: String, val icon: ImageVector)
 
 private val downloadTabs = listOf(
-    DownloadTabSpec(DownloadsFilter.ALL, "All"),
-    DownloadTabSpec(DownloadsFilter.PHOTOS, "Photos"),
-    DownloadTabSpec(DownloadsFilter.VIDEOS, "Videos"),
-    DownloadTabSpec(DownloadsFilter.FILES, "Files"),
-    DownloadTabSpec(DownloadsFilter.MUSIC, "Music"),
-    DownloadTabSpec(DownloadsFilter.VOICE, "Voice"),
+    DownloadTabSpec(DownloadsFilter.ALL, "All", Icons.Rounded.Download),
+    DownloadTabSpec(DownloadsFilter.PHOTOS, "Photos", Icons.Rounded.Image),
+    DownloadTabSpec(DownloadsFilter.VIDEOS, "Videos", Icons.Rounded.Movie),
+    DownloadTabSpec(DownloadsFilter.FILES, "Files", Icons.AutoMirrored.Rounded.InsertDriveFile),
+    DownloadTabSpec(DownloadsFilter.MUSIC, "Music", Icons.Rounded.Audiotrack),
+    DownloadTabSpec(DownloadsFilter.VOICE, "Voice", Icons.Rounded.Mic),
 )
 
 /**
  * Download tab — shows files that have been downloaded (or are downloading)
  * from any chat, grouped into All / Photos / Videos / Files / Music / Voice,
  * mirroring Telegram's own Downloads manager (backed by TDLib's real
- * SearchFileDownloads API).
+ * SearchFileDownloads API). Items are grouped under relative date headers
+ * (Today / Yesterday / This Week / Earlier) so the list reads as a timeline
+ * rather than a flat dump of files.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -123,116 +135,242 @@ fun DownloadContent() {
                 .fillMaxSize()
                 .padding(top = padding.calculateTopPadding())
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(24.dp))
-                    .clip(RoundedCornerShape(24.dp))
-            ) {
-                PrimaryScrollableTabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    edgePadding = 4.dp,
-                    divider = {},
-                    indicator = {
-                        Box(
-                            Modifier
-                                .tabIndicatorOffset(selectedTabIndex)
-                                .fillMaxSize()
-                                .padding(vertical = 4.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(MaterialTheme.colorScheme.primary)
-                        )
-                    }
-                ) {
-                    downloadTabs.forEachIndexed { index, spec ->
-                        val selected = selectedTabIndex == index
-                        Tab(
-                            selected = selected,
-                            onClick = { selectedTabIndex = index },
-                            modifier = Modifier
-                                .height(44.dp)
-                                .padding(vertical = 4.dp)
-                                .clip(RoundedCornerShape(24.dp)),
-                            selectedContentColor = MaterialTheme.colorScheme.onPrimary,
-                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            text = {
-                                Text(
-                                    text = spec.label,
-                                    fontSize = 14.sp,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        )
-                    }
-                }
-            }
+            DownloadTabRow(
+                selectedTabIndex = selectedTabIndex,
+                onTabSelected = { selectedTabIndex = it }
+            )
 
-            when {
-                isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                currentItems.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Download,
-                                contentDescription = null,
-                                modifier = Modifier.size(56.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                            )
-                            Text(
-                                text = "No downloaded files yet",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
+            AnimatedContent(
+                targetState = Triple(isLoading, currentItems.isEmpty(), selectedFilter),
+                transitionSpec = {
+                    fadeIn(tween(180, easing = LinearOutSlowInEasing)) togetherWith
+                        fadeOut(tween(120))
+                },
+                label = "DownloadListState"
+            ) { (loading, empty, filter) ->
+                when {
+                    loading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         }
                     }
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 80.dp)
-                    ) {
-                        items(currentItems, key = { it.fileId }) { entry ->
-                            DownloadedFileRow(
-                                entry = entry,
-                                timeFormat = timeFormat,
-                                onPauseToggle = {
-                                    val newPaused = !entry.isPaused
-                                    val updated = currentItems.map {
-                                        if (it.fileId == entry.fileId) it.copy(isPaused = newPaused) else it
-                                    }
-                                    currentItems = updated
-                                    itemsByFilter[selectedFilter] = updated
-                                    coroutineScope.launch {
-                                        fileRepository.toggleDownloadIsPaused(entry.fileId, newPaused)
-                                    }
-                                },
-                                onRemove = {
-                                    val updated = currentItems.filterNot { it.fileId == entry.fileId }
-                                    currentItems = updated
-                                    itemsByFilter[selectedFilter] = updated
-                                    coroutineScope.launch {
-                                        fileRepository.removeFileFromDownloads(entry.fileId)
-                                    }
+                    empty -> {
+                        DownloadsEmptyState(filter = filter)
+                    }
+                    else -> {
+                        val grouped = remember(currentItems) { groupDownloadsByDate(currentItems) }
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 80.dp, top = 4.dp)
+                        ) {
+                            grouped.forEach { (sectionLabel, entries) ->
+                                item(key = "header_$sectionLabel") {
+                                    DownloadSectionHeader(sectionLabel)
                                 }
-                            )
+                                items(entries, key = { it.fileId }) { entry ->
+                                    DownloadedFileRow(
+                                        entry = entry,
+                                        timeFormat = timeFormat,
+                                        onPauseToggle = {
+                                            val newPaused = !entry.isPaused
+                                            val updated = currentItems.map {
+                                                if (it.fileId == entry.fileId) it.copy(isPaused = newPaused) else it
+                                            }
+                                            currentItems = updated
+                                            itemsByFilter[selectedFilter] = updated
+                                            coroutineScope.launch {
+                                                fileRepository.toggleDownloadIsPaused(entry.fileId, newPaused)
+                                            }
+                                        },
+                                        onRemove = {
+                                            val updated = currentItems.filterNot { it.fileId == entry.fileId }
+                                            currentItems = updated
+                                            itemsByFilter[selectedFilter] = updated
+                                            coroutineScope.launch {
+                                                fileRepository.removeFileFromDownloads(entry.fileId)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun DownloadTabRow(
+    selectedTabIndex: Int,
+    onTabSelected: (Int) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
+    ) {
+        PrimaryScrollableTabRow(
+            selectedTabIndex = selectedTabIndex,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            edgePadding = 4.dp,
+            divider = {},
+            indicator = {
+                Box(
+                    Modifier
+                        .tabIndicatorOffset(selectedTabIndex)
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
+        ) {
+            downloadTabs.forEachIndexed { index, spec ->
+                val selected = selectedTabIndex == index
+                Tab(
+                    selected = selected,
+                    onClick = { onTabSelected(index) },
+                    modifier = Modifier
+                        .height(40.dp)
+                        .clip(RoundedCornerShape(16.dp)),
+                    selectedContentColor = MaterialTheme.colorScheme.onPrimary,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = spec.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = spec.label,
+                                fontSize = 13.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadsEmptyState(filter: DownloadsFilter) {
+    val spec = downloadTabs.first { it.filter == filter }
+    val message = when (filter) {
+        DownloadsFilter.ALL -> "Files you download from any chat will show up here"
+        DownloadsFilter.PHOTOS -> "Photos you download will show up here"
+        DownloadsFilter.VIDEOS -> "Videos you download will show up here"
+        DownloadsFilter.FILES -> "Documents you download will show up here"
+        DownloadsFilter.MUSIC -> "Music you download will show up here"
+        DownloadsFilter.VOICE -> "Voice messages you download will show up here"
+    }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 40.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceContainerHigh,
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = spec.icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(30.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+            Text(
+                text = "No ${spec.label.lowercase()} yet",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun DownloadSectionHeader(label: String) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 6.dp)
+    )
+}
+
+/** Visual identity (icon + tint) for a piece of downloaded content. */
+private data class FileTypeStyle(
+    val icon: ImageVector,
+    val tint: Color,
+    val container: Color
+)
+
+@Composable
+private fun fileTypeStyle(content: MessageContent): FileTypeStyle = when (content) {
+    is MessageContent.Photo -> FileTypeStyle(
+        icon = Icons.Rounded.Image,
+        tint = Color(0xFF2EA6FF),
+        container = Color(0xFF2EA6FF).copy(alpha = 0.14f)
+    )
+    is MessageContent.Video -> FileTypeStyle(
+        icon = Icons.Rounded.Movie,
+        tint = Color(0xFFFF5C7A),
+        container = Color(0xFFFF5C7A).copy(alpha = 0.14f)
+    )
+    is MessageContent.VideoNote -> FileTypeStyle(
+        icon = Icons.Rounded.Movie,
+        tint = Color(0xFFFF5C7A),
+        container = Color(0xFFFF5C7A).copy(alpha = 0.14f)
+    )
+    is MessageContent.Gif -> FileTypeStyle(
+        icon = Icons.Rounded.Movie,
+        tint = Color(0xFFB266FF),
+        container = Color(0xFFB266FF).copy(alpha = 0.14f)
+    )
+    is MessageContent.Document -> FileTypeStyle(
+        icon = Icons.AutoMirrored.Rounded.InsertDriveFile,
+        tint = Color(0xFF4C8DFF),
+        container = Color(0xFF4C8DFF).copy(alpha = 0.14f)
+    )
+    is MessageContent.Audio -> FileTypeStyle(
+        icon = Icons.Rounded.Audiotrack,
+        tint = Color(0xFFFFA640),
+        container = Color(0xFFFFA640).copy(alpha = 0.14f)
+    )
+    is MessageContent.Voice -> FileTypeStyle(
+        icon = Icons.Rounded.Mic,
+        tint = Color(0xFF35C77E),
+        container = Color(0xFF35C77E).copy(alpha = 0.14f)
+    )
+    else -> FileTypeStyle(
+        icon = Icons.AutoMirrored.Rounded.InsertDriveFile,
+        tint = MaterialTheme.colorScheme.primary,
+        container = MaterialTheme.colorScheme.primaryContainer
+    )
 }
 
 @Composable
@@ -245,9 +383,10 @@ private fun DownloadedFileRow(
     val message = entry.message
     var showMenu by remember { mutableStateOf(false) }
 
-    val (icon, title, subtitle) = remember(message.content, entry.isPaused, entry.isCompleted) {
+    val (title, subtitle, isDownloading, downloadProgress) = remember(message.content, entry.isPaused, entry.isCompleted) {
         describeContent(message.content)
     }
+    val style = fileTypeStyle(message.content)
 
     val dateText = remember(entry.addDate) {
         entry.addDate.toDate().toShortRelativeDate(timeFormat)
@@ -256,21 +395,35 @@ private fun DownloadedFileRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(48.dp)
+        Box(
+            modifier = Modifier.size(46.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(22.dp)
+            if (isDownloading && !entry.isPaused) {
+                CircularProgressIndicator(
+                    progress = { downloadProgress.coerceIn(0f, 1f) },
+                    modifier = Modifier.size(46.dp),
+                    color = style.tint,
+                    trackColor = style.container,
+                    strokeWidth = 2.5.dp
                 )
+            }
+            Surface(
+                shape = CircleShape,
+                color = style.container,
+                modifier = Modifier.size(if (isDownloading && !entry.isPaused) 36.dp else 44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = style.icon,
+                        contentDescription = null,
+                        tint = style.tint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
 
@@ -293,9 +446,18 @@ private fun DownloadedFileRow(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = "${message.senderName} • $subtitle",
+                    text = buildString {
+                        append(message.senderName)
+                        append(" • ")
+                        append(subtitle)
+                        if (isDownloading && !entry.isCompleted) {
+                            append(" • ")
+                            append("${(downloadProgress * 100).toInt()}%")
+                        }
+                    },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isDownloading) style.tint else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (isDownloading) FontWeight.Medium else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -340,22 +502,66 @@ private fun DownloadedFileRow(
     }
 }
 
-private fun describeContent(content: MessageContent): Triple<androidx.compose.ui.graphics.vector.ImageVector, String, String> =
+/** title, subtitle, isDownloading, downloadProgress (0f..1f) */
+private data class ContentDescription(
+    val title: String,
+    val subtitle: String,
+    val isDownloading: Boolean,
+    val downloadProgress: Float
+)
+
+private fun describeContent(content: MessageContent): ContentDescription =
     when (content) {
-        is MessageContent.Photo -> Triple(Icons.Rounded.Image, "Photo", "Image")
-        is MessageContent.Video -> Triple(Icons.Rounded.Movie, "Video", formatDuration(content.duration))
-        is MessageContent.VideoNote -> Triple(Icons.Rounded.Movie, "Video message", formatDuration(content.duration))
-        is MessageContent.Gif -> Triple(Icons.Rounded.Movie, "GIF", "Animation")
-        is MessageContent.Document -> Triple(
-            Icons.AutoMirrored.Rounded.InsertDriveFile,
+        is MessageContent.Photo -> ContentDescription(
+            "Photo", "Image", content.isDownloading, content.downloadProgress
+        )
+        is MessageContent.Video -> ContentDescription(
+            "Video", formatDuration(content.duration), content.isDownloading, content.downloadProgress
+        )
+        is MessageContent.VideoNote -> ContentDescription(
+            "Video message", formatDuration(content.duration), content.isDownloading, content.downloadProgress
+        )
+        is MessageContent.Gif -> ContentDescription(
+            "GIF", "Animation", content.isDownloading, content.downloadProgress
+        )
+        is MessageContent.Document -> ContentDescription(
             content.fileName.ifBlank { "Document" },
-            formatFileSize(content.size, isDownloading = false, downloadProgress = 0f)
+            formatFileSize(content.size, content.isDownloading, content.downloadProgress),
+            content.isDownloading,
+            content.downloadProgress
         )
-        is MessageContent.Audio -> Triple(
-            Icons.Rounded.Audiotrack,
+        is MessageContent.Audio -> ContentDescription(
             content.title.ifBlank { content.fileName.ifBlank { "Audio" } },
-            content.performer.ifBlank { formatDuration(content.duration) }
+            content.performer.ifBlank { formatDuration(content.duration) },
+            content.isDownloading,
+            content.downloadProgress
         )
-        is MessageContent.Voice -> Triple(Icons.Rounded.Mic, "Voice message", formatDuration(content.duration))
-        else -> Triple(Icons.AutoMirrored.Rounded.InsertDriveFile, "File", "")
+        is MessageContent.Voice -> ContentDescription(
+            "Voice message", formatDuration(content.duration), content.isDownloading, content.downloadProgress
+        )
+        else -> ContentDescription("File", "", false, 0f)
     }
+
+/** Groups downloads into Today / Yesterday / This Week / Earlier sections, preserving original order within each. */
+private fun groupDownloadsByDate(items: List<DownloadedFileModel>): List<Pair<String, List<DownloadedFileModel>>> {
+    val now = Calendar.getInstance()
+    val todayStart = (now.clone() as Calendar).apply {
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+    }
+    val yesterdayStart = (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
+    val weekStart = (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -7) }
+
+    fun label(epochSeconds: Int): String {
+        val date = Date(epochSeconds.toLong() * 1000)
+        return when {
+            date.after(todayStart.time) -> "Today"
+            date.after(yesterdayStart.time) -> "Yesterday"
+            date.after(weekStart.time) -> "This Week"
+            else -> "Earlier"
+        }
+    }
+
+    val order = listOf("Today", "Yesterday", "This Week", "Earlier")
+    val buckets = items.groupBy { label(it.addDate.takeIf { d -> d != 0 } ?: 0) }
+    return order.mapNotNull { key -> buckets[key]?.let { key to it } }
+}
