@@ -953,9 +953,9 @@ class DefaultProfileComponent(
         }
     }
 
-    override fun onDeleteChat() {
+    override fun onDeleteChat(revoke: Boolean) {
         scope.launch {
-            chatOperationsRepository.deleteChats(setOf(chatId))
+            chatOperationsRepository.deleteChats(setOf(chatId), revoke)
         }
     }
 
