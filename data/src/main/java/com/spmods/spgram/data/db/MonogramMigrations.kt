@@ -315,6 +315,12 @@ object SpgramMigrations {
         }
     }
 
+    val MIGRATION_33_34 = object : Migration(33, 34) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.addColumn("chats", "lastMessageIsStoryReply", "INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
     private fun SupportSQLiteDatabase.addColumn(table: String, column: String, definition: String) {
         execSQL("ALTER TABLE `$table` ADD COLUMN `$column` $definition")
     }
