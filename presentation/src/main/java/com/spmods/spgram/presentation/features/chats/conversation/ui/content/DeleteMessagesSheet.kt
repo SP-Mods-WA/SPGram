@@ -21,7 +21,9 @@ fun DeleteMessagesSheet(
     count: Int,
     canRevoke: Boolean,
     onDismiss: () -> Unit,
-    onDelete: (revoke: Boolean) -> Unit
+    onDelete: (revoke: Boolean) -> Unit,
+    title: String = if (count > 1) stringResource(R.string.delete_messages_title, count) else stringResource(R.string.delete_message_title),
+    description: String = if (count > 1) stringResource(R.string.delete_messages_confirmation) else stringResource(R.string.delete_message_confirmation)
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -47,7 +49,7 @@ fun DeleteMessagesSheet(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = if (count > 1) stringResource(R.string.delete_messages_title, count) else stringResource(R.string.delete_message_title),
+                text = title,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -56,7 +58,7 @@ fun DeleteMessagesSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = if (count > 1) stringResource(R.string.delete_messages_confirmation) else stringResource(R.string.delete_message_confirmation),
+                text = description,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
