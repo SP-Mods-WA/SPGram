@@ -156,7 +156,7 @@ interface ChatStore : Store<ChatStore.Intent, ChatComponent.State, ChatStore.Lab
         data class SearchDateRangeChange(val fromEpochSeconds: Int?, val toEpochSeconds: Int?) :
             Intent()
         object ClearHistory : Intent()
-        object DeleteChat : Intent()
+        data class DeleteChat(val revoke: Boolean = false) : Intent()
         object Report : Intent()
         data class ReportMessage(val message: MessageModel) : Intent()
         data class ReportReasonSelected(val reason: String) : Intent()
