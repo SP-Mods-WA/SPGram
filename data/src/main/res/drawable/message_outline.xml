@@ -1,17 +1,17 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
-    android:width="512dp"
-    android:height="512dp"
-    android:viewportWidth="512"
-    android:viewportHeight="512">
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
 
-    <path android:pathData="M256,256m-216,0a216,216 0,1 1,432 0a216,216 0,1 1,-432 0">
+    <path android:pathData="M54,54m-45.5,0a45.5,45.5 0,1 1,91 0a45.5,45.5 0,1 1,-91 0">
         <aapt:attr name="android:fillColor">
             <gradient
-                android:startX="40"
-                android:startY="40"
-                android:endX="472"
-                android:endY="472"
+                android:startX="8.4"
+                android:startY="8.4"
+                android:endX="99.6"
+                android:endY="99.6"
                 android:type="linear">
                 <item android:offset="0.0" android:color="#FF1D2671" />
                 <item android:offset="1.0" android:color="#FFC33764" />
@@ -20,12 +20,12 @@
     </path>
 
     <path
-        android:pathData="M256,256m-216,0a216,216 0,1 1,432 0a216,216 0,1 1,-432 0"
-        android:strokeWidth="4"
+        android:pathData="M54,54m-45.5,0a45.5,45.5 0,1 1,91 0a45.5,45.5 0,1 1,-91 0"
+        android:strokeWidth="0.84"
         android:strokeColor="#40FFFFFF" />
 
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M291,220q6,-4 8,-1t-3,8c-31,32 -54,50 -67,65q-9,10 5,20l62,42c25,17 33,3 36,-14q17,-91 24,-151c2,-15 -3,-23 -22,-17q-27,8 -194,81c-21,8 -17,17 -5,21s21,7 33,10 20,4 34,-5M257,64a192,192 0,1 1,-2 0" />
+        android:pathData="M61.38,46.4q1.27,-0.84 1.69,-0.21t-0.63,1.69c-6.54,6.75 -11.39,10.55 -14.13,13.7q-1.9,2.11 1.05,4.22l13.08,8.86c5.27,3.59 6.96,0.63 7.59,-2.95q3.59,-19.19 5.06,-31.85c0.42,-3.16 -0.63,-4.85 -4.64,-3.59q-5.7,1.69 -40.92,17.08c-4.43,1.69 -3.59,3.59 -1.05,4.43s4.43,1.48 6.96,2.11s4.22,0.84 7.17,-1.05M54.21,13.5a40.5,40.5 0,1 1,-0.42 0" />
 
 </vector>
