@@ -222,6 +222,12 @@ class TdChatRemoteSource(
         coRunCatching { gateway.execute(TdApi.DeleteChat(chatId)) }
     }
 
+    override suspend fun deleteChatHistory(chatId: Long, removeFromChatList: Boolean, revoke: Boolean) {
+        coRunCatching {
+            gateway.execute(TdApi.DeleteChatHistory(chatId, removeFromChatList, revoke))
+        }
+    }
+
     override suspend fun leaveChat(chatId: Long) {
         coRunCatching { gateway.execute(TdApi.LeaveChat(chatId)) }
     }
