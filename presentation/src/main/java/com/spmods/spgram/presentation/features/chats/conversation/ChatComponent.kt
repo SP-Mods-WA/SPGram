@@ -186,7 +186,7 @@ interface ChatComponent {
     fun onSearchSenderChange(user: UserModel?)
     fun onSearchDateRangeChange(fromEpochSeconds: Int?, toEpochSeconds: Int?)
     fun onClearHistory()
-    fun onDeleteChat()
+    fun onDeleteChat(revoke: Boolean = false)
     fun onReport()
     fun onReportMessage(message: MessageModel)
     fun onReportReasonSelected(reason: String)
