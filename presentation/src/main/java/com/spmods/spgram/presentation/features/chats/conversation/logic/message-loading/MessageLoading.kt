@@ -1371,7 +1371,11 @@ internal fun DefaultChatComponent.setupMessageCollectors() {
                     val currentMessages = currentState.messages
                     var hasChanges = false
                     val updatedMessages = currentMessages.map { message ->
-                        if (readUpdate is ReadUpdate.Outbox && message.isOutgoing && !message.isRead && message.id <= readUpdate.messageId) {
+                        val shouldMarkRead = when (readUpdate) {
+                            is ReadUpdate.Outbox -> message.isOutgoing && !message.isRead && message.id <= readUpdate.messageId
+                            is ReadUpdate.Inbox -> !message.isOutgoing && !message.isRead && message.id <= readUpdate.messageId
+                        }
+                        if (shouldMarkRead) {
                             hasChanges = true
                             message.copy(isRead = true)
                         } else {
