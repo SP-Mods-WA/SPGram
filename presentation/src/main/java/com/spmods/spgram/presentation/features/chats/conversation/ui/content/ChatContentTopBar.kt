@@ -363,6 +363,7 @@ fun ChatContentTopBar(
                     onSearchQueryChange = component::onSearchQueryChange,
                     onClearHistory = if (isMainChat && canClearOrDeleteChat) component::onClearHistory else null,
                     onDeleteChat = if (isMainChat && canClearOrDeleteChat) component::onDeleteChat else null,
+                    canDeleteChatForEveryone = !topBarState.isGroup && !topBarState.isChannel,
                     onReport = if (isMainChat && canReportChat) component::onReport else null,
                     onCopyLink = if (isMainChat && (topBarState.isGroup || topBarState.isChannel)) {
                         { component.onCopyLink(localClipboard) }
