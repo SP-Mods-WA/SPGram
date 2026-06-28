@@ -280,7 +280,8 @@ internal fun ChatInputBarComposerSection(
                     onVideoModeToggle = onVideoModeToggle,
                     onVoiceStart = onVoiceStart,
                     onVoiceStop = onVoiceStop,
-                    onVoiceLock = onVoiceLock
+                    onVoiceLock = onVoiceLock,
+                    isChannel = isChannel
                 )
 
                 ComposerSendOptionsPopup(
@@ -392,6 +393,7 @@ private fun ComposerMainRow(
     onVoiceStart: () -> Unit,
     onVoiceStop: (Boolean) -> Unit,
     onVoiceLock: () -> Unit,
+    isChannel: Boolean = false,
 ) {
     Row(
         modifier = Modifier
