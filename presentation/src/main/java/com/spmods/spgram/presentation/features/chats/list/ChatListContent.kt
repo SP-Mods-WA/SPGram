@@ -8,9 +8,11 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -33,6 +35,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -730,17 +733,34 @@ fun ChatListContent(component: ChatListComponent) {
                     enter = scaleIn() + fadeIn(),
                     exit = scaleOut() + fadeOut()
                 ) {
+                    val newChatFabInteractionSource = remember { MutableInteractionSource() }
+                    val isNewChatFabPressed by newChatFabInteractionSource.collectIsPressedAsState()
+                    val newChatFabScale by animateFloatAsState(
+                        targetValue = if (isNewChatFabPressed) 0.85f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        ),
+                        label = "NewChatFabPopupScale"
+                    )
+
                     FloatingActionButton(
                         onClick = { component.onNewChatClicked() },
-                        shape = RoundedCornerShape(22.dp),
+                        shape = RoundedCornerShape(18.dp),
                         containerColor = Color(0xFF25D366),
                         contentColor = Color.White,
-                        modifier = Modifier.size(64.dp)
+                        interactionSource = newChatFabInteractionSource,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .graphicsLayer {
+                                scaleX = newChatFabScale
+                                scaleY = newChatFabScale
+                            }
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_compose),
                             contentDescription = stringResource(R.string.new_chat_fab),
-                            modifier = Modifier.size(30.dp),
+                            modifier = Modifier.size(26.dp),
                             tint = Color.White
                         )
                     }
