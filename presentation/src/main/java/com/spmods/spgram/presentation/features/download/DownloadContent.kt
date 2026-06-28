@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
 import androidx.compose.material.icons.rounded.Audiotrack
+import androidx.compose.material.icons.rounded.Cancel
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Mic
@@ -41,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,10 +59,12 @@ import androidx.compose.ui.unit.sp
 import com.spmods.spgram.core.date.toDate
 import com.spmods.spgram.domain.models.DownloadedFileModel
 import com.spmods.spgram.domain.models.DownloadsFilter
+import com.spmods.spgram.domain.models.FileDownloadEvent
 import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.repository.FileRepository
 import com.spmods.spgram.presentation.core.ui.AvatarForChat
 import com.spmods.spgram.presentation.core.util.DateFormatManager
+import com.spmods.spgram.presentation.core.util.IDownloadUtils
 import com.spmods.spgram.presentation.core.util.toShortRelativeDate
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.formatDuration
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.formatFileSize
@@ -77,6 +84,39 @@ private val downloadTabs = listOf(
     DownloadTabSpec(DownloadsFilter.VOICE, "Voice", Icons.Rounded.Mic),
 )
 
+/** Normalized payload used to patch a DownloadedFileModel entry when a fileDownloadFlow event arrives. */
+private data class FileDownloadPatch(
+    val fileId: Int,
+    val progress: Float,
+    val isDownloading: Boolean,
+    val completedPath: String?
+)
+
+/** The local file path for whichever downloadable MessageContent subtype this is, if any. */
+private fun MessageContent.localPathOrNull(): String? = when (this) {
+    is MessageContent.Photo -> path
+    is MessageContent.Video -> path
+    is MessageContent.VideoNote -> path
+    is MessageContent.Gif -> path
+    is MessageContent.Document -> path
+    is MessageContent.Audio -> path
+    is MessageContent.Voice -> path
+    else -> null
+}
+
+/** Patches the live download progress/active-state onto whichever MessageContent subtype this is. */
+private fun MessageContent.withDownloadProgress(progress: Float, isDownloading: Boolean): MessageContent =
+    when (this) {
+        is MessageContent.Photo -> copy(downloadProgress = progress, isDownloading = isDownloading)
+        is MessageContent.Video -> copy(downloadProgress = progress, isDownloading = isDownloading)
+        is MessageContent.VideoNote -> copy(downloadProgress = progress, isDownloading = isDownloading)
+        is MessageContent.Gif -> copy(downloadProgress = progress, isDownloading = isDownloading)
+        is MessageContent.Document -> copy(downloadProgress = progress, isDownloading = isDownloading)
+        is MessageContent.Audio -> copy(downloadProgress = progress, isDownloading = isDownloading)
+        is MessageContent.Voice -> copy(downloadProgress = progress, isDownloading = isDownloading)
+        else -> this
+    }
+
 /**
  * Download tab — shows files that have been downloaded (or are downloading)
  * from any chat, grouped into All / Photos / Videos / Files / Music / Voice,
@@ -84,11 +124,18 @@ private val downloadTabs = listOf(
  * SearchFileDownloads API). Items are grouped under relative date headers
  * (Today / Yesterday / This Week / Earlier) so the list reads as a timeline
  * rather than a flat dump of files.
+ *
+ * Pause/resume/cancel act on the real TDLib download (the same global state
+ * the in-chat bubble shows), opening a completed file hands off to the
+ * system viewer, and "View in chat" jumps straight to the source message.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DownloadContent() {
+fun DownloadContent(
+    onNavigateToChat: (chatId: Long, messageId: Long) -> Unit = { _, _ -> }
+) {
     val fileRepository: FileRepository = koinInject()
+    val downloadUtils: IDownloadUtils = koinInject()
     val timeFormat = koinInject<DateFormatManager>().getHourMinuteFormat()
     val coroutineScope = rememberCoroutineScope()
 
@@ -98,6 +145,10 @@ fun DownloadContent() {
     var isLoading by remember { mutableStateOf(true) }
 
     val selectedFilter = downloadTabs[selectedTabIndex].filter
+
+    // Keep a stable reference to the latest currentItems/itemsByFilter for the
+    // long-lived flow collector below, without restarting it on every list change.
+    val currentItemsState = rememberUpdatedState(currentItems)
 
     LaunchedEffect(selectedFilter) {
         val cached = itemsByFilter[selectedFilter]
@@ -111,6 +162,31 @@ fun DownloadContent() {
         itemsByFilter[selectedFilter] = result.files
         currentItems = result.files
         isLoading = false
+    }
+
+    // Live-sync progress/pause/completion across chat <-> downloads page: both
+    // surfaces observe the same underlying TDLib file state via this shared flow.
+    LaunchedEffect(Unit) {
+        fileRepository.fileDownloadFlow.collect { event ->
+            val patch = when (event) {
+                is FileDownloadEvent.Progress -> FileDownloadPatch(event.fileId, event.progress, event.progress < 1f, null)
+                is FileDownloadEvent.Completed -> FileDownloadPatch(event.fileId, 1f, false, event.path)
+            }
+            val items = currentItemsState.value
+            if (items.none { it.fileId == patch.fileId }) return@collect
+
+            val updated = items.map { entry ->
+                if (entry.fileId != patch.fileId) return@map entry
+                val patchedContent = entry.message.content.withDownloadProgress(patch.progress, patch.isDownloading)
+                entry.copy(
+                    message = entry.message.copy(content = patchedContent),
+                    isPaused = if (patch.isDownloading) false else entry.isPaused,
+                    completeDate = if (patch.completedPath != null) (System.currentTimeMillis() / 1000).toInt() else entry.completeDate
+                )
+            }
+            currentItems = updated
+            itemsByFilter[selectedFilter] = updated
+        }
     }
 
     Scaffold(
@@ -171,6 +247,15 @@ fun DownloadContent() {
                                     DownloadedFileRow(
                                         entry = entry,
                                         timeFormat = timeFormat,
+                                        onOpen = {
+                                            val path = entry.message.content.localPathOrNull()
+                                            if (!path.isNullOrBlank()) {
+                                                downloadUtils.openFile(path)
+                                            }
+                                        },
+                                        onViewInChat = {
+                                            onNavigateToChat(entry.message.chatId, entry.message.id)
+                                        },
                                         onPauseToggle = {
                                             val newPaused = !entry.isPaused
                                             val updated = currentItems.map {
@@ -180,6 +265,14 @@ fun DownloadContent() {
                                             itemsByFilter[selectedFilter] = updated
                                             coroutineScope.launch {
                                                 fileRepository.toggleDownloadIsPaused(entry.fileId, newPaused)
+                                            }
+                                        },
+                                        onCancel = {
+                                            val updated = currentItems.filterNot { it.fileId == entry.fileId }
+                                            currentItems = updated
+                                            itemsByFilter[selectedFilter] = updated
+                                            coroutineScope.launch {
+                                                fileRepository.cancelDownloadFile(entry.fileId)
                                             }
                                         },
                                         onRemove = {
@@ -377,7 +470,10 @@ private fun fileTypeStyle(content: MessageContent): FileTypeStyle = when (conten
 private fun DownloadedFileRow(
     entry: DownloadedFileModel,
     timeFormat: String,
+    onOpen: () -> Unit,
+    onViewInChat: () -> Unit,
     onPauseToggle: () -> Unit,
+    onCancel: () -> Unit,
     onRemove: () -> Unit
 ) {
     val message = entry.message
@@ -395,6 +491,7 @@ private fun DownloadedFileRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(enabled = entry.isCompleted, onClick = onOpen)
             .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -480,23 +577,49 @@ private fun DownloadedFileRow(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+        }
+
+        Box {
+            IconButton(onClick = { showMenu = true }) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = "More options",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                if (!entry.isCompleted) {
                     DropdownMenuItem(
-                        text = { Text("Remove from Downloads") },
+                        text = { Text("Cancel download") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Rounded.Cancel, contentDescription = null)
+                        },
                         onClick = {
                             showMenu = false
-                            onRemove()
+                            onCancel()
                         }
                     )
                 }
+                DropdownMenuItem(
+                    text = { Text("View in chat") },
+                    leadingIcon = {
+                        Icon(imageVector = Icons.Rounded.ChatBubbleOutline, contentDescription = null)
+                    },
+                    onClick = {
+                        showMenu = false
+                        onViewInChat()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete") },
+                    leadingIcon = {
+                        Icon(imageVector = Icons.Rounded.Delete, contentDescription = null)
+                    },
+                    onClick = {
+                        showMenu = false
+                        onRemove()
+                    }
+                )
             }
         }
     }
