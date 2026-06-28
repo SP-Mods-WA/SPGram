@@ -117,7 +117,7 @@ class DefaultChatEditComponent(
 
     override fun onDeleteChat() {
         scope.launch {
-            chatOperationsRepository.deleteChats(setOf(chatId))
+            chatOperationsRepository.deleteChats(setOf(chatId), revoke = true)
             onBackClicked()
         }
     }
