@@ -90,5 +90,6 @@ data class ChatEntity(
     val permissionCanCreateTopics: Boolean = false,
     val lastMessageContentType: String = "text",
     val lastMessageSenderName: String = "",
+    val lastMessageIsStoryReply: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )
