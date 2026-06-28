@@ -575,6 +575,24 @@ class FileDownloadQueue(
         }
     }
 
+    /**
+     * Registers a manually-requested file into TDLib's persistent download list
+     * (TdApi.AddFileToDownloads), the same list TdApi.SearchFileDownloads reads
+     * from. Without this, files downloaded from within a chat never show up on
+     * the standalone Downloads page, since TDLib treats "downloading a file" and
+     * "tracking it in the downloads list" as two distinct, opt-in concepts.
+     */
+    private fun registerInDownloadsList(fileId: Int) {
+        val target = registry.getMessages(fileId).firstOrNull() ?: return
+        val (chatId, messageId) = target
+        scope.launch(dispatcherProvider.io) {
+            try {
+                gateway.execute(TdApi.AddFileToDownloads(fileId, chatId, messageId, /* priority= */ 1))
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     fun enqueue(
         fileId: Int,
         priority: Int = 1,
@@ -590,7 +608,10 @@ class FileDownloadQueue(
             }
 
             val isManualRequest = priority >= 32
-            if (isManualRequest) manualDownloadIds.add(fileId)
+            if (isManualRequest) {
+                manualDownloadIds.add(fileId)
+                registerInDownloadsList(fileId)
+            }
 
             val cooldownUntil = notFoundCooldownUntil[fileId]
             if (!isManualRequest && cooldownUntil != null && cooldownUntil > System.currentTimeMillis()) {
