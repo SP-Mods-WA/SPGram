@@ -10,7 +10,7 @@ interface ChatOperationsRepository {
     fun toggleArchiveChats(chatIds: Set<Long>, archive: Boolean)
     fun togglePinChats(chatIds: Set<Long>, pin: Boolean, folderId: Int)
     fun toggleReadChats(chatIds: Set<Long>, markAsUnread: Boolean)
-    fun deleteChats(chatIds: Set<Long>)
+    fun deleteChats(chatIds: Set<Long>, revoke: Boolean = false)
     fun leaveChat(chatId: Long)
     fun setArchivePinned(pinned: Boolean)
 
