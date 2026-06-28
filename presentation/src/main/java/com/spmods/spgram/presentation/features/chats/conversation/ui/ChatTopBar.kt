@@ -104,7 +104,8 @@ fun ChatTopBar(
     onSearchToggle: () -> Unit = {},
     onSearchQueryChange: (String) -> Unit = {},
     onClearHistory: (() -> Unit)? = null,
-    onDeleteChat: (() -> Unit)? = null,
+    onDeleteChat: ((Boolean) -> Unit)? = null,
+    canDeleteChatForEveryone: Boolean = false,
     onReport: (() -> Unit)? = null,
     onCopyLink: (() -> Unit)? = null,
     onManageMembers: (() -> Unit)? = null,
@@ -478,13 +479,13 @@ fun ChatTopBar(
             }
 
             if (showDeleteChatSheet && onDeleteChat != null) {
-                ConfirmationSheet(
-                    icon = Icons.Rounded.Delete,
+                com.spmods.spgram.presentation.features.chats.conversation.ui.content.DeleteMessagesSheet(
+                    count = 1,
+                    canRevoke = canDeleteChatForEveryone,
                     title = stringResource(R.string.delete_chat_title),
                     description = stringResource(R.string.delete_chat_confirmation),
-                    confirmText = stringResource(R.string.action_delete_chat),
-                    onConfirm = {
-                        onDeleteChat()
+                    onDelete = { revoke ->
+                        onDeleteChat(revoke)
                         showDeleteChatSheet = false
                     },
                     onDismiss = { showDeleteChatSheet = false }
