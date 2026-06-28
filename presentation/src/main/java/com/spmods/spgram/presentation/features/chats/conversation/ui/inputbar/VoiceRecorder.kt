@@ -34,8 +34,8 @@ fun rememberVoiceRecorder(
         }
     }
 
-    LaunchedEffect(state.isRecording, state.isPaused) {
-        if (state.isRecording && !state.isPaused) {
+    LaunchedEffect(state.isRecording) {
+        if (state.isRecording) {
             state.runUpdateLoop()
         }
     }
@@ -47,8 +47,6 @@ class VoiceRecorderState(private val context: Context) {
     var isRecording by mutableStateOf(false)
         private set
     var isLocked by mutableStateOf(false)
-        private set
-    var isPaused by mutableStateOf(false)
         private set
     var isViewOnce by mutableStateOf(false)
         private set
@@ -62,7 +60,6 @@ class VoiceRecorderState(private val context: Context) {
     private var mediaRecorder: MediaRecorder? = null
     private var currentFile: File? = null
     private var startTime = 0L
-    private var accumulatedMillis = 0L
 
     var onRecordingFinished: ((String, Int, ByteArray, Boolean) -> Unit)? = null
     var onPermissionDenied: (() -> Unit)? = null
@@ -70,41 +67,6 @@ class VoiceRecorderState(private val context: Context) {
     fun toggleViewOnce() {
         if (isLocked) {
             isViewOnce = !isViewOnce
-        }
-    }
-
-    fun togglePause() {
-        if (!isRecording || !isLocked) return
-        if (isPaused) {
-            resumeRecording()
-        } else {
-            pauseRecording()
-        }
-    }
-
-    private fun pauseRecording() {
-        if (!isRecording || isPaused) return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                mediaRecorder?.pause()
-                accumulatedMillis += System.currentTimeMillis() - startTime
-                isPaused = true
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    private fun resumeRecording() {
-        if (!isRecording || !isPaused) return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                mediaRecorder?.resume()
-                startTime = System.currentTimeMillis()
-                isPaused = false
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
         }
     }
 
@@ -156,10 +118,8 @@ class VoiceRecorderState(private val context: Context) {
             }
 
             startTime = System.currentTimeMillis()
-            accumulatedMillis = 0L
             isRecording = true
             isLocked = false
-            isPaused = false
             isViewOnce = false
             durationMillis = 0
         } catch (e: Exception) {
@@ -174,7 +134,7 @@ class VoiceRecorderState(private val context: Context) {
             try {
                 recorder.stop()
             } catch (e: Exception) {
-                // Ignore
+                // Ignore: stop() can fail if called too soon after start()
             } finally {
                 try {
                     recorder.release()
@@ -203,10 +163,8 @@ class VoiceRecorderState(private val context: Context) {
         releaseResources()
         isRecording = false
         isLocked = false
-        isPaused = false
         isViewOnce = false
         currentFile = null
-        accumulatedMillis = 0L
 
         if (wasRecording && !cancel && file != null) {
             val durationSec = (capturedDurationMillis / 1000).toInt()
@@ -221,8 +179,8 @@ class VoiceRecorderState(private val context: Context) {
     }
 
     suspend fun runUpdateLoop() {
-        while (isRecording && !isPaused) {
-            durationMillis = accumulatedMillis + (System.currentTimeMillis() - startTime)
+        while (isRecording) {
+            durationMillis = System.currentTimeMillis() - startTime
 
             val maxAmp = try {
                 mediaRecorder?.maxAmplitude ?: 0
@@ -234,6 +192,7 @@ class VoiceRecorderState(private val context: Context) {
                 (20 * log10(maxAmp.toDouble() / 32767.0)).toFloat().coerceIn(-60f, 0f)
             } else -60f
 
+            // Map -60..0 to 0..31 for TDLib waveform
             val normalized = ((amplitude + 60) / 60 * 31).toInt().coerceIn(0, 31)
             waveform.add(normalized.toByte())
 
