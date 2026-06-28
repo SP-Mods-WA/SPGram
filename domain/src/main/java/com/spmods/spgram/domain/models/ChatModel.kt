@@ -76,6 +76,7 @@ data class ChatModel(
     val paidMessageStarCount: Long = 0L,
     val lastMessageContentType: String = "text",
     val lastMessageSenderName: String = "",
+    val lastMessageIsStoryReply: Boolean = false,
     val lastMessagePreviewPath: String? = null,
     val lastMessagePreviewPaths: List<String> = emptyList(),
 )
