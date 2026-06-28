@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
         <!-- View Once Media -->
+        <string name="chat_list_story_reply_indicator">Replied to your story</string>
         <string name="recording_pause">Pause Recording</string>
 <string name="recording_resume">Resume Recording</string>
 <string name="view_once_photo">View Once Photo</string>
