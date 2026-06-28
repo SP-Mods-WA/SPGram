@@ -185,12 +185,16 @@ class DefaultChatListComponent(
         val canPin = selectedChats.all { currentFolderChatIds.contains(it.id) }
         val canDelete =
             selectedChats.all { it.canBeDeletedOnlyForSelf || it.canBeDeletedForAllUsers }
+        val canDeleteForEveryone = selectedChats.all {
+            (it.type == ChatType.PRIVATE || it.type == ChatType.SECRET) && it.canBeDeletedForAllUsers
+        }
 
         return ChatListComponent.SelectionCapabilities(
             canPin = canPin,
             canMute = true,
             canArchive = true,
             canDelete = canDelete,
+            canDeleteForEveryone = canDeleteForEveryone,
             canToggleRead = true
         )
     }
@@ -654,17 +658,18 @@ class DefaultChatListComponent(
         }
     }
 
-    override fun onDeleteSelected() = store.accept(ChatListStore.Intent.DeleteSelected)
+    override fun onDeleteSelected(revoke: Boolean) = store.accept(ChatListStore.Intent.DeleteSelected(revoke))
 
-    internal fun handleDeleteSelected() {
+    internal fun handleDeleteSelected(revoke: Boolean) {
         val selection = _selectionState.value
         if (!selection.capabilities.canDelete) return
+        if (revoke && !selection.capabilities.canDeleteForEveryone) return
 
         val selectedIds = selection.selectedChatIds
         if (selectedIds.isEmpty()) return
 
         scope.launch(Dispatchers.IO) {
-            chatOperationsRepository.deleteChats(selectedIds)
+            chatOperationsRepository.deleteChats(selectedIds, revoke)
             handleClearSelection()
         }
     }
