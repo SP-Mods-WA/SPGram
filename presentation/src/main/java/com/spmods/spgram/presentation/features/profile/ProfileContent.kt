@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ExitToApp
 import androidx.compose.material.icons.rounded.Block
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.BottomSheetDefaults
@@ -496,13 +495,13 @@ fun ProfileContent(component: ProfileComponent) {
         }
 
         if (showDeleteChatSheet && !isGroupOrChannel) {
-            ConfirmationSheet(
-                icon = Icons.Rounded.Delete,
+            com.spmods.spgram.presentation.features.chats.conversation.ui.content.DeleteMessagesSheet(
+                count = 1,
+                canRevoke = true,
                 title = stringResource(R.string.delete_chat_title),
                 description = stringResource(R.string.delete_chat_confirmation),
-                confirmText = stringResource(R.string.action_delete_chat),
-                onConfirm = {
-                    component.onDeleteChat()
+                onDelete = { revoke ->
+                    component.onDeleteChat(revoke)
                     showDeleteChatSheet = false
                 },
                 onDismiss = { showDeleteChatSheet = false }
