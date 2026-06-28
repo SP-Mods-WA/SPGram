@@ -238,8 +238,8 @@ internal fun DefaultChatComponent.handleClearHistory() {
     chatOperationsRepository.clearChatHistory(chatId, true)
 }
 
-internal fun DefaultChatComponent.handleDeleteChat() {
-    chatOperationsRepository.deleteChats(setOf(chatId))
+internal fun DefaultChatComponent.handleDeleteChat(revoke: Boolean) {
+    chatOperationsRepository.deleteChats(setOf(chatId), revoke)
     onBackClicked()
 }
 
