@@ -43,7 +43,7 @@ class ChatListStoreFactory(
                 is Intent.ArchiveSelected -> component.handleArchiveSelected(intent.archive)
                 Intent.PinSelected -> component.handlePinSelected()
                 Intent.ToggleReadSelected -> component.handleToggleReadSelected()
-                Intent.DeleteSelected -> component.handleDeleteSelected()
+                is Intent.DeleteSelected -> component.handleDeleteSelected(intent.revoke)
                 Intent.ArchivePinToggle -> component.handleArchivePinToggle()
                 Intent.ConfirmForwarding -> component.handleConfirmForwarding()?.let(::publish)
                 Intent.NewChatClicked -> publish(Label.OpenNewChat)
