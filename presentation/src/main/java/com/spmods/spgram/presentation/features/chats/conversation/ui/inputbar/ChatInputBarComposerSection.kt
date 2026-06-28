@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
@@ -403,6 +404,7 @@ private fun ComposerMainRow(
             uiState = inputUiState,
             attachments = attachments,
             voiceRecorder = voiceRecorder,
+            isChannel = isChannel,
             knownCustomEmojis = knownCustomEmojis,
             emojiFontFamily = emojiFontFamily,
             focusRequester = focusRequester,
@@ -440,6 +442,7 @@ private fun ComposerInputSlot(
     uiState: InputTextFieldUiState,
     attachments: ComposerAttachmentState,
     voiceRecorder: VoiceRecorderState,
+    isChannel: Boolean = false,
     knownCustomEmojis: MutableMap<Long, StickerModel>,
     emojiFontFamily: FontFamily,
     focusRequester: FocusRequester,
