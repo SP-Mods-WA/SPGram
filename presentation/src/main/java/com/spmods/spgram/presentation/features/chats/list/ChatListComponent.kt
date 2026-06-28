@@ -41,7 +41,7 @@ interface ChatListComponent {
     fun onArchiveSelected(archive: Boolean)
     fun onPinSelected()
     fun onToggleReadSelected()
-    fun onDeleteSelected()
+    fun onDeleteSelected(revoke: Boolean = false)
     fun onArchivePinToggle()
     fun onConfirmForwarding()
     fun onNewChatClicked()
@@ -147,6 +147,7 @@ interface ChatListComponent {
         val canMute: Boolean = false,
         val canArchive: Boolean = false,
         val canDelete: Boolean = false,
+        val canDeleteForEveryone: Boolean = false,
         val canToggleRead: Boolean = false
     )
 
