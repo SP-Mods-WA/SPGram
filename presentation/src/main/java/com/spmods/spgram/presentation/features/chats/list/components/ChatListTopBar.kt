@@ -33,10 +33,10 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.ShieldMoon
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.DoneAll
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -354,34 +354,21 @@ fun ChatListTopBar(
                             }
                         }
 
-                        IconButton(
-                            onClick = onMenuClick,
-                            shapes = iconButtonShapes,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .semantics { contentDescription = settingsContentDescription }
-                        ) {
-                            AvatarTopAppBar(
-                                path = user?.avatarPath,
-                                fallbackPath = user?.personalAvatarPath,
-                                name = user?.firstName ?: "",
-                                size = 36.dp
-                            )
-                        }
-
                         var menuExpanded by remember { mutableStateOf(false) }
 
                         Box {
                             IconButton(
                                 onClick = { menuExpanded = true },
                                 shapes = iconButtonShapes,
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .semantics { contentDescription = settingsContentDescription }
                             ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.MoreVert,
-                                    contentDescription = "More options",
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.onSurface
+                                AvatarTopAppBar(
+                                    path = user?.avatarPath,
+                                    fallbackPath = user?.personalAvatarPath,
+                                    name = user?.firstName ?: "",
+                                    size = 36.dp
                                 )
                             }
 
@@ -418,6 +405,16 @@ fun ChatListTopBar(
                                         )
                                     },
                                     onClick = { onDownloads(); menuExpanded = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.menu_settings)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Settings,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = { onMenuClick(); menuExpanded = false }
                                 )
                             }
                         }
