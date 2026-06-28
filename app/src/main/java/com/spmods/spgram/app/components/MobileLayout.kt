@@ -264,7 +264,9 @@ fun MobileLayout(root: RootComponent) {
 
             // ── Download tab overlay ──────────────────────────────────────
             if (selectedBottomTab == MainTab.Download) {
-                DownloadContent()
+                DownloadContent(
+                    onNavigateToChat = { chatId, messageId -> root.navigateToChat(chatId, messageId) }
+                )
             }
         }
 
