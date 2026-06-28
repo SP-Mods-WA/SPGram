@@ -341,7 +341,7 @@ class ChatStoreFactory(
                 )
                 is Intent.ClearHistory -> component.handleClearHistory()
 
-                is Intent.DeleteChat -> component.handleDeleteChat()
+                is Intent.DeleteChat -> component.handleDeleteChat(intent.revoke)
 
                 is Intent.Report -> component._state.update { it.copy(showReportDialog = true) }
                 is Intent.ReportMessage -> component.handleReportMessage(intent.message)
