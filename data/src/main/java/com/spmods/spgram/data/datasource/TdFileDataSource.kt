@@ -33,6 +33,11 @@ class TdFileDataSource(
         // the user intentionally taps the download button again via onDownloadFile.
         fileDownloadQueue.cancelDownload(fileId, force = true, suppress = true)
         val result = gateway.execute(TdApi.CancelDownloadFile(fileId, false))
+        // AddFileToDownloads starts a download that TDLib explicitly documents as
+        // independent of, and unaffected by, CancelDownloadFile — so a file that was
+        // registered into the downloads list must also be removed here, or it keeps
+        // downloading via that separate path regardless of the cancel above.
+        coRunCatching { gateway.execute(TdApi.RemoveFileFromDownloads(fileId, false)) }
         return if (result is TdApi.Ok) result else null
     }
 
