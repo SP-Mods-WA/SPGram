@@ -1,5 +1,6 @@
 package com.spmods.spgram.domain.repository
 
+import com.spmods.spgram.domain.models.FoundStoryViewersModel
 import com.spmods.spgram.domain.models.StoryModel
 import kotlinx.coroutines.flow.Flow
 
@@ -46,4 +47,20 @@ interface StoryRepository {
 
     /** Delete a story */
     suspend fun deleteStory(chatId: Long, storyId: Int)
+
+    /** Informs TDLib that a story is opened and is being viewed by the user — marks it as viewed. */
+    suspend fun openStory(posterChatId: Long, storyId: Int)
+
+    /** Informs TDLib that a story is closed by the user. Call when leaving the viewer. */
+    suspend fun closeStory(posterChatId: Long, storyId: Int)
+
+    /** Sets (or clears, when [emoji] is null) the current user's reaction on a story. */
+    suspend fun setStoryReaction(posterChatId: Long, storyId: Int, emoji: String?)
+
+    /** Gets the list of users who viewed one of the current user's own stories. */
+    suspend fun getStoryViewers(
+        storyId: Int,
+        offset: String = "",
+        limit: Int = 50
+    ): FoundStoryViewersModel
 }
