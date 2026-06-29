@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -55,6 +56,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.sp
 import com.spmods.spgram.core.date.toDate
 import com.spmods.spgram.domain.models.DownloadedFileModel
@@ -318,7 +320,9 @@ private fun DownloadTabRow(
                 Box(
                     Modifier
                         .tabIndicatorOffset(selectedTabIndex)
-                        .fillMaxSize()
+                        .fillMaxHeight()
+                        .padding(vertical = 4.dp)
+                        .zIndex(-1f)
                         .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.primary)
                 )
