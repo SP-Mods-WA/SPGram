@@ -129,7 +129,7 @@ private fun MessageContent.withDownloadProgress(progress: Float, isDownloading: 
  * the in-chat bubble shows), opening a completed file hands off to the
  * system viewer, and "View in chat" jumps straight to the source message.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DownloadContent(
     onNavigateToChat: (chatId: Long, messageId: Long) -> Unit = { _, _ -> }
@@ -227,7 +227,7 @@ fun DownloadContent(
                 when {
                     loading -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            LoadingIndicator(color = MaterialTheme.colorScheme.primary)
                         }
                     }
                     empty -> {
@@ -335,17 +335,24 @@ private fun DownloadTabRow(
                     selectedContentColor = MaterialTheme.colorScheme.onPrimary,
                     unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     text = {
+                        val contentColor = if (selected) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = spec.icon,
                                 contentDescription = null,
-                                modifier = Modifier.size(15.dp)
+                                modifier = Modifier.size(15.dp),
+                                tint = contentColor
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = spec.label,
                                 fontSize = 13.sp,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                color = contentColor
                             )
                         }
                     }
