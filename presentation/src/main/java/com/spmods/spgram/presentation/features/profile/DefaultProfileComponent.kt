@@ -304,6 +304,27 @@ class DefaultProfileComponent(
         _state.update { it.copy(viewingStoryIndex = -1) }
     }
 
+    override fun onStoryViewed(story: StoryModel) {
+        scope.launch {
+            storyRepository.openStory(story.posterChatId, story.id)
+        }
+        // Optimistically mark as viewed locally so the ring updates immediately,
+        // without waiting for the next observeActiveStories emission.
+        _state.update { current ->
+            current.copy(
+                stories = current.stories.map { s ->
+                    if (s.id == story.id) s.copy(isViewed = true) else s
+                }
+            )
+        }
+    }
+
+    override fun onStoryClosed(story: StoryModel) {
+        scope.launch {
+            storyRepository.closeStory(story.posterChatId, story.id)
+        }
+    }
+
     override fun onOpenStoryPoster() {
         _state.update { it.copy(showStoryPoster = true) }
     }
@@ -317,6 +338,48 @@ class DefaultProfileComponent(
             val resolvedId = _state.value.chat?.id ?: chatId
             storyRepository.deleteStory(resolvedId, storyId)
             _state.update { it.copy(stories = it.stories.filter { s -> s.id != storyId }) }
+        }
+    }
+
+    override fun onSetStoryReaction(storyId: Int, emoji: String?) {
+        val story = _state.value.stories.find { it.id == storyId } ?: return
+        // Optimistic update so the heart animates immediately
+        _state.update { current ->
+            current.copy(
+                stories = current.stories.map { s ->
+                    if (s.id == storyId) s.copy(chosenReactionEmoji = emoji) else s
+                }
+            )
+        }
+        scope.launch {
+            storyRepository.setStoryReaction(story.posterChatId, storyId, emoji)
+        }
+    }
+
+    override fun onOpenStoryViewers(storyId: Int) {
+        _state.update {
+            it.copy(
+                storyViewersForStoryId = storyId,
+                storyViewers = emptyList(),
+                isLoadingStoryViewers = true,
+                storyViewersTotalCount = 0
+            )
+        }
+        scope.launch {
+            val result = storyRepository.getStoryViewers(storyId)
+            _state.update {
+                it.copy(
+                    storyViewers = result.viewers,
+                    isLoadingStoryViewers = false,
+                    storyViewersTotalCount = result.totalCount
+                )
+            }
+        }
+    }
+
+    override fun onDismissStoryViewers() {
+        _state.update {
+            it.copy(storyViewersForStoryId = null, storyViewers = emptyList(), storyViewersTotalCount = 0)
         }
     }
 
