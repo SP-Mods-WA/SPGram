@@ -83,6 +83,7 @@ import com.spmods.spgram.presentation.features.profile.components.ProfilePermiss
 import com.spmods.spgram.presentation.features.profile.components.ProfileStoriesSection
 import com.spmods.spgram.presentation.features.profile.components.StoryPosterSheet
 import com.spmods.spgram.presentation.features.profile.components.StoryViewerScreen
+import com.spmods.spgram.presentation.features.profile.components.StoryViewersSheet
 import com.spmods.spgram.presentation.features.profile.components.ProfileQRDialog
 import com.spmods.spgram.presentation.features.profile.components.ProfileReportDialog
 import com.spmods.spgram.presentation.features.profile.components.ProfileTOSDialog
@@ -391,6 +392,7 @@ fun ProfileContent(component: ProfileComponent) {
                             stories = state.stories,
                             isOwnProfile = profileUser != null && profileUser.id == state.currentUser?.id,
                             isLoadingStories = state.isLoadingStories,
+                            posterName = profileUser?.firstName.orEmpty().ifBlank { "Story" },
                             onStoryClick = component::onViewStory,
                             onAddStory = component::onOpenStoryPoster
                         )
@@ -455,17 +457,22 @@ fun ProfileContent(component: ProfileComponent) {
                         )
                     }
                 },
-                onLikeStory = { story ->
-                    storyActionScope.launch {
-                        component.messageRepository.sendStoryReply(
-                            chatId = story.posterChatId,
-                            text = "\u2764\ufe0f",
-                            storyPosterChatId = story.posterChatId,
-                            storyId = story.id
-                        )
-                    }
+                onSetReaction = { story, emoji ->
+                    component.onSetStoryReaction(story.id, emoji)
                 },
+                onOpenViewers = { story ->
+                    component.onOpenStoryViewers(story.id)
+                },
+                onStoryViewed = component::onStoryViewed,
+                onStoryClosed = component::onStoryClosed,
                 onDismiss = component::onDismissStory
+            )
+        }
+
+        if (state.storyViewersForStoryId != null) {
+            StoryViewersSheet(
+                state = state,
+                onDismiss = component::onDismissStoryViewers
             )
         }
 
