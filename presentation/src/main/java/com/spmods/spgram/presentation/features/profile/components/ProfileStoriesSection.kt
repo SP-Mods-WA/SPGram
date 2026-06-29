@@ -43,6 +43,7 @@ fun ProfileStoriesSection(
     stories: List<StoryModel>,
     isOwnProfile: Boolean,
     isLoadingStories: Boolean = false,
+    posterName: String = "Story",
     onStoryClick: (Int) -> Unit,
     onAddStory: () -> Unit,
     modifier: Modifier = Modifier
@@ -89,6 +90,7 @@ fun ProfileStoriesSection(
             itemsIndexed(stories) { index, story ->
                 StoryThumbnailItem(
                     story = story,
+                    posterName = posterName,
                     onClick = { onStoryClick(index) }
                 )
             }
@@ -101,12 +103,28 @@ fun ProfileStoriesSection(
 @Composable
 private fun StoryThumbnailItem(
     story: StoryModel,
+    posterName: String,
     onClick: () -> Unit
 ) {
     val thumbnailPath = when (val c = story.content) {
         is StoryContentModel.Photo -> c.filePath
         is StoryContentModel.Video -> c.thumbnailPath.ifEmpty { c.filePath }
         else -> null
+    }
+
+    val ringBorder = if (story.isViewed) {
+        BorderStroke(2.dp, MaterialTheme.colorScheme.outlineVariant)
+    } else {
+        BorderStroke(
+            2.dp,
+            Brush.sweepGradient(
+                listOf(
+                    Color(0xFFE040FB),
+                    Color(0xFFFF6D00),
+                    Color(0xFFE040FB)
+                )
+            )
+        )
     }
 
     Column(
@@ -117,19 +135,7 @@ private fun StoryThumbnailItem(
             modifier = Modifier
                 .size(64.dp)
                 .clip(CircleShape)
-                .border(
-                    BorderStroke(
-                        2.dp,
-                        Brush.sweepGradient(
-                            listOf(
-                                Color(0xFFE040FB),
-                                Color(0xFFFF6D00),
-                                Color(0xFFE040FB)
-                            )
-                        )
-                    ),
-                    CircleShape
-                )
+                .border(ringBorder, CircleShape)
                 .clickable(onClick = onClick)
         ) {
             if (thumbnailPath != null) {
@@ -154,7 +160,7 @@ private fun StoryThumbnailItem(
         }
 
         Text(
-            text = "Story",
+            text = posterName,
             style = MaterialTheme.typography.labelSmall,
             fontSize = 10.sp,
             maxLines = 1,
