@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +45,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -92,7 +95,10 @@ fun StoryViewerScreen(
     canDeleteStory: Boolean = false,
     onDelete: (Int) -> Unit = {},
     onSendReply: (StoryModel, String) -> Unit = { _, _ -> },
-    onLikeStory: (StoryModel) -> Unit = {},
+    onSetReaction: (StoryModel, String?) -> Unit = { _, _ -> },
+    onOpenViewers: (StoryModel) -> Unit = {},
+    onStoryViewed: (StoryModel) -> Unit = {},
+    onStoryClosed: (StoryModel) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     var currentIndex by remember { mutableIntStateOf(initialIndex.coerceIn(0, stories.lastIndex)) }
@@ -101,12 +107,19 @@ fun StoryViewerScreen(
     var videoDurationMs by remember { mutableStateOf<Long?>(null) }
     var replyText by remember { mutableStateOf("") }
     var isReplyFieldFocused by remember { mutableStateOf(false) }
-    val likedStoryIds = remember { mutableStateOf(setOf<Int>()) }
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
     val story = stories.getOrNull(currentIndex) ?: run { onDismiss(); return }
-    val isLiked = likedStoryIds.value.contains(story.id)
+    val isLiked = story.chosenReactionEmoji != null
+
+    // Fires OpenStory/CloseStory for whichever story is currently shown — runs again
+    // every time the user swipes to a different story, not just once for the whole
+    // viewer session, since each story needs its own view marked with TDLib.
+    DisposableEffect(story.id) {
+        onStoryViewed(story)
+        onDispose { onStoryClosed(story) }
+    }
 
     // For video stories, drive the progress bar from real elapsed playback time
     // instead of the fixed-duration timer (video length varies per story).
@@ -388,6 +401,31 @@ fun StoryViewerScreen(
             }
         }
 
+        if (canDeleteStory) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 16.dp, bottom = 76.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { onOpenViewers(story) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Visibility,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = story.viewCount.toString(),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+
         // Bottom bar — reply text field + send button + like button
         Row(
             modifier = Modifier
@@ -450,14 +488,7 @@ fun StoryViewerScreen(
                 IconButton(
                     onClick = {
                         val nowLiked = !isLiked
-                        likedStoryIds.value = if (nowLiked) {
-                            likedStoryIds.value + story.id
-                        } else {
-                            likedStoryIds.value - story.id
-                        }
-                        if (nowLiked) {
-                            coroutineScope.launch { onLikeStory(story) }
-                        }
+                        onSetReaction(story, if (nowLiked) "\u2764" else null)
                     }
                 ) {
                     AnimatedLikeIcon(isLiked = isLiked)
