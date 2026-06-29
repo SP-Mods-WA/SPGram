@@ -33,9 +33,11 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -80,6 +82,7 @@ private const val STORY_DURATION_MS = 5_000L
  *                     externally if you want it to persist across re-opens; locally the
  *                     button toggles its own state immediately for a responsive feel.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun StoryViewerScreen(
     stories: List<StoryModel>,
@@ -130,18 +133,20 @@ fun StoryViewerScreen(
         }
     }
 
-    // Auto-advance timer — pauses while isPaused is true or the reply field has focus,
-    // and resumes from the exact progress value where it left off (no restart).
-    // For video stories, advancement is driven by onPlaybackEnded instead, since video
-    // length varies; this loop is skipped for videos so it doesn't fight with playback.
-    LaunchedEffect(currentIndex) {
+    // Auto-advance timer — pauses while isPaused is true, the reply field has focus,
+    // or the content hasn't finished downloading yet — and resumes from the exact
+    // progress value where it left off (no restart). For video stories, advancement
+    // is driven by onPlaybackEnded instead, since video length varies; this loop is
+    // skipped for videos so it doesn't fight with playback.
+    LaunchedEffect(currentIndex, story.content) {
         if (story.content is StoryContentModel.Video) return@LaunchedEffect
+        val isLoadingContent = (story.content as? StoryContentModel.Photo)?.filePath.isNullOrBlank()
         progress = 0f
         val steps = 100
         val stepDelay = STORY_DURATION_MS / steps
         var step = 0
         while (step < steps) {
-            if (isPaused || isReplyFieldFocused) {
+            if (isPaused || isReplyFieldFocused || isLoadingContent) {
                 delay(50)
             } else {
                 delay(stepDelay)
@@ -164,30 +169,38 @@ fun StoryViewerScreen(
         // Story content
         when (val content = story.content) {
             is StoryContentModel.Photo -> {
-                SubcomposeAsyncImage(
-                    model = content.filePath,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
+                if (content.filePath.isBlank()) {
+                    StoryContentLoadingIndicator()
+                } else {
+                    SubcomposeAsyncImage(
+                        model = content.filePath,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
             }
             is StoryContentModel.Video -> {
-                com.spmods.spgram.presentation.core.media.VideoStickerPlayer(
-                    path = content.filePath,
-                    type = com.spmods.spgram.presentation.core.media.VideoType.Gif,
-                    modifier = Modifier.fillMaxSize(),
-                    animate = !isPaused && !isReplyFieldFocused,
-                    shouldLoop = false,
-                    volume = 1f,
-                    contentScale = ContentScale.Fit,
-                    thumbnailData = content.thumbnailPath.ifEmpty { null },
-                    onDurationKnown = { durationMs ->
-                        if (durationMs > 0L) videoDurationMs = durationMs
-                    },
-                    onPlaybackEnded = {
-                        if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
-                    }
-                )
+                if (content.filePath.isBlank()) {
+                    StoryContentLoadingIndicator()
+                } else {
+                    com.spmods.spgram.presentation.core.media.VideoStickerPlayer(
+                        path = content.filePath,
+                        type = com.spmods.spgram.presentation.core.media.VideoType.Gif,
+                        modifier = Modifier.fillMaxSize(),
+                        animate = !isPaused && !isReplyFieldFocused,
+                        shouldLoop = false,
+                        volume = 1f,
+                        contentScale = ContentScale.Fit,
+                        thumbnailData = content.thumbnailPath.ifEmpty { null },
+                        onDurationKnown = { durationMs ->
+                            if (durationMs > 0L) videoDurationMs = durationMs
+                        },
+                        onPlaybackEnded = {
+                            if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
+                        }
+                    )
+                }
             }
             is StoryContentModel.Unsupported -> {
                 Box(
@@ -451,6 +464,14 @@ fun StoryViewerScreen(
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun StoryContentLoadingIndicator() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        LoadingIndicator(color = Color.White)
     }
 }
 
