@@ -101,9 +101,10 @@ class StoryRepositoryImpl(
     }
 
     override suspend fun getStory(posterChatId: Long, storyId: Int): StoryModel? {
-        return coRunCatching {
+        val story = coRunCatching {
             gateway.execute(TdApi.GetStory(posterChatId, storyId, false)) as? TdApi.Story
-        }.getOrNull()?.toModel()
+        }.getOrNull() ?: return null
+        return story.toModel(waitForDownload = true)
     }
 
     override suspend fun postPhotoStory(
@@ -168,9 +169,9 @@ class StoryRepositoryImpl(
         return result.toModel()
     }
 
-    private suspend fun TdApi.Story.toModel(): StoryModel? {
+    private suspend fun TdApi.Story.toModel(waitForDownload: Boolean = false): StoryModel? {
         // resolveContent never returns null now (uses fast path), only Unsupported for unknown types
-        val contentModel = resolveContent(content) ?: StoryContentModel.Unsupported
+        val contentModel = resolveContent(content, waitForDownload) ?: StoryContentModel.Unsupported
         return StoryModel(
             id = id,
             posterChatId = posterChatId,
@@ -183,20 +184,29 @@ class StoryRepositoryImpl(
         )
     }
 
-    private suspend fun resolveContent(content: TdApi.StoryContent): StoryContentModel? {
+    private suspend fun resolveContent(content: TdApi.StoryContent, waitForDownload: Boolean = false): StoryContentModel? {
         return when (content) {
             is TdApi.StoryContentPhoto -> {
                 val best = content.photo.sizes.maxByOrNull { it.width * it.height }?.photo
                     ?: return StoryContentModel.Unsupported
-                // Enqueue download but don't wait — return cached path or empty string
-                val path = resolveFilePathFast(best)
+                val path = if (waitForDownload) {
+                    resolveFilePath(best).orEmpty()
+                } else {
+                    resolveFilePathFast(best)
+                }
                 StoryContentModel.Photo(path)
             }
             is TdApi.StoryContentVideo -> {
                 val videoFile = content.video.video
                 val thumbFile = content.video.thumbnail?.file
-                val videoPath = resolveFilePathFast(videoFile)
-                val thumbPath = thumbFile?.let { resolveFilePathFast(it) }.orEmpty()
+                val videoPath = if (waitForDownload) {
+                    resolveFilePath(videoFile).orEmpty()
+                } else {
+                    resolveFilePathFast(videoFile)
+                }
+                val thumbPath = thumbFile?.let {
+                    if (waitForDownload) resolveFilePath(it).orEmpty() else resolveFilePathFast(it)
+                }.orEmpty()
                 StoryContentModel.Video(videoPath, thumbPath)
             }
             else -> StoryContentModel.Unsupported
@@ -240,7 +250,7 @@ class StoryRepositoryImpl(
     }
 
     companion object {
-        private const val STORY_DOWNLOAD_PRIORITY = 28
+        private const val STORY_DOWNLOAD_PRIORITY = 32
         private const val FILE_DOWNLOAD_TIMEOUT_MS = 20_000L
     }
 }
