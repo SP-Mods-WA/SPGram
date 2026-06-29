@@ -38,6 +38,11 @@ interface ProfileComponent {
     fun onOpenStoryPoster()
     fun onDismissStoryPoster()
     fun onDeleteStory(storyId: Int)
+    fun onSetStoryReaction(storyId: Int, emoji: String?)
+    fun onOpenStoryViewers(storyId: Int)
+    fun onDismissStoryViewers()
+    fun onStoryViewed(story: StoryModel)
+    fun onStoryClosed(story: StoryModel)
     fun onLoadMoreMedia()
     fun onOpenMiniApp(url: String, name: String, chatId: Long)
     fun onDismissMiniApp()
@@ -117,6 +122,10 @@ interface ProfileComponent {
         val isLoadingStories: Boolean = false,
         val viewingStoryIndex: Int = -1,
         val showStoryPoster: Boolean = false,
+        val storyViewersForStoryId: Int? = null,
+        val storyViewers: List<StoryViewerModel> = emptyList(),
+        val isLoadingStoryViewers: Boolean = false,
+        val storyViewersTotalCount: Int = 0,
 
         val fullScreenImages: List<String>? = null,
         val fullScreenImageMessageIds: List<Long> = emptyList(),
