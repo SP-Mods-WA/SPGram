@@ -481,6 +481,7 @@ class FileDownloadQueue(
         }
 
         if (file.local.isDownloadingCompleted) {
+            val wasManual = manualDownloadIds.contains(file.id)
             manualDownloadIds.remove(file.id)
             failedRequests.remove(file.id)
             stalledRecoveryAt.remove(file.id)
@@ -488,7 +489,7 @@ class FileDownloadQueue(
             scope.launch {
                 stateMutex.withLock { pendingRequests.remove(file.id) }
             }
-            notifyDownloadComplete(file.id)
+            notifyDownloadComplete(file.id, wasManual = wasManual)
         } else if (oldFile?.local?.isDownloadingActive == true && !file.local.isDownloadingActive) {
             val type = fileDownloadTypes[file.id]
             if (type == DownloadType.STICKER) {
@@ -575,24 +576,6 @@ class FileDownloadQueue(
         }
     }
 
-    /**
-     * Registers a manually-requested file into TDLib's persistent download list
-     * (TdApi.AddFileToDownloads), the same list TdApi.SearchFileDownloads reads
-     * from. Without this, files downloaded from within a chat never show up on
-     * the standalone Downloads page, since TDLib treats "downloading a file" and
-     * "tracking it in the downloads list" as two distinct, opt-in concepts.
-     */
-    private fun registerInDownloadsList(fileId: Int) {
-        val target = registry.getMessages(fileId).firstOrNull() ?: return
-        val (chatId, messageId) = target
-        scope.launch(dispatcherProvider.io) {
-            try {
-                gateway.execute(TdApi.AddFileToDownloads(fileId, chatId, messageId, /* priority= */ 1))
-            } catch (_: Exception) {
-            }
-        }
-    }
-
     fun enqueue(
         fileId: Int,
         priority: Int = 1,
@@ -610,7 +593,6 @@ class FileDownloadQueue(
             val isManualRequest = priority >= 32
             if (isManualRequest) {
                 manualDownloadIds.add(fileId)
-                registerInDownloadsList(fileId)
             }
 
             val cooldownUntil = notFoundCooldownUntil[fileId]
@@ -753,10 +735,33 @@ class FileDownloadQueue(
         return uploadWaiters.getOrPut(fileId) { CompletableDeferred() }
     }
 
-    fun notifyDownloadComplete(fileId: Int) {
+    fun notifyDownloadComplete(fileId: Int, wasManual: Boolean = manualDownloadIds.contains(fileId)) {
         downloadWaiters.remove(fileId)?.complete(Unit)
         if (suppressedAutoDownloadIds.remove(fileId)) {
             persistSuppressed()
+        }
+        if (wasManual) {
+            registerInDownloadsList(fileId)
+        }
+    }
+
+    /**
+     * Registers an already-completed, manually-downloaded file into TDLib's
+     * persistent download list (TdApi.AddFileToDownloads), the same list
+     * TdApi.SearchFileDownloads reads from — this is what makes it show up on
+     * the standalone Downloads page. Only called once the file has finished
+     * downloading: calling this on a file that's still in progress would start
+     * a second, independent transfer that TDLib documents as explicitly immune
+     * to CancelDownloadFile, which would make Cancel silently stop working.
+     */
+    private fun registerInDownloadsList(fileId: Int) {
+        val target = registry.getMessages(fileId).firstOrNull() ?: return
+        val (chatId, messageId) = target
+        scope.launch(dispatcherProvider.io) {
+            try {
+                gateway.execute(TdApi.AddFileToDownloads(fileId, chatId, messageId, /* priority= */ 1))
+            } catch (_: Exception) {
+            }
         }
     }
 
