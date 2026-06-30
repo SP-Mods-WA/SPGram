@@ -165,29 +165,15 @@ internal class WebPageMapper(
         }
 
         val photo = photoObj?.let { photoObject ->
-            // ✅ FIX: photoObject.sizes is NOT guaranteed to be ordered largest-last.
-            // Using sizes.firstOrNull() picks up TDLib's smallest thumbnail entry
-            // (type "s", ~100px) for width/height, which made the link-preview bubble
-            // render at the thumbnail's tiny/wrong aspect ratio. It only "looked right"
-            // once something else (e.g. re-entering the chat, full image decode)
-            // recomputed it — same bug class fixed for MessagePhoto. Mirror that fix
-            // here: always pick the file/size with the largest area for download and
-            // for the reported width/height, exactly like official Telegram clients do.
-            val sizes = photoObject.sizes
-            val preferredTypes = listOf("y", "x", "w", "a", "b", "c", "d")
-            val size = preferredTypes.firstNotNullOfOrNull { t -> sizes.find { it.type == t } }
-                ?: sizes.maxByOrNull { it.width * it.height }
-                ?: sizes.firstOrNull()
-            val bestDims = sizes.maxByOrNull { it.width * it.height }
-
+            val size = photoObject.sizes.firstOrNull()
             if (size != null) {
                 val file = processTdFile(size.photo, TdMessageRemoteDataSource.DownloadType.DEFAULT)
                 val bestPath = fileHelper.findBestAvailablePath(file, photoObject.sizes)
 
                 WebPage.Photo(
                     path = bestPath,
-                    width = bestDims?.width ?: size.width,
-                    height = bestDims?.height ?: size.height,
+                    width = size.width,
+                    height = size.height,
                     fileId = file.id,
                     minithumbnail = photoObject.minithumbnail?.data
                 )
