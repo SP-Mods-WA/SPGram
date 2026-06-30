@@ -22,6 +22,7 @@ import com.spmods.spgram.domain.models.FileDownloadEvent
 import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageModel
 import com.spmods.spgram.domain.models.StatisticsGraphModel
+import com.spmods.spgram.domain.models.StoryModel
 import com.spmods.spgram.domain.models.UserTypeEnum
 import com.spmods.spgram.domain.repository.BotPreferencesProvider
 import com.spmods.spgram.domain.repository.BotRepository
