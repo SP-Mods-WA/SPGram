@@ -941,15 +941,22 @@ fun ChatContent(
                         }
                     },
                     onSetReaction = { storyClicked, emoji ->
-                        if (emoji != null) {
-                            coroutineScope.launch {
-                                component.repositoryMessage.sendStoryReply(
-                                    chatId = storyClicked.posterChatId,
-                                    text = emoji,
-                                    storyPosterChatId = storyClicked.posterChatId,
-                                    storyId = storyClicked.id
-                                )
-                            }
+                        coroutineScope.launch {
+                            component.storyRepository.setStoryReaction(
+                                posterChatId = storyClicked.posterChatId,
+                                storyId = storyClicked.id,
+                                emoji = emoji
+                            )
+                        }
+                    },
+                    onStoryViewed = { storyClicked ->
+                        coroutineScope.launch {
+                            component.storyRepository.openStory(storyClicked.posterChatId, storyClicked.id)
+                        }
+                    },
+                    onStoryClosed = { storyClicked ->
+                        coroutineScope.launch {
+                            component.storyRepository.closeStory(storyClicked.posterChatId, storyClicked.id)
                         }
                     },
                     onDismiss = { component.onDismissStoryReply() }
