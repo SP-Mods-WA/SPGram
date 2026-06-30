@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Image as ImageIcon
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Button
@@ -210,7 +210,7 @@ fun StoryPosterSheet(
                     enabled = !isPreparingMedia && !isPosting
                 ) {
                     Icon(
-                        imageVector = ImageIcon,
+                        imageVector = Icons.Default.Photo,
                         contentDescription = null,
                         modifier = Modifier
                             .size(18.dp)
