@@ -2,6 +2,7 @@ package com.spmods.spgram.domain.repository
 
 import com.spmods.spgram.domain.models.FoundStoryViewersModel
 import com.spmods.spgram.domain.models.StoryModel
+import com.spmods.spgram.domain.models.StoryPrivacy
 import kotlinx.coroutines.flow.Flow
 
 interface StoryRepository {
@@ -33,7 +34,8 @@ interface StoryRepository {
         chatId: Long,
         photoPath: String,
         caption: String = "",
-        activePeriodSeconds: Int = 86400
+        activePeriodSeconds: Int = 86400,
+        privacy: StoryPrivacy = StoryPrivacy.EVERYONE
     ): StoryModel?
 
     /** Post a video story */
@@ -42,7 +44,8 @@ interface StoryRepository {
         videoPath: String,
         thumbnailPath: String = "",
         caption: String = "",
-        activePeriodSeconds: Int = 86400
+        activePeriodSeconds: Int = 86400,
+        privacy: StoryPrivacy = StoryPrivacy.EVERYONE
     ): StoryModel?
 
     /** Delete a story */
