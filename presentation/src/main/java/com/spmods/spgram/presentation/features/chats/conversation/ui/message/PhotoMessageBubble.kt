@@ -121,7 +121,21 @@ fun PhotoMessageBubble(
     // appeared to "fix itself" on navigating back. Keying on width/height as well
     // ensures we recompute the instant real data shows up, while still avoiding
     // recomputation (and any layout jump) once the real ratio is known and stable.
-    val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
+    // SELF-CORRECTING ASPECT RATIO:
+    // content.width/content.height ultimately come from TDLib's reported photo.sizes via
+    // the data layer. In practice that value can be wrong, zero, or stale on the very
+    // first composition (e.g. right after opening a chat, before a corrective update
+    // lands) and the data-layer fixes for that have proven unreliable. Rather than
+    // trusting that pipeline, we additionally let the actually-loaded bitmap correct
+    // the aspect ratio directly: Coil's AsyncImage onSuccess callback reports the real
+    // decoded image size regardless of what TDLib said. The first time any image (full
+    // photo or thumbnail) successfully loads for this exact file, we store its real
+    // ratio and prefer it over the TDLib-derived one. This is reset per fileId so a
+    // different photo (same message position reused via LazyColumn key) doesn't reuse
+    // a stale ratio.
+    var observedAspectRatio by remember(content.fileId) { mutableStateOf<Float?>(null) }
+
+    val stableAspectRatio = observedAspectRatio ?: remember(msg.id, content.fileId, content.width, content.height) {
         if (content.width > 0 && content.height > 0)
             (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
         else 1.3f
@@ -309,8 +323,23 @@ fun PhotoMessageBubble(
                                 .build(),
                             contentDescription = content.caption,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                            ) 
+                            contentScale = ContentScale.Crop,
+                            onSuccess = { state ->
+                                val intrinsicSize = state.painter.intrinsicSize
+                                val realWidth = intrinsicSize.width
+                                val realHeight = intrinsicSize.height
+                                if (realWidth.isFinite() && realHeight.isFinite() && realWidth > 0f && realHeight > 0f) {
+                                    val realRatio = (realWidth / realHeight).coerceIn(0.3f, 3f)
+                                    // Only correct if it actually differs from what we're
+                                    // currently showing — avoids redundant state writes
+                                    // (and the recomposition + layout pass they'd trigger)
+                                    // once the ratio is already right.
+                                    if (kotlin.math.abs(realRatio - stableAspectRatio) > 0.01f) {
+                                        observedAspectRatio = realRatio
+                                    }
+                                }
+                            }
+                            )
                     }
 
                     // --- Download action (CENTER - fixed clickable) ---
