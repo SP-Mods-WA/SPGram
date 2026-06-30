@@ -23,6 +23,12 @@ data class StoryViewerModel(
     val reactionEmoji: String? = null
 )
 
+enum class StoryPrivacy {
+    EVERYONE,
+    CONTACTS,
+    CLOSE_FRIENDS
+}
+
 data class FoundStoryViewersModel(
     val totalCount: Int,
     val viewers: List<StoryViewerModel>,
