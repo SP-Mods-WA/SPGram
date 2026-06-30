@@ -940,14 +940,16 @@ fun ChatContent(
                             )
                         }
                     },
-                    onSetReaction = { storyClicked, _ ->
-                        coroutineScope.launch {
-                            component.repositoryMessage.sendStoryReply(
-                                chatId = storyClicked.posterChatId,
-                                text = "\u2764\ufe0f",
-                                storyPosterChatId = storyClicked.posterChatId,
-                                storyId = storyClicked.id
-                            )
+                    onSetReaction = { storyClicked, emoji ->
+                        if (emoji != null) {
+                            coroutineScope.launch {
+                                component.repositoryMessage.sendStoryReply(
+                                    chatId = storyClicked.posterChatId,
+                                    text = emoji,
+                                    storyPosterChatId = storyClicked.posterChatId,
+                                    storyId = storyClicked.id
+                                )
+                            }
                         }
                     },
                     onDismiss = { component.onDismissStoryReply() }
