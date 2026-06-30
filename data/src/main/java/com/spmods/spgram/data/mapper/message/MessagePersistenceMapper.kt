@@ -120,7 +120,10 @@ internal class MessagePersistenceMapper(
                 CachedMessageContent(
                     "photo",
                     content.caption.text,
-                    encodeMeta(best?.width ?: 0, best?.height ?: 0),
+                    // index 0=width, 1=height, 2=fileId — fileId stored here so
+                    // resolveLegacyMediaFromMeta() can recover it if the mediaFileId
+                    // column was wiped to 0 by an older build's clearCachedMediaPaths().
+                    encodeMeta(best?.width ?: 0, best?.height ?: 0, fileId),
                     fileId = fileId,
                     path = path,
                     thumbnailPath = thumbnailPath,
@@ -136,6 +139,7 @@ internal class MessagePersistenceMapper(
                 CachedMessageContent(
                     "video",
                     content.caption.text,
+                    // index 0=width, 1=height, 2=duration, 3=thumbnailPath, 4=supportsStreaming, 5=fileId
                     encodeMeta(
                         content.video.width,
                         content.video.height,
@@ -143,7 +147,8 @@ internal class MessagePersistenceMapper(
                         content.video.thumbnail?.file?.local?.path
                             ?.takeIf { fileHelper.isValidPath(it) }
                             .orEmpty(),
-                        if (content.video.supportsStreaming) 1 else 0
+                        if (content.video.supportsStreaming) 1 else 0,
+                        fileId
                     ),
                     fileId = fileId,
                     path = path,
@@ -931,8 +936,8 @@ internal class MessagePersistenceMapper(
 
     private fun resolveLegacyMediaFromMeta(contentType: String, meta: List<String>): Pair<Int, String?> {
         return when (contentType) {
-            "photo" -> (meta.getOrNull(2)?.toIntOrNull() ?: 0) to meta.getOrNull(3)
-            "video" -> (meta.getOrNull(3)?.toIntOrNull() ?: 0) to meta.getOrNull(4)
+            "photo" -> (meta.getOrNull(2)?.toIntOrNull() ?: 0) to null
+            "video" -> (meta.getOrNull(5)?.toIntOrNull() ?: 0) to null
             "voice" -> (meta.getOrNull(1)?.toIntOrNull() ?: 0) to meta.getOrNull(2)
             "video_note" -> (meta.getOrNull(2)?.toIntOrNull() ?: 0) to meta.getOrNull(3)
             "sticker" -> (meta.getOrNull(4)?.toIntOrNull() ?: 0) to meta.getOrNull(6)
