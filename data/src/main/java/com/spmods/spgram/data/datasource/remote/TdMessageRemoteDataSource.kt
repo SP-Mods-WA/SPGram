@@ -1446,22 +1446,12 @@ class TdMessageRemoteDataSource(
                         newMessageFlow.emit(model)
                     } catch (e: Exception) { Log.e("TdMessageRemote", "Error mapping NewMessage", e) }
                 }
-                // ✅ ROOT CAUSE FIX: the old check (sizes.any { width > 0 && height > 0 })
-                // is true even when TDLib has ONLY delivered the small thumbnail size
-                // (e.g. type "s", ~90px) — which is nonzero but still the wrong dimensions
-                // for the bubble's aspect ratio. The real/large size (type "x"/"y"/"w")
-                // arrives moments later via a separate updateMessageContent. Because this
-                // check passed on the thumbnail-only case, the refresh/retry below never
-                // fired, so the live bubble (and the Room row written from this same
-                // message) locked onto the small thumbnail's aspect ratio. Outgoing photos
-                // don't hit this because the sender's device already has full sizes at
-                // send time. Require an actual photo-scale size (>150px on the long edge —
-                // safely above any thumbnail type, safely below any real photo) before
-                // treating dimensions as "known".
+                // If incoming photo has no size dimensions yet, refresh after a short
+                // delay so TDLib has time to populate photo.sizes with real dimensions.
                 if (message.content is TdApi.MessagePhoto) {
                     val sizes = (message.content as TdApi.MessagePhoto).photo.sizes
-                    val hasRealDimensions = sizes.any { maxOf(it.width, it.height) >= 150 }
-                    if (!hasRealDimensions) {
+                    val hasDimensions = sizes.any { it.width > 0 && it.height > 0 }
+                    if (!hasDimensions) {
                         scope.launch(dispatcherProvider.io) {
                             delay(500)
                             cache.removeMessage(message.chatId, message.id)
@@ -1635,9 +1625,7 @@ class TdMessageRemoteDataSource(
         val model = mapMessageToModel(msg)
         messageEditedFlow.emit(model)
         val photoContent = msg.content as? TdApi.MessagePhoto ?: return true
-        // Same fix as the updateNewMessage handler: require a real photo-scale size,
-        // not just any nonzero size, or the retry loop stops too early on thumbnail-only data.
-        return photoContent.photo.sizes.any { maxOf(it.width, it.height) >= 150 }
+        return photoContent.photo.sizes.any { it.width > 0 && it.height > 0 }
     }
 
     private suspend fun mapMessageToModel(message: TdApi.Message): MessageModel {
