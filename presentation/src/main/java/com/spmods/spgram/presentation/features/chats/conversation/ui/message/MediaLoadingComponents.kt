@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -34,7 +33,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import com.spmods.spgram.presentation.R
@@ -45,14 +43,7 @@ fun MediaLoadingBackground(
     previewData: Any?,
     contentScale: ContentScale,
     modifier: Modifier = Modifier,
-    previewBlur: Dp = 10.dp,
-    // Reports the real decoded intrinsic size of previewData (e.g. the minithumbnail
-    // or thumbnail file) once it loads. previewData is often a tiny embedded blob
-    // (TDLib's minithumbnail) that's available immediately — well before any full
-    // photo/thumbnail file is downloaded — so this is the earliest reliable signal
-    // for the bubble's true aspect ratio. Null by default so existing callers are
-    // unaffected.
-    onSizeAvailable: ((Size) -> Unit)? = null
+    previewBlur: Dp = 10.dp
 ) {
     val context = LocalContext.current
     val previewCacheKey = remember(previewData) {
@@ -86,17 +77,7 @@ fun MediaLoadingBackground(
                                 diskCacheKey(it)
                             }
                         }
-                        .build(),
-                    onSuccess = { state: AsyncImagePainter.State.Success ->
-                        if (onSizeAvailable != null) {
-                            val size = state.painter.intrinsicSize
-                            if (size.width.isFinite() && size.height.isFinite() &&
-                                size.width > 0f && size.height > 0f
-                            ) {
-                                onSizeAvailable(size)
-                            }
-                        }
-                    }
+                        .build()
                 ),
                 contentDescription = null,
                 modifier = Modifier
