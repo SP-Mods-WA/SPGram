@@ -103,8 +103,8 @@ fun StoryViewersSheet(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                if (viewer.reactionEmoji != null) {
-                                    val emoji = viewer.reactionEmoji!!
+                                val emoji = viewer.reactionEmoji
+                                if (emoji != null) {
                                     Text(
                                         text = emoji,
                                         style = MaterialTheme.typography.titleLarge
