@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -163,8 +163,10 @@ fun GifMessageBubble(
         else 1f
     }
 
+    // Same fix as PhotoMessageBubble: IntrinsicSize.Max + fillMaxWidth().aspectRatio()
+    // collapses tall/narrow media (e.g. portrait GIFs) to a tiny sliver on first layout.
     Column(
-        modifier = modifier.width(IntrinsicSize.Max),
+        modifier = modifier.wrapContentWidth(if (isOutgoing) Alignment.End else Alignment.Start),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
         Surface(
