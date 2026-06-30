@@ -104,7 +104,7 @@ fun StoryViewersSheet(
                                     )
                                 }
                                 if (viewer.reactionEmoji != null) {
-                                    val emoji = viewer.reactionEmoji
+                                    val emoji = viewer.reactionEmoji!!
                                     Text(
                                         text = emoji,
                                         style = MaterialTheme.typography.titleLarge
