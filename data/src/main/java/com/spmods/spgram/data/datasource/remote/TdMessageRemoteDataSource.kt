@@ -431,7 +431,7 @@ class TdMessageRemoteDataSource(
                 cache.putMessage(msg)
                 scope.async {
                     try {
-                        withTimeout(5000) { messageMapper.mapMessageToModelSync(msg, lastReadInbox, lastReadOutbox, isChatOpen = true) }
+                        withTimeout(12000) { messageMapper.mapMessageToModelSync(msg, lastReadInbox, lastReadOutbox, isChatOpen = true) }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -479,7 +479,7 @@ class TdMessageRemoteDataSource(
             cache.putMessage(msg)
             async {
                 try {
-                    withTimeout(5000) { messageMapper.mapMessageToModelSync(msg, lastReadInbox, lastReadOutbox, isChatOpen = true) }
+                    withTimeout(12000) { messageMapper.mapMessageToModelSync(msg, lastReadInbox, lastReadOutbox, isChatOpen = true) }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -549,20 +549,57 @@ class TdMessageRemoteDataSource(
         }
     }
 
-    private fun createFallbackMessage(msg: TdApi.Message): MessageModel = MessageModel(
-        id = msg.id,
-        date = msg.date,
-        isOutgoing = msg.isOutgoing,
-        senderName = "",
-        chatId = msg.chatId,
-        content = MessageContent.Text(""),
-        senderId = 0L,
-        senderAvatar = null,
-        isRead = false,
-        replyToMsgId = null, replyToMsg = null, forwardInfo = null, views = null, viewCount = null, mediaAlbumId = 0L,
-        editDate = 0, sendingState = null, readDate = 0, reactions = emptyList(), isSenderVerified = false,
-        threadId = null, replyCount = 0, canGetMessageThread = false, replyMarkup = null
-    )
+    // ✅ FIX: Previously this always built MessageContent.Text(""), throwing away photo/video
+    // dimensions whenever mapMessageToModelSync() timed out (e.g. cold start on a fresh
+    // install, with no local TDLib DB yet, where sender/avatar lookups inside the full
+    // mapper are slow). That caused bubbles to render at the wrong/tiny size until the
+    // app was restarted and TDLib's local cache made the full mapper fast enough to finish
+    // within the timeout.
+    //
+    // Width/height are available directly on msg.content with zero extra TDLib round-trips,
+    // so we extract them here synchronously and build a minimal but correctly-sized
+    // Photo/Video placeholder instead of discarding the media entirely. A later
+    // UpdateMessageContent/refresh (or simply scrolling back into view) will replace this
+    // with the fully-mapped message, but the bubble is never tiny/wrong-sized in the meantime.
+    private fun createFallbackMessage(msg: TdApi.Message): MessageModel {
+        val content = when (val c = msg.content) {
+            is TdApi.MessagePhoto -> {
+                val best = c.photo.sizes.maxByOrNull { it.width * it.height }
+                MessageContent.Photo(
+                    path = null,
+                    thumbnailPath = null,
+                    width = best?.width ?: 0,
+                    height = best?.height ?: 0,
+                    caption = c.caption.text,
+                    fileId = best?.photo?.id ?: 0
+                )
+            }
+            is TdApi.MessageVideo -> MessageContent.Video(
+                path = null,
+                thumbnailPath = null,
+                width = c.video.width,
+                height = c.video.height,
+                duration = c.video.duration,
+                caption = c.caption.text,
+                fileId = c.video.video.id
+            )
+            else -> MessageContent.Text("")
+        }
+        return MessageModel(
+            id = msg.id,
+            date = msg.date,
+            isOutgoing = msg.isOutgoing,
+            senderName = "",
+            chatId = msg.chatId,
+            content = content,
+            senderId = 0L,
+            senderAvatar = null,
+            isRead = false,
+            replyToMsgId = null, replyToMsg = null, forwardInfo = null, views = null, viewCount = null, mediaAlbumId = 0L,
+            editDate = 0, sendingState = null, readDate = 0, reactions = emptyList(), isSenderVerified = false,
+            threadId = null, replyCount = 0, canGetMessageThread = false, replyMarkup = null
+        )
+    }
 
     override suspend fun sendStoryReply(
         chatId: Long,
