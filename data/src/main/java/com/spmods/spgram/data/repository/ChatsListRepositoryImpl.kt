@@ -132,7 +132,7 @@ class ChatsListRepositoryImpl(
             triggerUpdate()
             refreshActiveForumTopics()
         }
-    ).apply { attachMessageFileRegistry(fileQueue.registry) }
+    )
 
     private val typingManager = ChatTypingManager(
         scope = scope,
