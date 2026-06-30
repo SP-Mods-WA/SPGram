@@ -303,9 +303,15 @@ fun PhotoMessageBubble(
                         }
                     } else if (!hasPath) {
                         MediaLoadingBackground(
-    previewData = content.thumbnailPath ?: content.minithumbnail,
-    contentScale = ContentScale.Crop
-)
+                            previewData = content.thumbnailPath ?: content.minithumbnail,
+                            contentScale = ContentScale.Crop,
+                            onSizeAvailable = { size ->
+                                val realRatio = (size.width / size.height).coerceIn(0.3f, 3f)
+                                if (kotlin.math.abs(realRatio - stableAspectRatio) > 0.01f) {
+                                    observedAspectRatio = realRatio
+                                }
+                            }
+                        )
                     }
 
                     // --- Actual image (after download) ---
