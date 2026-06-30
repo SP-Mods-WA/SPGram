@@ -1,5 +1,6 @@
 package com.spmods.spgram.presentation.features.chats.conversation.logic
 
+import android.graphics.BitmapFactory
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -28,14 +29,67 @@ import kotlin.math.abs
 private const val PAGE_SIZE = 50
 private const val MAX_DOWNLOAD_RETRIES = 3
 
-// Bubble width/height for photos and videos always come from TDLib's own metadata
-// (photoSize.width/height, video.width/height — see MessageContentMapper), which is
-// available the instant the message arrives, before any download starts. This matches
-// what the official Telegram clients do, and keeps the bubble's aspect ratio stable for
-// its entire lifetime: it never gets re-derived from a decoded thumbnail or full-file
-// bitmap, which previously caused the bubble to visibly resize twice during download
-// (once when the thumbnail landed, again when the full file landed) because decoded
-// pixel bounds don't always exactly match TDLib's reported size.
+// BUG FIX: MessageDownloadEvent.Completed only carries (chatId, messageId, fileId, path) —
+// no width/height. The live in-memory content.copy(path = ...) calls below never touched
+// width/height, so once a photo/video finished downloading the bubble kept whatever
+// (possibly wrong/placeholder) dimensions it was first created with, until the chat
+// screen was destroyed and recreated. Reading real bounds straight from the just-downloaded
+// file gives an instant, accurate fix with no extra TDLib round-trip.
+// BUG FIX 2: TDLib can report isDownloadingCompleted=true a moment before the file is
+// fully flushed/closed on disk. If BitmapFactory/MediaMetadataRetriever hit the file in
+// that tiny window, decoding silently fails, bounds comes back null, and the caller falls
+// back to the OLD (often placeholder) width/height — which then never gets corrected
+// because stableAspectRatio only recomputes when width/height actually change. The bubble
+// stays the wrong size until the chat is reloaded from local DB (app restart), which is
+// exactly the bug being fixed here. Retrying a few times with a short delay, off the main
+// thread, lets the transient race resolve itself instead of failing permanently.
+private fun decodeImageBoundsOnce(path: String): Pair<Int, Int>? = try {
+    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(path, opts)
+    if (opts.outWidth > 0 && opts.outHeight > 0) opts.outWidth to opts.outHeight else null
+} catch (_: Exception) {
+    null
+}
+
+private fun decodeVideoBoundsOnce(path: String): Triple<Int, Int, Int>? = try {
+    val retriever = android.media.MediaMetadataRetriever()
+    retriever.setDataSource(path)
+    val w = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+    val h = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+    val rotation = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+    retriever.release()
+    if (w > 0 && h > 0) {
+        // Swap dimensions if the video is rotated 90/270 so aspect ratio matches what's displayed.
+        if (rotation == 90 || rotation == 270) Triple(h, w, rotation) else Triple(w, h, rotation)
+    } else null
+} catch (_: Exception) {
+    null
+}
+
+private const val BOUNDS_RETRY_COUNT = 3
+private const val BOUNDS_RETRY_DELAY_MS = 60L
+
+private suspend fun realImageBounds(path: String): Pair<Int, Int>? = withContext(Dispatchers.IO) {
+    var result: Pair<Int, Int>? = null
+    var attempt = 0
+    while (result == null && attempt < BOUNDS_RETRY_COUNT) {
+        if (attempt > 0) delay(BOUNDS_RETRY_DELAY_MS)
+        result = decodeImageBoundsOnce(path)
+        attempt++
+    }
+    result
+}
+
+private suspend fun realVideoBounds(path: String): Triple<Int, Int, Int>? = withContext(Dispatchers.IO) {
+    var result: Triple<Int, Int, Int>? = null
+    var attempt = 0
+    while (result == null && attempt < BOUNDS_RETRY_COUNT) {
+        if (attempt > 0) delay(BOUNDS_RETRY_DELAY_MS)
+        result = decodeVideoBoundsOnce(path)
+        attempt++
+    }
+    result
+}
 
 private fun isUsableAvatarPath(path: String?): Boolean {
     if (path.isNullOrBlank()) return false
@@ -1066,51 +1120,75 @@ internal fun DefaultChatComponent.setupMessageCollectors() {
                     var mainFileId = 0
                     var mainPathUpdated = false
 
+                    // Resolve real bounds BEFORE entering the synchronous state-update
+                    // transform below: realImageBounds/realVideoBounds are now suspend
+                    // functions (IO dispatch + short retry) to survive the brief window
+                    // where TDLib reports the download as complete just before the file
+                    // is fully flushed to disk. A transient decode failure here used to
+                    // silently fall back to stale width/height with no retry, leaving the
+                    // bubble at the wrong size until app restart.
+                    val finalPathForBounds = path.ifEmpty { null }
+                    val resolvedImageBounds = finalPathForBounds?.let { realImageBounds(it) }
+                    val resolvedVideoBounds = finalPathForBounds?.let { realVideoBounds(it) }
+
                     updateMessageContent(messageId) { message ->
                         val isError = path.isEmpty()
                         val finalPath = path.ifEmpty { null }
 
                         val newContent = when (val content = message.content) {
                             is MessageContent.Photo -> {
-                                // NOTE: width/height are intentionally left untouched here.
-                                // TDLib's photo.sizes metadata (set once in MessageContentMapper)
-                                // is the single source of truth for bubble dimensions, exactly
-                                // like the official Telegram clients. Re-deriving dimensions from
-                                // the decoded bitmap of whichever file (thumbnail vs full photo)
-                                // happens to finish downloading first caused the bubble to resize
-                                // twice — once when the thumbnail landed, again when the full
-                                // photo landed — because decoded pixel bounds don't always match
-                                // TDLib's reported size (JPEG scaling/EXIF rounding differences).
                                 if (downloadedFileId == content.fileId) {
                                     mainFileId = content.fileId
                                     mainPathUpdated = true
                                     if (isError) fileIdToRetry = content.fileId
+                                    val bounds = resolvedImageBounds
                                     content.copy(
                                         path = finalPath,
+                                        width = bounds?.first ?: content.width,
+                                        height = bounds?.second ?: content.height,
                                         isDownloading = false,
                                         downloadError = isError
                                     )
                                 } else if (finalPath != null) {
-                                    content.copy(thumbnailPath = finalPath)
+                                    // Thumbnail finished downloading. This fires immediately
+                                    // on receive, well before the user opens/downloads the full
+                                    // photo — so this is the only place that can correct the
+                                    // bubble's box size in real time for a message the user
+                                    // hasn't tapped on yet. Thumbnail aspect ratio always
+                                    // matches the full photo, so it's safe to use here.
+                                    val bounds = resolvedImageBounds
+                                    content.copy(
+                                        thumbnailPath = finalPath,
+                                        width = bounds?.first ?: content.width,
+                                        height = bounds?.second ?: content.height
+                                    )
                                 } else {
                                     content
                                 }
                             }
 
                             is MessageContent.Video -> {
-                                // Same reasoning as MessageContent.Photo above: keep TDLib's
-                                // reported width/height as-is, never overwrite from decoded bounds.
                                 if (downloadedFileId == content.fileId) {
                                     mainFileId = content.fileId
                                     mainPathUpdated = true
                                     if (isError) fileIdToRetry = content.fileId
+                                    val bounds = resolvedVideoBounds
                                     content.copy(
                                         path = finalPath,
+                                        width = bounds?.first ?: content.width,
+                                        height = bounds?.second ?: content.height,
                                         isDownloading = false,
                                         downloadError = isError
                                     )
                                 } else if (finalPath != null) {
-                                    content.copy(thumbnailPath = finalPath)
+                                    // Video thumbnail is a still image, so its aspect ratio
+                                    // matches the video and BitmapFactory can read it directly.
+                                    val bounds = resolvedImageBounds
+                                    content.copy(
+                                        thumbnailPath = finalPath,
+                                        width = bounds?.first ?: content.width,
+                                        height = bounds?.second ?: content.height
+                                    )
                                 } else {
                                     content
                                 }
