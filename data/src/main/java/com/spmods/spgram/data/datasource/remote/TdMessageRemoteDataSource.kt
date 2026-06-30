@@ -1618,17 +1618,9 @@ class TdMessageRemoteDataSource(
     }
 
     /** Returns true if the refreshed message now has real (non-zero) photo dimensions,
-     *  or isn't a photo at all — i.e. true means "no further retry needed."
-     *
-     *  IMPORTANT: getMessage() returns a cached message if one is present (see its
-     *  implementation), so without clearing the cache here every retry attempt after
-     *  the first would just return the same stale, zero-dimension message that was
-     *  cached the first time TDLib was actually queried — meaning later retries
-     *  silently never re-checked TDLib at all, no matter how long we waited. Removing
-     *  the cache entry before each attempt forces a real TDLib round-trip every time. */
+     *  or isn't a photo at all — i.e. true means "no further retry needed." */
     private suspend fun refreshAndEmitMessage(chatId: Long, messageId: Long): Boolean {
         if (messageId == 0L) return true
-        cache.removeMessage(chatId, messageId)
         val msg = getMessage(chatId, messageId) ?: return true
         val model = mapMessageToModel(msg)
         messageEditedFlow.emit(model)
