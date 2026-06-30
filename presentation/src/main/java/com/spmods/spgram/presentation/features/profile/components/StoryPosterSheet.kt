@@ -21,9 +21,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Image as ImageIcon
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.Photo as ImageIcon
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -224,7 +224,7 @@ fun StoryPosterSheet(
                     enabled = !isPreparingMedia && !isPosting
                 ) {
                     Icon(
-                        imageVector = Icons.Default.VideoLibrary,
+                        imageVector = Icons.Default.Videocam,
                         contentDescription = null,
                         modifier = Modifier
                             .size(18.dp)
@@ -265,7 +265,7 @@ fun StoryPosterSheet(
                             )
                         }
                         Icon(
-                            imageVector = Icons.Default.PlayCircle,
+                            imageVector = Icons.Default.PlayArrow,
                             contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier
