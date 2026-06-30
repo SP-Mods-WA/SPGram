@@ -165,7 +165,12 @@ class ChatUpdateHandler(
 
             is TdApi.UpdateFile -> {
                 if (fileManager.handleFileUpdate(update.file)) {
+                    // ✅ FIX: chat-list photo IDs (chatPhotoIds) don't cover normal
+                    // message photos/videos. Fall back to the message file registry so
+                    // the chat screen actually refreshes when a photo/video download
+                    // completes, instead of staying at thumbnail size until restart.
                     val chatId = fileManager.getChatIdByPhotoId(update.file.id)
+                        ?: fileManager.getMessageChatIdByFileId(update.file.id)
                     onTriggerUpdate(chatId)
                     onRefreshForumTopics()
                 }
