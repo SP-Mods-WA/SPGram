@@ -121,9 +121,25 @@ internal class MessageContentMapper(
                         TdMessageRemoteDataSource.DownloadType.DEFAULT, 0, 0, false
                     )
                 }
-                val bestWidth = sizes.maxByOrNull { it.width * it.height }?.width
+                // BUG FIX: width/height must match whichever size's file `path` is actually
+                // being rendered. findBestAvailablePath() can fall back to a smaller
+                // already-downloaded size (e.g. the thumbnail) while the full photo is
+                // still downloading. Previously width/height were always taken from the
+                // LARGEST size regardless of what was shown, so the bubble box was sized
+                // for the full photo while a smaller thumbnail bitmap was decoded into it
+                // (stretched/letterboxed). Only after the full photo finished downloading
+                // and the message was re-mapped (e.g. on app restart) did width/height and
+                // the displayed bitmap finally agree.
+                val displayedSize = sizes.firstOrNull { size ->
+                    val sizeFile = fileHelper.getUpdatedFile(size.photo)
+                    path != null && sizeFile.local.path == path
+                } ?: photoSize
+
+                val bestWidth = displayedSize?.width
+                    ?: sizes.maxByOrNull { it.width * it.height }?.width
                     ?: photoSize?.width ?: 0
-                val bestHeight = sizes.maxByOrNull { it.width * it.height }?.height
+                val bestHeight = displayedSize?.height
+                    ?: sizes.maxByOrNull { it.width * it.height }?.height
                     ?: photoSize?.height ?: 0
 
                 MessageContent.Photo(
