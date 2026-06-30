@@ -115,8 +115,16 @@ internal class MessagePersistenceMapper(
                 val thumbnail = sizes.find { it.type == "m" }
                     ?: sizes.find { it.type == "s" }
                 val fileId = best?.photo?.id ?: 0
-                val path = best?.photo?.local?.path?.takeIf { fileHelper.isValidPath(it) }
-                val thumbnailPath = thumbnail?.photo?.local?.path?.takeIf { fileHelper.isValidPath(it) }
+                // ✅ FIX: read from the live file cache (fileHelper.getUpdatedFile), not
+                // best.photo directly. best.photo is a snapshot embedded in the cached
+                // TdApi.Message and is never mutated when UpdateFile arrives later, so
+                // its local.path stayed null/stale even after the download completed —
+                // causing the bubble to render at thumbnail size until app restart
+                // (which discards the stale ChatCache message and fetches a fresh one).
+                val updatedBestFile = best?.photo?.let(fileHelper::getUpdatedFile)
+                val updatedThumbFile = thumbnail?.photo?.let(fileHelper::getUpdatedFile)
+                val path = updatedBestFile?.local?.path?.takeIf { fileHelper.isValidPath(it) }
+                val thumbnailPath = updatedThumbFile?.local?.path?.takeIf { fileHelper.isValidPath(it) }
                 CachedMessageContent(
                     "photo",
                     content.caption.text,
@@ -132,7 +140,12 @@ internal class MessagePersistenceMapper(
 
             is TdApi.MessageVideo -> {
                 val fileId = content.video.video.id
-                val path = content.video.video.local.path.takeIf { fileHelper.isValidPath(it) }
+                // ✅ FIX: same stale-snapshot issue as MessagePhoto above — read the
+                // live file from the cache instead of content.video.video directly.
+                val updatedVideoFile = fileHelper.getUpdatedFile(content.video.video)
+                val updatedThumbFile = content.video.thumbnail?.file?.let(fileHelper::getUpdatedFile)
+                val path = updatedVideoFile.local?.path?.takeIf { fileHelper.isValidPath(it) }
+                val thumbPath = updatedThumbFile?.local?.path?.takeIf { fileHelper.isValidPath(it) }
                 CachedMessageContent(
                     "video",
                     content.caption.text,
@@ -140,43 +153,47 @@ internal class MessagePersistenceMapper(
                         content.video.width,
                         content.video.height,
                         content.video.duration,
-                        content.video.thumbnail?.file?.local?.path
-                            ?.takeIf { fileHelper.isValidPath(it) }
-                            .orEmpty(),
+                        thumbPath.orEmpty(),
                         if (content.video.supportsStreaming) 1 else 0
                     ),
                     fileId = fileId,
                     path = path,
-                    thumbnailPath = content.video.thumbnail?.file?.local?.path?.takeIf { fileHelper.isValidPath(it) },
+                    thumbnailPath = thumbPath,
                     minithumbnail = content.video.minithumbnail?.data,
                     isViewOnce = content.isSecret,
                     isViewOnceOpened = false
                 )
             }
 
-            is TdApi.MessageVoiceNote -> CachedMessageContent(
-                "voice",
-                content.caption.text,
-                encodeMeta(content.voiceNote.duration),
-                fileId = content.voiceNote.voice.id,
-                path = content.voiceNote.voice.local.path.takeIf { fileHelper.isValidPath(it) }
-            )
+            is TdApi.MessageVoiceNote -> {
+                val updatedFile = fileHelper.getUpdatedFile(content.voiceNote.voice)
+                CachedMessageContent(
+                    "voice",
+                    content.caption.text,
+                    encodeMeta(content.voiceNote.duration),
+                    fileId = content.voiceNote.voice.id,
+                    path = updatedFile.local?.path?.takeIf { fileHelper.isValidPath(it) }
+                )
+            }
 
-            is TdApi.MessageVideoNote -> CachedMessageContent(
-                "video_note",
-                "",
-                encodeMeta(
-                    content.videoNote.duration,
-                    content.videoNote.length,
-                    content.videoNote.thumbnail?.file?.local?.path
-                        ?.takeIf { fileHelper.isValidPath(it) }
-                        .orEmpty()
-                ),
-                fileId = content.videoNote.video.id,
-                path = content.videoNote.video.local.path.takeIf { fileHelper.isValidPath(it) },
-                isViewOnce = content.isSecret,
-                isViewOnceOpened = content.isViewed
-            )
+            is TdApi.MessageVideoNote -> {
+                val updatedVideoFile = fileHelper.getUpdatedFile(content.videoNote.video)
+                val updatedThumbFile = content.videoNote.thumbnail?.file?.let(fileHelper::getUpdatedFile)
+                val thumbPath = updatedThumbFile?.local?.path?.takeIf { fileHelper.isValidPath(it) }
+                CachedMessageContent(
+                    "video_note",
+                    "",
+                    encodeMeta(
+                        content.videoNote.duration,
+                        content.videoNote.length,
+                        thumbPath.orEmpty()
+                    ),
+                    fileId = content.videoNote.video.id,
+                    path = updatedVideoFile.local?.path?.takeIf { fileHelper.isValidPath(it) },
+                    isViewOnce = content.isSecret,
+                    isViewOnceOpened = content.isViewed
+                )
+            }
 
             is TdApi.MessageSticker -> {
                 val format = when (content.sticker.format) {
@@ -185,6 +202,7 @@ internal class MessagePersistenceMapper(
                     is TdApi.StickerFormatWebm -> "webm"
                     else -> "unknown"
                 }
+                val updatedFile = fileHelper.getUpdatedFile(content.sticker.sticker)
                 CachedMessageContent(
                     "sticker",
                     content.sticker.emoji,
@@ -196,45 +214,54 @@ internal class MessagePersistenceMapper(
                         format
                     ),
                     fileId = content.sticker.sticker.id,
-                    path = content.sticker.sticker.local.path.takeIf { fileHelper.isValidPath(it) }
+                    path = updatedFile.local?.path?.takeIf { fileHelper.isValidPath(it) }
                 )
             }
 
-            is TdApi.MessageDocument -> CachedMessageContent(
-                "document",
-                content.caption.text,
-                encodeMeta(content.document.fileName, content.document.mimeType, content.document.document.size),
-                fileId = content.document.document.id,
-                path = content.document.document.local.path.takeIf { fileHelper.isValidPath(it) }
-            )
+            is TdApi.MessageDocument -> {
+                val updatedFile = fileHelper.getUpdatedFile(content.document.document)
+                CachedMessageContent(
+                    "document",
+                    content.caption.text,
+                    encodeMeta(content.document.fileName, content.document.mimeType, content.document.document.size),
+                    fileId = content.document.document.id,
+                    path = updatedFile.local?.path?.takeIf { fileHelper.isValidPath(it) }
+                )
+            }
 
-            is TdApi.MessageAudio -> CachedMessageContent(
-                "audio",
-                content.caption.text,
-                encodeMeta(
-                    content.audio.duration,
-                    content.audio.title.orEmpty(),
-                    content.audio.performer.orEmpty(),
-                    content.audio.fileName.orEmpty()
-                ),
-                fileId = content.audio.audio.id,
-                path = content.audio.audio.local.path.takeIf { fileHelper.isValidPath(it) }
-            )
+            is TdApi.MessageAudio -> {
+                val updatedFile = fileHelper.getUpdatedFile(content.audio.audio)
+                CachedMessageContent(
+                    "audio",
+                    content.caption.text,
+                    encodeMeta(
+                        content.audio.duration,
+                        content.audio.title.orEmpty(),
+                        content.audio.performer.orEmpty(),
+                        content.audio.fileName.orEmpty()
+                    ),
+                    fileId = content.audio.audio.id,
+                    path = updatedFile.local?.path?.takeIf { fileHelper.isValidPath(it) }
+                )
+            }
 
-            is TdApi.MessageAnimation -> CachedMessageContent(
-                "gif",
-                content.caption.text,
-                encodeMeta(
-                    content.animation.width,
-                    content.animation.height,
-                    content.animation.duration,
-                    content.animation.thumbnail?.file?.local?.path
-                        ?.takeIf { fileHelper.isValidPath(it) }
-                        .orEmpty()
-                ),
-                fileId = content.animation.animation.id,
-                path = content.animation.animation.local.path.takeIf { fileHelper.isValidPath(it) }
-            )
+            is TdApi.MessageAnimation -> {
+                val updatedFile = fileHelper.getUpdatedFile(content.animation.animation)
+                val updatedThumbFile = content.animation.thumbnail?.file?.let(fileHelper::getUpdatedFile)
+                val thumbPath = updatedThumbFile?.local?.path?.takeIf { fileHelper.isValidPath(it) }
+                CachedMessageContent(
+                    "gif",
+                    content.caption.text,
+                    encodeMeta(
+                        content.animation.width,
+                        content.animation.height,
+                        content.animation.duration,
+                        thumbPath.orEmpty()
+                    ),
+                    fileId = content.animation.animation.id,
+                    path = updatedFile.local?.path?.takeIf { fileHelper.isValidPath(it) }
+                )
+            }
 
             is TdApi.MessagePoll -> CachedMessageContent(
                 "poll",
