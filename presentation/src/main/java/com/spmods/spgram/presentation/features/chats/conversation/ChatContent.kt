@@ -940,7 +940,7 @@ fun ChatContent(
                             )
                         }
                     },
-                    onLikeStory = { storyClicked ->
+                    onSetReaction = { storyClicked, _ ->
                         coroutineScope.launch {
                             component.repositoryMessage.sendStoryReply(
                                 chatId = storyClicked.posterChatId,
