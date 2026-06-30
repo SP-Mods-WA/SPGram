@@ -565,24 +565,38 @@ class TdMessageRemoteDataSource(
         val content = when (val c = msg.content) {
             is TdApi.MessagePhoto -> {
                 val best = c.photo.sizes.maxByOrNull { it.width * it.height }
+                val fid = best?.photo?.id ?: 0
+                // ✅ CRITICAL: mapContent() in MessageContentMapper normally calls
+                // fileHelper.registerCachedFile() -> fileDownloadQueue.registry.register(),
+                // which is what lets handleFileUpdate() -> updateMessageWithFile() find this
+                // (chatId, messageId) pair when the download later completes and emit a
+                // refreshed message. The fallback path skipped this entirely, so even though
+                // width/height were fixed, the bubble never got the "download complete" event
+                // and stayed stuck until the chat was re-entered (which re-runs the full
+                // mapper and registers it). Register here too so the live update fires.
+                if (fid != 0) fileDownloadQueue.registry.register(fid, msg.chatId, msg.id)
                 MessageContent.Photo(
                     path = null,
                     thumbnailPath = null,
                     width = best?.width ?: 0,
                     height = best?.height ?: 0,
                     caption = c.caption.text,
-                    fileId = best?.photo?.id ?: 0
+                    fileId = fid
                 )
             }
-            is TdApi.MessageVideo -> MessageContent.Video(
-                path = null,
-                thumbnailPath = null,
-                width = c.video.width,
-                height = c.video.height,
-                duration = c.video.duration,
-                caption = c.caption.text,
-                fileId = c.video.video.id
-            )
+            is TdApi.MessageVideo -> {
+                val fid = c.video.video.id
+                if (fid != 0) fileDownloadQueue.registry.register(fid, msg.chatId, msg.id)
+                MessageContent.Video(
+                    path = null,
+                    thumbnailPath = null,
+                    width = c.video.width,
+                    height = c.video.height,
+                    duration = c.video.duration,
+                    caption = c.caption.text,
+                    fileId = fid
+                )
+            }
             else -> MessageContent.Text("")
         }
         return MessageModel(
