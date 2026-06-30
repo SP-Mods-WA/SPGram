@@ -202,29 +202,7 @@ class MessageRepositoryImpl(
     private suspend fun processCachedUpdate(update: TdApi.Update) {
         when (update) {
             is TdApi.UpdateNewMessage -> {
-                // ✅ ROOT CAUSE FIX: TDLib's updateNewMessage for an INCOMING photo can
-                // arrive with content.photo.sizes only partially populated (e.g. just the
-                // small "s"/"m" thumbnail sizes) — the real/large size metadata is filled
-                // in moments later via a separate updateMessageContent. Outgoing (sent-by-
-                // us) photos don't have this problem because the full sizes are already
-                // known locally at send time. Previously we inserted update.message into
-                // Room as-is here, so an incoming photo's FIRST persisted row could lock in
-                // wrong/small width-height — and since nothing later necessarily re-wrote
-                // that row (no download was needed, so no UpdateFile fired either), it
-                // stayed wrong until something else forced a fresh getMessage(). Mirror the
-                // same re-fetch-and-confirm pattern already used in the UpdateMessageContent
-                // branch below: for incoming photos, re-fetch via getMessage() before the
-                // first Room insert so we persist correct, fully-resolved dimensions from
-                // the start.
-                val isIncomingPhoto = !update.message.isOutgoing &&
-                    update.message.content is TdApi.MessagePhoto
-                val messageToCache = if (isIncomingPhoto) {
-                    messageRemoteDataSource.getMessage(update.message.chatId, update.message.id)
-                        ?: update.message
-                } else {
-                    update.message
-                }
-                val entity = messageMapper.mapToEntity(messageToCache, ::resolveSenderName)
+                val entity = messageMapper.mapToEntity(update.message, ::resolveSenderName)
                 chatLocalDataSource.insertMessage(entity)
             }
 
