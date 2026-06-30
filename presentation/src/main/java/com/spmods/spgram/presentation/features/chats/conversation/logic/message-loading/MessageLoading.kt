@@ -1093,31 +1093,33 @@ internal fun DefaultChatComponent.setupMessageCollectors() {
 
                         val newContent = when (val content = message.content) {
                             is MessageContent.Photo -> {
+                                // NOTE: width/height are intentionally left untouched here.
+                                // TDLib already reports the correct photo dimensions in
+                                // content.photo.sizes at message-creation time (see
+                                // MessageContentMapper), before any file is downloaded.
+                                // Previously this branch re-derived bounds by decoding the
+                                // downloaded file with BitmapFactory.decodeFile() — a blocking
+                                // disk read + decode running synchronously on the main thread
+                                // inside this state-update lambda (updateMessageContent runs
+                                // on `scope`, i.e. Dispatchers.Main, while holding messageMutex).
+                                // That caused two problems: (1) the bubble briefly kept its
+                                // fallback aspect ratio because the decode didn't land in the
+                                // same recomposition pass, only "fixing itself" when the chat
+                                // was fully reloaded from the mapper; (2) it blocked the UI
+                                // thread on every photo/thumbnail download. Trusting TDLib's
+                                // metadata avoids both issues entirely.
                                 if (downloadedFileId == content.fileId) {
                                     mainFileId = content.fileId
                                     mainPathUpdated = true
                                     if (isError) fileIdToRetry = content.fileId
-                                    val bounds = finalPath?.let(::realImageBounds)
                                     content.copy(
                                         path = finalPath,
-                                        width = bounds?.first ?: content.width,
-                                        height = bounds?.second ?: content.height,
                                         isDownloading = false,
                                         downloadError = isError
                                     )
                                 } else if (finalPath != null) {
-                                    // Thumbnail finished downloading. This fires immediately
-                                    // on receive, well before the user opens/downloads the full
-                                    // photo — so this is the only place that can correct the
-                                    // bubble's box size in real time for a message the user
-                                    // hasn't tapped on yet. Thumbnail aspect ratio always
-                                    // matches the full photo, so it's safe to use here.
-                                    val bounds = realImageBounds(finalPath)
-                                    content.copy(
-                                        thumbnailPath = finalPath,
-                                        width = bounds?.first ?: content.width,
-                                        height = bounds?.second ?: content.height
-                                    )
+                                    // Thumbnail finished downloading.
+                                    content.copy(thumbnailPath = finalPath)
                                 } else {
                                     content
                                 }
