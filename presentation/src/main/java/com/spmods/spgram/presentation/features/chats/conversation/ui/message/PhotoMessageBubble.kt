@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable  // ✅ මෙතන add කරන�
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -166,19 +166,8 @@ fun PhotoMessageBubble(
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
     var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
 
-    // ✅ ROOT FIX: IntrinsicSize.Max forces this Column to measure its INTRINSIC width —
-    // i.e. "how wide do you want to be at your preferred height?". The photo Box below
-    // uses Modifier.fillMaxWidth().aspectRatio(ratio), which has no real intrinsic width;
-    // under intrinsic measurement Compose falls back to deriving width from the Box's
-    // minimum height (120dp), so a tall/narrow image (e.g. a phone screenshot, ratio
-    // ~0.5) intrinsically wants width = 120dp * 0.5 = 60dp — a tiny sliver bubble. This
-    // is exactly the "real_size_does_not_load" bug: the bubble looks correct once a full
-    // download/restart happens to skip this intrinsic pass, but the layout is fundamentally
-    // wrong from the first frame otherwise. wrapContentWidth() lets the column size to its
-    // child's actual (non-intrinsic) measured width instead, matching how Telegram clients
-    // size media bubbles.
     Column(
-        modifier = modifier.wrapContentWidth(if (isOutgoing) Alignment.End else Alignment.Start),
+        modifier = modifier.width(IntrinsicSize.Max),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
         Surface(
