@@ -9,6 +9,7 @@ import com.spmods.spgram.data.mapper.isValidFilePath
 import com.spmods.spgram.domain.models.FoundStoryViewersModel
 import com.spmods.spgram.domain.models.StoryContentModel
 import com.spmods.spgram.domain.models.StoryModel
+import com.spmods.spgram.domain.models.StoryPrivacy
 import com.spmods.spgram.domain.models.StoryViewerModel
 import com.spmods.spgram.domain.repository.StoryRepository
 import kotlinx.coroutines.flow.Flow
@@ -115,13 +116,14 @@ class StoryRepositoryImpl(
         chatId: Long,
         photoPath: String,
         caption: String,
-        activePeriodSeconds: Int
+        activePeriodSeconds: Int,
+        privacy: StoryPrivacy
     ): StoryModel? {
         val content = TdApi.InputStoryContentPhoto(
             TdApi.InputFileLocal(photoPath),
             intArrayOf()
         )
-        return postStory(chatId, content, caption, activePeriodSeconds)
+        return postStory(chatId, content, caption, activePeriodSeconds, privacy)
     }
 
     override suspend fun postVideoStory(
@@ -129,7 +131,8 @@ class StoryRepositoryImpl(
         videoPath: String,
         thumbnailPath: String,
         caption: String,
-        activePeriodSeconds: Int
+        activePeriodSeconds: Int,
+        privacy: StoryPrivacy
     ): StoryModel? {
         val content = TdApi.InputStoryContentVideo(
             TdApi.InputFileLocal(videoPath),
@@ -138,7 +141,7 @@ class StoryRepositoryImpl(
             0.0,
             false
         )
-        return postStory(chatId, content, caption, activePeriodSeconds)
+        return postStory(chatId, content, caption, activePeriodSeconds, privacy)
     }
 
     override suspend fun deleteStory(chatId: Long, storyId: Int) {
@@ -213,14 +216,19 @@ class StoryRepositoryImpl(
         chatId: Long,
         content: TdApi.InputStoryContent,
         caption: String,
-        activePeriodSeconds: Int
+        activePeriodSeconds: Int,
+        privacy: StoryPrivacy
     ): StoryModel? {
         val req = TdApi.PostStory().apply {
             this.chatId = chatId
             this.content = content
             this.areas = null
             this.caption = TdApi.FormattedText(caption, emptyArray())
-            this.privacySettings = TdApi.StoryPrivacySettingsEveryone()
+            this.privacySettings = when (privacy) {
+                StoryPrivacy.EVERYONE -> TdApi.StoryPrivacySettingsEveryone()
+                StoryPrivacy.CONTACTS -> TdApi.StoryPrivacySettingsContacts()
+                StoryPrivacy.CLOSE_FRIENDS -> TdApi.StoryPrivacySettingsCloseFriends()
+            }
             this.albumIds = intArrayOf()
             this.activePeriod = activePeriodSeconds
             this.fromStoryFullId = null
