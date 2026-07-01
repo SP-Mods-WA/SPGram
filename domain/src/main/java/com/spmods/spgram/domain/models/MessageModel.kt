@@ -121,6 +121,9 @@ sealed interface MessageContent {
             if (downloadError != other.downloadError) return false
             if (fileId != other.fileId) return false
             if (hasSpoiler != other.hasSpoiler) return false
+            if (isViewOnce != other.isViewOnce) return false
+            if (isViewOnceOpened != other.isViewOnceOpened) return false
+            if (selfDestructSeconds != other.selfDestructSeconds) return false
             if (path != other.path) return false
             if (thumbnailPath != other.thumbnailPath) return false
             if (caption != other.caption) return false
@@ -140,6 +143,9 @@ sealed interface MessageContent {
             result = 31 * result + downloadError.hashCode()
             result = 31 * result + fileId
             result = 31 * result + hasSpoiler.hashCode()
+            result = 31 * result + isViewOnce.hashCode()
+            result = 31 * result + isViewOnceOpened.hashCode()
+            result = 31 * result + selfDestructSeconds
             result = 31 * result + (path?.hashCode() ?: 0)
             result = 31 * result + (thumbnailPath?.hashCode() ?: 0)
             result = 31 * result + caption.hashCode()
@@ -186,6 +192,8 @@ sealed interface MessageContent {
             if (fileId != other.fileId) return false
             if (supportsStreaming != other.supportsStreaming) return false
             if (hasSpoiler != other.hasSpoiler) return false
+            if (isViewOnce != other.isViewOnce) return false
+            if (isViewOnceOpened != other.isViewOnceOpened) return false
             if (path != other.path) return false
             if (thumbnailPath != other.thumbnailPath) return false
             if (caption != other.caption) return false
@@ -207,6 +215,8 @@ sealed interface MessageContent {
             result = 31 * result + fileId
             result = 31 * result + supportsStreaming.hashCode()
             result = 31 * result + hasSpoiler.hashCode()
+            result = 31 * result + isViewOnce.hashCode()
+            result = 31 * result + isViewOnceOpened.hashCode()
             result = 31 * result + (path?.hashCode() ?: 0)
             result = 31 * result + (thumbnailPath?.hashCode() ?: 0)
             result = 31 * result + caption.hashCode()
@@ -244,6 +254,8 @@ sealed interface MessageContent {
             if (downloadError != other.downloadError) return false
             if (fileId != other.fileId) return false
             if (isListened != other.isListened) return false
+            if (isViewOnce != other.isViewOnce) return false
+            if (isViewOnceOpened != other.isViewOnceOpened) return false
             if (path != other.path) return false
             if (!(waveform contentEquals other.waveform)) return false
 
@@ -259,6 +271,8 @@ sealed interface MessageContent {
             result = 31 * result + downloadError.hashCode()
             result = 31 * result + fileId
             result = 31 * result + isListened.hashCode()
+            result = 31 * result + isViewOnce.hashCode()
+            result = 31 * result + isViewOnceOpened.hashCode()
             result = 31 * result + (path?.hashCode() ?: 0)
             result = 31 * result + (waveform?.contentHashCode() ?: 0)
             return result
