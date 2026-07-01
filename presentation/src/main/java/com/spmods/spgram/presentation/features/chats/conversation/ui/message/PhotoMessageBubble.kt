@@ -29,7 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -180,24 +179,6 @@ fun PhotoMessageBubble(
         androidx.compose.ui.unit.DpSize(w.dp, h.dp)
     }
 
-    // IMPORTANT: pointerInput(Unit) below never restarts its gesture-detection
-    // coroutine (its key never changes), so the onTap lambda captures whatever
-    // `content`/`msg` were current AT FIRST COMPOSITION and keeps using those
-    // forever — it does not see later recompositions where content.path,
-    // content.isDownloading, or content.isViewOnceOpened have changed. This is
-    // exactly the pattern VideoMessageBubble avoids with onVideoClickState /
-    // onCancelDownloadState (rememberUpdatedState). Without this, a view-once
-    // photo whose download finishes AFTER the bubble was first composed keeps
-    // reacting to tap as if path were still null (or vice versa), which is why
-    // tapping the flame icon could silently do nothing.
-    val contentState by rememberUpdatedState(content)
-    val msgState by rememberUpdatedState(msg)
-    val onOpenViewOnceState by rememberUpdatedState(onOpenViewOnce)
-    val onDownloadPhotoState by rememberUpdatedState(onDownloadPhoto)
-    val onCancelDownloadState by rememberUpdatedState(onCancelDownload)
-    val onPhotoClickState by rememberUpdatedState(onPhotoClick)
-    val onLongClickState by rememberUpdatedState(onLongClick)
-
     Column(
         modifier = modifier,
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
@@ -265,32 +246,35 @@ fun PhotoMessageBubble(
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {
-                                    val c = contentState
-                                    val m = msgState
                                     when {
-                                        c.isViewOnce && !c.isViewOnceOpened -> {
-                                            // Mirrors VideoMessageBubble: always delegate to
-                                            // onOpenViewOnce, whether the file is downloaded
-                                            // yet or not. handleOpenViewOnce reads the LIVE
-                                            // state itself and decides to download or open —
-                                            // it does not rely on this closure's snapshot of
-                                            // content, so it can never go stale.
-                                            onOpenViewOnceState(m)
+                                        content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank() -> {
+                                            // Downloaded — flame icon tap opens the viewer.
+                                            onOpenViewOnce(msg)
                                         }
-                                        c.hasSpoiler -> {
+                                        content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
+                                            // Download in progress — tap cancels it.
+                                            AutoDownloadSuppression.suppress(content.fileId)
+                                            onCancelDownload(content.fileId)
+                                        }
+                                        content.isViewOnce && !content.isViewOnceOpened -> {
+                                            // Not downloaded yet — tap starts the download.
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            onDownloadPhoto(content.fileId)
+                                        }
+                                        content.hasSpoiler -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
                                         }
-                                        c.isDownloading -> {
-                                            AutoDownloadSuppression.suppress(c.fileId)
-                                            onCancelDownloadState(c.fileId)
+                                        content.isDownloading -> {
+                                            AutoDownloadSuppression.suppress(content.fileId)
+                                            onCancelDownload(content.fileId)
                                         }
                                         else -> {
-                                            AutoDownloadSuppression.clear(c.fileId)
-                                            if (!c.path.isNullOrBlank()) onPhotoClickState(m) else onDownloadPhotoState(c.fileId)
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
                                         }
                                     }
                                 },
-                                onLongPress = { offset -> onLongClickState(imagePosition + offset) }
+                                onLongPress = { offset -> onLongClick(imagePosition + offset) }
                             )
                         }
                 ) {
@@ -386,12 +370,30 @@ fun PhotoMessageBubble(
 
                     // --- View once overlay ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Blurred thumbnail background
-                        MediaLoadingBackground(
-                            previewData = content.thumbnailPath ?: content.minithumbnail,
-                            contentScale = ContentScale.Crop,
-                            previewBlur = 20.dp
-                        )
+                        // Blurred background: use full photo path when downloaded (better quality),
+                        // fall back to thumbnail/minithumbnail while waiting.
+                        val blurSource = content.path?.takeIf { it.isNotBlank() }
+                            ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
+                            ?: content.minithumbnail
+                        if (blurSource != null) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(blurSource)
+                                    .crossfade(false)
+                                    .build(),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .blur(25.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            MediaLoadingBackground(
+                                previewData = content.minithumbnail,
+                                contentScale = ContentScale.Crop,
+                                previewBlur = 20.dp
+                            )
+                        }
                         // Dark scrim
                         Box(
                             modifier = Modifier
@@ -399,24 +401,18 @@ fun PhotoMessageBubble(
                                 .background(Color.Black.copy(alpha = 0.45f))
                         )
                         // Center icon reflects the current download state:
-                        //   - no path, not downloading -> download icon
-                        //   - downloading -> progress ring
-                        //   - path exists -> flame icon
-                        // Every tap on this overlay, in any of these three visual states,
-                        // routes to the same onOpenViewOnce(msg) call (see outer pointerInput
-                        // handler above) — exactly like VideoMessageBubble's VideoLoadingLayer.
-                        // handleOpenViewOnce reads the live message state itself and decides
-                        // whether to start the download or open the viewer, so the UI layer
-                        // doesn't need its own download/open branching.
+                        //   - no path, not downloading -> download icon (tap starts download)
+                        //   - downloading -> progress ring (tap cancels, same as normal photo)
+                        //   - path exists -> flame icon (tap opens the view-once viewer)
+                        // Tap routing for all three states lives in the outer pointerInput
+                        // handler above, which dispatches based on content.path/isDownloading.
                         Box(
                             modifier = Modifier.align(Alignment.Center),
                             contentAlignment = Alignment.Center
                         ) {
                             when {
                                 content.isDownloading -> {
-                                    // Progress ring — tap (via outer handler) calls
-                                    // onOpenViewOnce again; handleOpenViewOnce is a no-op
-                                    // re-trigger here since a download is already active.
+                                    // Progress ring — tap (via outer handler) cancels the download.
                                     Box(
                                         modifier = Modifier.size(64.dp),
                                         contentAlignment = Alignment.Center
@@ -437,8 +433,7 @@ fun PhotoMessageBubble(
                                 }
                                 content.path == null -> {
                                     // Not downloaded, no active download — tap (via outer
-                                    // handler) calls onOpenViewOnce, which starts the
-                                    // download since path is still null.
+                                    // handler) starts the download, like a normal photo.
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
