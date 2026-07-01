@@ -115,18 +115,12 @@ internal class MessageContentMapper(
                     else -> 0
                 }
                 val photoIsViewOnce = isViewOnce || selfDestructSeconds > 0
-                // Auto-download view-once photos immediately so they are ready to open.
-                // TDLib destroys them server-side after openMessageContent(), so we save
-                // locally first. isViewOnceOpened starts false; ViewOnceOperations updates
-                // local state immediately after the user taps open.
+                // View-once photos are NOT auto-downloaded anymore. The overlay shows a
+                // download icon (like a normal undownloaded photo); tapping it starts the
+                // download with visible progress. Only once content.path is non-null does
+                // the overlay switch to the flame icon, and only a tap on the flame calls
+                // onOpenViewOnce to actually reveal the photo.
                 val photoOpened = false
-                if (photoIsViewOnce && photoFile != null && path == null && !isDownloading && !isQueued) {
-                    fileHelper.clearSuppression(photoFile.id)
-                    fileHelper.enqueueDownload(
-                        photoFile.id, 32,
-                        TdMessageRemoteDataSource.DownloadType.DEFAULT, 0, 0, false
-                    )
-                }
                 val bestWidth = sizes.maxByOrNull { it.width * it.height }?.width
                     ?: photoSize?.width ?: 0
                 val bestHeight = sizes.maxByOrNull { it.width * it.height }?.height
@@ -190,14 +184,9 @@ internal class MessageContentMapper(
                 val downloadProgress = fileHelper.computeDownloadProgress(videoFile)
 
                 val videoIsViewOnce = content.isSecret
-                // Auto-download view-once videos immediately (same as photo).
-                if (videoIsViewOnce && path == null && !isDownloading && !isQueued) {
-                    fileHelper.clearSuppression(videoFile.id)
-                    fileHelper.enqueueDownload(
-                        videoFile.id, 32,
-                        TdMessageRemoteDataSource.DownloadType.VIDEO, 0, 0, false
-                    )
-                } else if (!videoIsViewOnce && path == null && context.networkAutoDownload && video.supportsStreaming) {
+                // View-once videos are NOT auto-downloaded — same as photos, the user
+                // must tap a download icon first (see MessageContentMapper photo section).
+                if (!videoIsViewOnce && path == null && context.networkAutoDownload && video.supportsStreaming) {
                     fileHelper.enqueueDownload(
                         videoFile.id, 1,
                         TdMessageRemoteDataSource.DownloadType.VIDEO, 0, 0, false
