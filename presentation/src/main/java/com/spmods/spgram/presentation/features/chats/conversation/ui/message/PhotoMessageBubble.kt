@@ -106,16 +106,7 @@ fun PhotoMessageBubble(
         }
     }
 
-    // ✅ AUTO-OPEN: When view-once photo download completes, open the viewer
-    LaunchedEffect(content.path, content.isViewOnce, content.isViewOnceOpened) {
-        if (content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank()) {
-            // Small delay to let the image load, then open viewer
-            kotlinx.coroutines.delay(300)
-            onOpenViewOnce(msg)
-        }
-    }
-
-    // Auto-download logic - view-once photos are EXCLUDED (user must tap to download)
+    // Auto-download logic - view-once photos are EXCLUDED
     LaunchedEffect(content.path, content.isDownloading, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
         if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !AutoDownloadSuppression.isSuppressed(content.fileId)) {
             val shouldDownload = when {
@@ -246,7 +237,7 @@ fun PhotoMessageBubble(
                                         content.hasSpoiler && !content.isViewOnce -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
                                         }
-                                        // ✅ VIEW-ONCE: Downloaded - OPEN VIEWER IMMEDIATELY
+                                        // VIEW-ONCE: Downloaded - OPEN VIEWER
                                         content.isViewOnce && !content.isViewOnceOpened && hasFullPhoto -> {
                                             onOpenViewOnce(msg)
                                         }
@@ -284,8 +275,7 @@ fun PhotoMessageBubble(
                         )
                     }
 
-                    // ✅ FIX: Show real image for view-once photos too!
-                    // The blur overlay will be shown on top
+                    // --- Show real image for ALL photos including view-once ---
                     if (hasPath) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -363,20 +353,29 @@ fun PhotoMessageBubble(
                     }
 
                     // --- VIEW-ONCE OVERLAY ---
+                    // ✅ FIX: Blur and scrim should NOT consume taps
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // ✅ Show blur overlay on top of real image
-                        MediaLoadingBackground(
-                            previewData = content.thumbnailPath ?: content.minithumbnail,
-                            contentScale = ContentScale.Crop,
-                            previewBlur = 20.dp
-                        )
-                        // Dark scrim
+                        // ✅ Blur overlay - non-interactive
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.45f))
-                        )
-                        // Center icon
+                                .matchParentSize()
+                                .pointerInput(Unit) {} // Consumes no taps - lets clicks pass through
+                        ) {
+                            MediaLoadingBackground(
+                                previewData = content.thumbnailPath ?: content.minithumbnail,
+                                contentScale = ContentScale.Crop,
+                                previewBlur = 20.dp
+                            )
+                            // Dark scrim - also non-interactive
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.45f))
+                                    .pointerInput(Unit) {} // Consumes no taps
+                            )
+                        }
+                        
+                        // Center icon - display only (tap handled by outer pointerInput)
                         Box(
                             modifier = Modifier.align(Alignment.Center),
                             contentAlignment = Alignment.Center
@@ -417,7 +416,7 @@ fun PhotoMessageBubble(
                                     }
                                 }
                                 else -> {
-                                    // ✅ Downloaded - Show flame icon, tap opens viewer
+                                    // Downloaded - flame icon
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
@@ -434,7 +433,8 @@ fun PhotoMessageBubble(
                                 }
                             }
                         }
-                        // Timer label
+                        
+                        // Timer label - non-interactive
                         val timerLabel = when {
                             content.selfDestructSeconds <= 0 -> "Photo, tap to view"
                             else -> "🔥 ${content.selfDestructSeconds}s · tap to view"
@@ -446,6 +446,7 @@ fun PhotoMessageBubble(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .padding(bottom = 10.dp)
+                                .pointerInput(Unit) {} // Non-interactive
                         )
                     }
 
