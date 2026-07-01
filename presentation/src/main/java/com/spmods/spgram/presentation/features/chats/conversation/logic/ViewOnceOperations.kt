@@ -23,12 +23,6 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
         // Always use the freshest version from current state
         val latest = _state.value.messages.find { it.id == message.id } ?: message
 
-        try {
-            repositoryMessage.openMessageContent(chatId, latest.id)
-        } catch (e: Throwable) {
-            Log.e("ViewOnce", "openMessageContent failed: msgId=${latest.id}", e)
-        }
-
         // Only mark Photo/Video as "opened" once we actually have a path to show —
         // otherwise the view-once overlay (flame icon / download progress / "tap to
         // view" label) disappears the instant the user taps, before the file has even
@@ -40,34 +34,45 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
         val currentPhotoPath = (latest.content as? MessageContent.Photo)?.path ?: passedPhoto?.path
         val currentVideoPath = (latest.content as? MessageContent.Video)?.path ?: passedVideo?.path
 
-        _state.update { state ->
-            state.copy(
-                messages = state.messages.map { msg ->
-                    if (msg.id != latest.id) return@map msg
-                    when (val content = msg.content) {
-                        is MessageContent.Photo ->
-                            if (currentPhotoPath != null) {
-                                msg.copy(content = content.copy(isViewOnceOpened = true))
-                            } else msg
-                        is MessageContent.Video ->
-                            if (currentVideoPath != null) {
-                                msg.copy(content = content.copy(isViewOnceOpened = true))
-                            } else msg
-                        is MessageContent.Voice ->
-                            msg.copy(content = content.copy(isViewOnceOpened = true))
-                        is MessageContent.VideoNote ->
-                            msg.copy(content = content.copy(isViewOnceOpened = true))
-                        else -> msg
+        val hasDisplayablePath = when (latest.content) {
+            is MessageContent.Photo -> currentPhotoPath != null
+            is MessageContent.Video -> currentVideoPath != null
+            is MessageContent.Voice, is MessageContent.VideoNote -> true
+            else -> false
+        }
+
+        // IMPORTANT: only tell TDLib the content was "opened" once we're actually
+        // about to display it (path is ready). TDLib/the server treats this as the
+        // signal that self-destructing media has been viewed and may begin expiring
+        // the underlying file reference shortly after. Calling this BEFORE the photo
+        // has finished downloading — as this used to do — can cause the in-flight
+        // download to fail/hang on slow connections, leaving the user stuck with a
+        // permanently un-openable "tap to view" bubble.
+        if (hasDisplayablePath) {
+            try {
+                repositoryMessage.openMessageContent(chatId, latest.id)
+            } catch (e: Throwable) {
+                Log.e("ViewOnce", "openMessageContent failed: msgId=${latest.id}", e)
+            }
+
+            _state.update { state ->
+                state.copy(
+                    messages = state.messages.map { msg ->
+                        if (msg.id != latest.id) return@map msg
+                        when (val content = msg.content) {
+                            is MessageContent.Photo -> msg.copy(content = content.copy(isViewOnceOpened = true))
+                            is MessageContent.Video -> msg.copy(content = content.copy(isViewOnceOpened = true))
+                            is MessageContent.Voice -> msg.copy(content = content.copy(isViewOnceOpened = true))
+                            is MessageContent.VideoNote -> msg.copy(content = content.copy(isViewOnceOpened = true))
+                            else -> msg
+                        }
                     }
-                }
-            )
+                )
+            }
         }
 
         when (val content = latest.content) {
             is MessageContent.Photo -> {
-                // Prefer the path from the passed-in message (which the UI already
-                // confirmed is non-null by showing the flame icon), falling back to
-                // latest state in case a fresh updateFile arrived in between.
                 val path = currentPhotoPath
                 if (path != null) {
                     onOpenImages(
@@ -79,8 +84,9 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                     )
                 } else {
                     // Not downloaded yet: kick off the download and leave the overlay
-                    // in place. ViewOnceAutoOpen (in PhotoMessageBubble) watches for
-                    // content.path to arrive and will open the viewer automatically —
+                    // in place (openMessageContent is NOT sent yet — see above). The
+                    // auto-open effect in PhotoMessageBubble watches for content.path
+                    // to arrive and will call this function again automatically —
                     // no second tap required.
                     Log.d("ViewOnce", "Photo not downloaded yet — triggering download")
                     onDownloadFile(content.fileId)
