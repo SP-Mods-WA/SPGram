@@ -91,7 +91,6 @@ fun PhotoMessageBubble(
     val smallCorner = 6.dp
     val tailCorner = 0.dp
 
-    // ✅ ROOT FIX: Compute display path directly from content on every recompose.
     val displayPath: String? = content.path?.takeIf { it.isNotBlank() }
         ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
     val hasFullPhoto = !content.path.isNullOrBlank()
@@ -107,15 +106,16 @@ fun PhotoMessageBubble(
         }
     }
 
-    // ✅ FIX: Auto-download view-once photo when downloaded, then auto-open it
+    // ✅ AUTO-OPEN: When view-once photo download completes, open the viewer
     LaunchedEffect(content.path, content.isViewOnce, content.isViewOnceOpened) {
         if (content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank()) {
-            // Auto-open view-once photo after download completes
+            // Small delay to let the image load, then open viewer
+            kotlinx.coroutines.delay(300)
             onOpenViewOnce(msg)
         }
     }
 
-    // Auto-download logic - view-once photos are excluded
+    // Auto-download logic - view-once photos are EXCLUDED (user must tap to download)
     LaunchedEffect(content.path, content.isDownloading, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
         if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !AutoDownloadSuppression.isSuppressed(content.fileId)) {
             val shouldDownload = when {
@@ -149,7 +149,6 @@ fun PhotoMessageBubble(
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
     var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
 
-    // Compute exact bubble size from photo pixel dimensions
     val maxBubbleW = 260.dp
     val maxBubbleH = 320.dp
     val minBubbleW = 120.dp
@@ -232,18 +231,10 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                // ✅ FIX: View-once photos use dynamic size, not fixed 260dp
-                val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
-                    Modifier
-                        .size(bubbleSize.width, bubbleSize.height)
-                        .clipToBounds()
-                        .onGloballyPositioned { imagePosition = it.positionInWindow() }
-                } else {
-                    Modifier
-                        .size(bubbleSize.width, bubbleSize.height)
-                        .clipToBounds()
-                        .onGloballyPositioned { imagePosition = it.positionInWindow() }
-                }
+                val boxModifier = Modifier
+                    .size(bubbleSize.width, bubbleSize.height)
+                    .clipToBounds()
+                    .onGloballyPositioned { imagePosition = it.positionInWindow() }
 
                 Box(
                     modifier = boxModifier
@@ -251,30 +242,30 @@ fun PhotoMessageBubble(
                             detectTapGestures(
                                 onTap = {
                                     when {
-                                        // ✅ FIX: Spoiler check first (only for non-view-once)
+                                        // Spoiler check first (only for non-view-once)
                                         content.hasSpoiler && !content.isViewOnce -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
                                         }
-                                        // View-once: downloaded - open viewer
-                                        content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank() -> {
+                                        // ✅ VIEW-ONCE: Downloaded - OPEN VIEWER IMMEDIATELY
+                                        content.isViewOnce && !content.isViewOnceOpened && hasFullPhoto -> {
                                             onOpenViewOnce(msg)
                                         }
-                                        // View-once: downloading - cancel
+                                        // View-once: Downloading - cancel
                                         content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
                                             AutoDownloadSuppression.suppress(content.fileId)
                                             onCancelDownload(content.fileId)
                                         }
-                                        // View-once: not downloaded - start download
+                                        // View-once: Not downloaded - start download
                                         content.isViewOnce && !content.isViewOnceOpened -> {
                                             AutoDownloadSuppression.clear(content.fileId)
                                             onDownloadPhoto(content.fileId)
                                         }
-                                        // Normal photo: downloading - cancel
+                                        // Normal photo: Downloading - cancel
                                         content.isDownloading -> {
                                             AutoDownloadSuppression.suppress(content.fileId)
                                             onCancelDownload(content.fileId)
                                         }
-                                        // Normal photo: default behavior
+                                        // Normal photo: Default behavior
                                         else -> {
                                             AutoDownloadSuppression.clear(content.fileId)
                                             if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
@@ -293,8 +284,8 @@ fun PhotoMessageBubble(
                         )
                     }
 
-                    // ✅ FIX: Show real image for view-once photos too (when downloaded)
-                    // The overlay will still show flame icon and blur on top
+                    // ✅ FIX: Show real image for view-once photos too!
+                    // The blur overlay will be shown on top
                     if (hasPath) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -371,9 +362,9 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // --- View once overlay ---
+                    // --- VIEW-ONCE OVERLAY ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Blurred thumbnail background (shown on top of real image)
+                        // ✅ Show blur overlay on top of real image
                         MediaLoadingBackground(
                             previewData = content.thumbnailPath ?: content.minithumbnail,
                             contentScale = ContentScale.Crop,
@@ -385,14 +376,13 @@ fun PhotoMessageBubble(
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.45f))
                         )
-                        // Center icon reflects the current download state
+                        // Center icon
                         Box(
                             modifier = Modifier.align(Alignment.Center),
                             contentAlignment = Alignment.Center
                         ) {
                             when {
                                 content.isDownloading -> {
-                                    // Progress ring — tap cancels the download
                                     Box(
                                         modifier = Modifier.size(64.dp),
                                         contentAlignment = Alignment.Center
@@ -411,8 +401,7 @@ fun PhotoMessageBubble(
                                         )
                                     }
                                 }
-                                content.path == null -> {
-                                    // Not downloaded, no active download — tap starts the download
+                                !hasFullPhoto -> {
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
@@ -428,7 +417,7 @@ fun PhotoMessageBubble(
                                     }
                                 }
                                 else -> {
-                                    // Downloaded — flame icon, tap opens the view-once viewer
+                                    // ✅ Downloaded - Show flame icon, tap opens viewer
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
@@ -445,13 +434,10 @@ fun PhotoMessageBubble(
                                 }
                             }
                         }
-                        // Timer label bottom
+                        // Timer label
                         val timerLabel = when {
                             content.selfDestructSeconds <= 0 -> "Photo, tap to view"
-                            else -> {
-                                val s = content.selfDestructSeconds
-                                "🔥 ${s}s · tap to view"
-                            }
+                            else -> "🔥 ${content.selfDestructSeconds}s · tap to view"
                         }
                         Text(
                             text = timerLabel,
@@ -485,7 +471,6 @@ fun PhotoMessageBubble(
 
                     // --- Spoiler overlay ---
                     if (content.hasSpoiler) {
-                        // ✅ FIX: Full size spoiler overlay
                         SpoilerWrapper(
                             isRevealed = isMediaSpoilerRevealed,
                             modifier = Modifier.matchParentSize()
