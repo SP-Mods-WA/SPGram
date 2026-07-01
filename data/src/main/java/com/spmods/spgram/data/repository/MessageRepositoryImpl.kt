@@ -84,11 +84,6 @@ class MessageRepositoryImpl(
 ) : MessageRepository {
     private val _textCompositionStyles = MutableStateFlow<List<TextCompositionStyleModel>>(emptyList())
     private val hardResetFlagKey = "cache_hard_reset_v2"
-    // v3: contentMeta format now includes fileId at index 2 (photo) / 5 (video).
-    // Existing rows stored only width|height — resolveLegacyMediaFromMeta() can't
-    // recover fileId from them, so bubbles stay tiny until TDLib re-populates.
-    // One-shot clear forces a fresh re-fetch from TDLib on next chat open.
-    private val metaV3ResetFlagKey = "cache_meta_v3_reset"
 
     override val newMessageFlow = messageRemoteDataSource.newMessageFlow
     override val senderUpdateFlow = messageMapper.senderUpdateFlow
@@ -144,10 +139,6 @@ class MessageRepositoryImpl(
         }
 
         scope.launch(dispatcherProvider.io) {
-            purgeStaleMetaCacheOnce()
-        }
-
-        scope.launch(dispatcherProvider.io) {
             purgeTransientMediaCacheOnStartup()
         }
 
@@ -179,19 +170,6 @@ class MessageRepositoryImpl(
                     }
                 }
             }
-        }
-    }
-
-    private suspend fun purgeStaleMetaCacheOnce() {
-        val alreadyDone = keyValueDao.getValue(metaV3ResetFlagKey)?.value == "1"
-        if (alreadyDone) return
-        coRunCatching {
-            chatLocalDataSource.clearAll()
-            cache.clearAll()
-            keyValueDao.insertValue(KeyValueEntity(metaV3ResetFlagKey, "1"))
-            Log.i("MessageRepository", "One-shot meta-v3 cache reset completed")
-        }.onFailure { error ->
-            Log.e("MessageRepository", "Failed to perform meta-v3 cache reset", error)
         }
     }
 
