@@ -1,6 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.conversation.logic
 
 import android.util.Log
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.spmods.spgram.domain.models.MessageContent
@@ -10,44 +11,86 @@ import com.spmods.spgram.presentation.features.chats.conversation.DefaultChatCom
 /**
  * Handles tapping a view-once (self-destructing) message.
  *
- * View-once files are NOT auto-downloaded. The user must tap the message
- * to trigger download and open. We read the LATEST message from _state
- * so we never use a stale snapshot that has path=null after download completed.
+ * Flow:
+ *  1. User taps download icon  → onDownloadPhoto starts the download.
+ *  2. User taps flame icon     → onOpenViewOnce is called (path is ready).
  *
- * Voice: playback is triggered directly from VoiceMessageBubble (UI layer has
- * access to VoicePlaybackController). This function only handles Photo/Video
- * opening + the TDLib openMessageContent notify for all types.
+ * If the flame is tapped but path is somehow still null (race condition /
+ * state lag), we kick off the download and then WAIT for the path to arrive
+ * via _state before opening the viewer — instead of silently doing nothing.
  */
 internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
     scope.launch {
-        // Always use the freshest version from current state
-        val latest = _state.value.messages.find { it.id == message.id } ?: message
+        // Prefer latest state, fall back to the passed snapshot.
+        fun latestMsg() = _state.value.messages.find { it.id == message.id } ?: message
 
-        // Only mark Photo/Video as "opened" once we actually have a path to show —
-        // otherwise the view-once overlay (flame icon / download progress / "tap to
-        // view" label) disappears the instant the user taps, before the file has even
-        // downloaded, and nothing is left on screen to auto-open once it's ready.
-        // Voice/VideoNote open inline via their own players, so it's safe to flip
-        // those immediately.
-        val passedPhoto = message.content as? MessageContent.Photo
-        val passedVideo = message.content as? MessageContent.Video
-        val currentPhotoPath = (latest.content as? MessageContent.Photo)?.path ?: passedPhoto?.path
-        val currentVideoPath = (latest.content as? MessageContent.Video)?.path ?: passedVideo?.path
+        val initial = latestMsg()
+
+        // ── Resolve path, waiting for download if needed ────────────────────
+        val photoPath: String? = when (val c = initial.content) {
+            is MessageContent.Photo -> {
+                if (!c.path.isNullOrBlank()) {
+                    c.path
+                } else {
+                    // Path not ready yet. Start download (in case it wasn't triggered)
+                    // and wait for _state to deliver a non-null path for this message.
+                    Log.d("ViewOnce", "Photo path null — starting download and waiting…")
+                    onDownloadFile(c.fileId)
+                    try {
+                        val ready = _state.first { state ->
+                            val msg = state.messages.find { it.id == message.id }
+                            val path = (msg?.content as? MessageContent.Photo)?.path
+                            !path.isNullOrBlank()
+                        }
+                        (ready.messages.find { it.id == message.id }
+                            ?.content as? MessageContent.Photo)?.path
+                    } catch (e: Throwable) {
+                        Log.e("ViewOnce", "Timed out waiting for photo path", e)
+                        null
+                    }
+                }
+            }
+            else -> null
+        }
+
+        val videoPath: String? = when (val c = initial.content) {
+            is MessageContent.Video -> {
+                if (!c.path.isNullOrBlank()) {
+                    c.path
+                } else {
+                    Log.d("ViewOnce", "Video path null — starting download and waiting…")
+                    onDownloadFile(c.fileId)
+                    try {
+                        val ready = _state.first { state ->
+                            val msg = state.messages.find { it.id == message.id }
+                            val path = (msg?.content as? MessageContent.Video)?.path
+                            !path.isNullOrBlank()
+                        }
+                        (ready.messages.find { it.id == message.id }
+                            ?.content as? MessageContent.Video)?.path
+                    } catch (e: Throwable) {
+                        Log.e("ViewOnce", "Timed out waiting for video path", e)
+                        null
+                    }
+                }
+            }
+            else -> null
+        }
+
+        // ── Get the freshest message snapshot now that path is ready ─────────
+        val latest = latestMsg()
 
         val hasDisplayablePath = when (latest.content) {
-            is MessageContent.Photo -> currentPhotoPath != null
-            is MessageContent.Video -> currentVideoPath != null
-            is MessageContent.Voice, is MessageContent.VideoNote -> true
+            is MessageContent.Photo    -> photoPath != null
+            is MessageContent.Video    -> videoPath != null
+            is MessageContent.Voice,
+            is MessageContent.VideoNote -> true
             else -> false
         }
 
-        // IMPORTANT: only tell TDLib the content was "opened" once we're actually
-        // about to display it (path is ready). TDLib/the server treats this as the
-        // signal that self-destructing media has been viewed and may begin expiring
-        // the underlying file reference shortly after. Calling this BEFORE the photo
-        // has finished downloading — as this used to do — can cause the in-flight
-        // download to fail/hang on slow connections, leaving the user stuck with a
-        // permanently un-openable "tap to view" bubble.
+        // ── Tell TDLib this content was opened (only once path is ready) ────
+        // Calling openMessageContent BEFORE the file is fully available can cause
+        // TDLib to expire the file reference mid-download, permanently blocking open.
         if (hasDisplayablePath) {
             try {
                 repositoryMessage.openMessageContent(chatId, latest.id)
@@ -60,9 +103,9 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                     messages = state.messages.map { msg ->
                         if (msg.id != latest.id) return@map msg
                         when (val content = msg.content) {
-                            is MessageContent.Photo -> msg.copy(content = content.copy(isViewOnceOpened = true))
-                            is MessageContent.Video -> msg.copy(content = content.copy(isViewOnceOpened = true))
-                            is MessageContent.Voice -> msg.copy(content = content.copy(isViewOnceOpened = true))
+                            is MessageContent.Photo     -> msg.copy(content = content.copy(isViewOnceOpened = true))
+                            is MessageContent.Video     -> msg.copy(content = content.copy(isViewOnceOpened = true))
+                            is MessageContent.Voice     -> msg.copy(content = content.copy(isViewOnceOpened = true))
                             is MessageContent.VideoNote -> msg.copy(content = content.copy(isViewOnceOpened = true))
                             else -> msg
                         }
@@ -71,38 +114,30 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
             }
         }
 
+        // ── Open the viewer ─────────────────────────────────────────────────
         when (val content = latest.content) {
             is MessageContent.Photo -> {
-                val path = currentPhotoPath
-                if (path != null) {
+                if (photoPath != null) {
                     onOpenImages(
-                        images = listOf(path),
+                        images   = listOf(photoPath),
                         captions = listOf(content.caption.takeIf { it.isNotBlank() }),
                         startIndex = 0,
-                        messageId = latest.id,
+                        messageId  = latest.id,
                         messageIds = listOf(latest.id)
                     )
                 } else {
-                    // Should not normally happen: PhotoMessageBubble only calls
-                    // onOpenViewOnce once content.path is non-null (undownloaded
-                    // taps go straight to onDownloadPhoto instead). Kept as a
-                    // safety net — just kick off the download if we get here.
-                    Log.d("ViewOnce", "Photo not downloaded yet — triggering download")
-                    onDownloadFile(content.fileId)
+                    Log.e("ViewOnce", "Photo path still null after waiting — cannot open viewer")
                 }
             }
             is MessageContent.Video -> {
-                val path = currentVideoPath
-                if (path != null) {
-                    onOpenVideo(path = path, messageId = latest.id, caption = content.caption)
+                if (videoPath != null) {
+                    onOpenVideo(path = videoPath, messageId = latest.id, caption = content.caption)
                 } else {
-                    // Same safety net as above for video.
-                    Log.w("ViewOnce", "Video tapped but path still null — download in progress")
-                    onDownloadFile(content.fileId)
+                    Log.e("ViewOnce", "Video path still null after waiting — cannot open viewer")
                 }
             }
-            // Voice: VoiceMessageBubble calls togglePlayPause directly after onOpenViewOnce.
-            // VideoNote: inline player recomposes automatically once path arrives.
+            // Voice: VoiceMessageBubble calls togglePlayPause directly.
+            // VideoNote: inline player recomposes once path arrives.
             else -> Unit
         }
     }
