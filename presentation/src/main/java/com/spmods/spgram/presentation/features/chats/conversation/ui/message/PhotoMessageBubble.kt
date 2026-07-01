@@ -34,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -181,8 +180,6 @@ fun PhotoMessageBubble(
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
         Surface(
-            // ✅ FIX: view-once bubble now uses the same rounded-rectangle shape as a
-            // normal photo bubble instead of a CircleShape. Size (220.dp) is unchanged.
             shape = bubbleShape,
             color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
@@ -228,12 +225,10 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                // ✅ FIX: view-once box keeps its original 220.dp size, but now clips to
-                // bubbleShape (rounded rectangle) instead of CircleShape.
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                     Modifier
-                        .size(220.dp)
-                        .clip(bubbleShape)
+                        .size(260.dp, 260.dp)
+                        .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 } else {
                     Modifier
@@ -246,10 +241,13 @@ fun PhotoMessageBubble(
                     modifier = boxModifier
                         .pointerInput(Unit) {
                             detectTapGestures(
-                                // ✅ FIX: tap handling now branches for view-once photos so
-                                // the center icon can drive download / cancel / view actions.
                                 onTap = {
                                     when {
+                                        content.isViewOnce && !content.isViewOnceOpened -> {
+                                            // Only open if already downloaded; otherwise
+                                            // download is triggered by the center icon click
+                                            if (content.path != null) onOpenViewOnce(msg)
+                                        }
                                         content.hasSpoiler -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
                                         }
@@ -257,16 +255,8 @@ fun PhotoMessageBubble(
                                             AutoDownloadSuppression.suppress(content.fileId)
                                             onCancelDownload(content.fileId)
                                         }
-                                        content.isViewOnce && !content.isViewOnceOpened -> {
-                                            AutoDownloadSuppression.clear(content.fileId)
-                                            // Full photo already downloaded → open viewer.
-                                            // Otherwise → start downloading it.
-                                            if (hasFullPhoto) onOpenViewOnce(msg) else onDownloadPhoto(content.fileId)
-                                        }
                                         else -> {
                                             AutoDownloadSuppression.clear(content.fileId)
-                                            // If full photo is ready open the viewer; if only
-                                            // thumbnail is available start downloading the full photo.
                                             if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
                                         }
                                     }
@@ -302,11 +292,7 @@ fun PhotoMessageBubble(
                             ) 
                     }
 
-                    // --- Download action (CENTER - fixed clickable) ---
-                    // Show the download/cancel button only when the full-resolution photo
-                    // is not yet available. If we already have the thumbnail (hasPath=true
-                    // but hasFullPhoto=false) the button still shows so the user can fetch
-                    // the full photo; it just sits on top of the thumbnail preview.
+                    // --- Download action (CENTER) ---
                     if (!hasFullPhoto && !content.isViewOnce) {
                         Box(
                             modifier = Modifier.matchParentSize(),
@@ -325,7 +311,6 @@ fun PhotoMessageBubble(
                                         trackColor = Color.White.copy(alpha = 0.25f),
                                         modifier = Modifier.size(40.dp)
                                     )
-                                    // Cancel button
                                     Box(
                                         modifier = Modifier
                                             .size(48.dp)
@@ -344,7 +329,6 @@ fun PhotoMessageBubble(
                                     }
                                 }
                             } else {
-                                // Download button
                                 Box(
                                     modifier = Modifier
                                         .size(48.dp)
@@ -367,69 +351,55 @@ fun PhotoMessageBubble(
                     }
 
                     // --- View once overlay ---
-                    // Official Telegram style: blurred thumbnail fills the bubble,
-                    // dark scrim on top. Center icon now reflects download state:
-                    // - not downloaded / no auto-download yet -> download icon (tap to start)
-                    // - downloading -> progress ring + cancel icon (tap to cancel)
-                    // - fully downloaded -> flame icon + "tap to view" label (tap opens viewer)
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Blurred thumbnail background (always shown, even before download)
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            MediaLoadingBackground(
-                                previewData = content.thumbnailPath ?: content.minithumbnail,
-                                contentScale = ContentScale.Crop,
-                                previewBlur = 20.dp
-                            )
-                        }
+                        // Blurred thumbnail background
+                        MediaLoadingBackground(
+                            previewData = content.thumbnailPath ?: content.minithumbnail,
+                            contentScale = ContentScale.Crop,
+                            previewBlur = 20.dp
+                        )
                         // Dark scrim
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.45f))
                         )
-
-                        if (!hasFullPhoto) {
-                            // --- Download / progress icon (center) ---
-                            Box(
-                                modifier = Modifier.matchParentSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (content.isDownloading) {
+                        // Center icon — flame (downloaded) or download/progress (not yet)
+                        Box(
+                            modifier = Modifier.align(Alignment.Center),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            when {
+                                content.isDownloading -> {
+                                    // Progress ring around cancel icon
                                     Box(
                                         modifier = Modifier
-                                            .size(56.dp)
-                                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
+                                            .size(64.dp)
+                                            .clickable {
+                                                AutoDownloadSuppression.suppress(content.fileId)
+                                                onCancelDownload(content.fileId)
+                                            },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         CircularWavyProgressIndicator(
                                             progress = { content.downloadProgress },
                                             color = Color.White,
                                             trackColor = Color.White.copy(alpha = 0.25f),
-                                            modifier = Modifier.size(48.dp)
+                                            modifier = Modifier.size(64.dp)
                                         )
-                                        // Cancel button
-                                        Box(
-                                            modifier = Modifier
-                                                .size(56.dp)
-                                                .clickable {
-                                                    AutoDownloadSuppression.suppress(content.fileId)
-                                                    onCancelDownload(content.fileId)
-                                                },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = stringResource(R.string.cancel_button),
-                                                tint = Color.White,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     }
-                                } else {
-                                    // Download button
+                                }
+                                content.path == null -> {
+                                    // Not downloaded — show download icon, click to download
                                     Box(
                                         modifier = Modifier
-                                            .size(56.dp)
+                                            .size(64.dp)
                                             .background(Color.White.copy(alpha = 0.18f), CircleShape)
                                             .clickable {
                                                 AutoDownloadSuppression.clear(content.fileId)
@@ -439,40 +409,46 @@ fun PhotoMessageBubble(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Download,
-                                            contentDescription = stringResource(R.string.cd_download),
+                                            contentDescription = null,
                                             tint = Color.White,
-                                            modifier = Modifier.size(26.dp)
+                                            modifier = Modifier.size(30.dp)
+                                        )
+                                    }
+                                }
+                                else -> {
+                                    // Downloaded — flame icon, tap anywhere to open
+                                    Box(
+                                        modifier = Modifier
+                                            .size(64.dp)
+                                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Whatshot,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(32.dp)
                                         )
                                     }
                                 }
                             }
-                        } else {
-                            // --- Flame icon + label (photo ready, tap to view) ---
-                            Column(
-                                modifier = Modifier.align(Alignment.Center),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(56.dp)
-                                        .background(Color.White.copy(alpha = 0.18f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Whatshot,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(30.dp)
-                                    )
-                                }
-                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.size(8.dp))
-                                androidx.compose.material3.Text(
-                                    text = "Photo, tap to view",
-                                    color = Color.White,
-                                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium
-                                )
+                        }
+                        // Timer label bottom
+                        val timerLabel = when {
+                            content.selfDestructSeconds <= 0 -> "Photo, tap to view"
+                            else -> {
+                                val s = content.selfDestructSeconds
+                                "🔥 ${s}s · tap to view"
                             }
                         }
+                        androidx.compose.material3.Text(
+                            text = timerLabel,
+                            color = Color.White,
+                            style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 10.dp)
+                        )
                     }
 
                     // --- Upload progress ---
