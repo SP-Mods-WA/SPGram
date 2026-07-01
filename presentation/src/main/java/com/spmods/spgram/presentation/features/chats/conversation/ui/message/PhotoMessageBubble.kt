@@ -115,6 +115,26 @@ fun PhotoMessageBubble(
         }
     }
 
+    // View-once auto-open: tapping an undownloaded view-once photo starts the
+    // download but keeps isViewOnceOpened=false until a path exists (see
+    // ViewOnceOperations.handleOpenViewOnce). Once TDLib finishes downloading and
+    // content.path arrives, open the viewer automatically instead of requiring a
+    // second tap.
+    var pendingViewOnceOpen by remember(content.fileId) { mutableStateOf(false) }
+    LaunchedEffect(content.isViewOnce, content.isDownloading, content.path, content.fileId) {
+        // Not yet opened, no path yet, but a download is underway (or has just
+        // finished so fast we only see the resulting path) — arm the auto-open.
+        if (content.isViewOnce && !content.isViewOnceOpened && content.path.isNullOrBlank() && content.isDownloading) {
+            pendingViewOnceOpen = true
+        }
+    }
+    LaunchedEffect(content.path, pendingViewOnceOpen) {
+        if (pendingViewOnceOpen && !content.path.isNullOrBlank()) {
+            pendingViewOnceOpen = false
+            onOpenViewOnce(msg)
+        }
+    }
+
     LaunchedEffect(content.path, content.isDownloading, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
         if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !AutoDownloadSuppression.isSuppressed(content.fileId)) {
             val shouldDownload = when {
