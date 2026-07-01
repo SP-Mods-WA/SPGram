@@ -66,6 +66,17 @@ internal fun ChatContentOverlays(
     val isTablet =
         adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.EXPANDED &&
                 isTabletInterfaceEnabled
+    // Renders the image / video / instant-view / YouTube / mini-app / invoice
+    // overlays driven by state.fullScreenImages, fullScreenVideoPath, etc.
+    // Without this call, tapping a photo (including view-once photos after
+    // they finish downloading) updates the state correctly but nothing is
+    // ever composed to show it — the tap silently does nothing.
+    ChatContentViewers(
+        state = state,
+        component = component,
+        localClipboard = localClipboard
+    )
+
     if (renderPinnedMessagesList) {
         PinnedMessagesListSheet(
             isVisible = state.showPinnedMessagesList,
