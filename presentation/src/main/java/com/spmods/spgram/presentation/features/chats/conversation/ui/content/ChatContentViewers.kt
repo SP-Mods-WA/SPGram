@@ -156,8 +156,16 @@ internal fun ImagesOverlay(
             val messageMap = state.messages.associateBy { it.id }
             val items = if (state.fullScreenImageMessageIds.size == images.size) {
                 state.fullScreenImageMessageIds.mapIndexed { index, messageId ->
+                    // Trust the path captured at open-time first (images[index]) — same
+                    // approach VideoOverlay uses with fullScreenVideoPath. Re-deriving via
+                    // message?.displayMediaPathForViewer() as the *primary* source could
+                    // silently resolve to a blank/stale path if the live message lookup
+                    // doesn't line up (e.g. right after a view-once open), which made the
+                    // viewer render nothing while state said it should be showing. The live
+                    // message path is only used as a fallback if the captured one is blank.
                     val message = messageMap[messageId]
-                    val resolvedPath = message?.displayMediaPathForViewer() ?: images[index]
+                    val capturedPath = images[index].takeIf { it.isNotBlank() }
+                    val resolvedPath = capturedPath ?: message?.displayMediaPathForViewer() ?: images[index]
                     ViewerMediaItem(messageId = messageId, path = resolvedPath)
                 }
             } else {
@@ -165,7 +173,7 @@ internal fun ImagesOverlay(
                     val message = state.messages.firstOrNull { it.content.matchesDisplayPath(path) }
                     ViewerMediaItem(
                         messageId = message?.id ?: 0L,
-                        path = message?.displayMediaPathForViewer() ?: path
+                        path = path.takeIf { it.isNotBlank() } ?: message?.displayMediaPathForViewer() ?: path
                     )
                 }
             }
