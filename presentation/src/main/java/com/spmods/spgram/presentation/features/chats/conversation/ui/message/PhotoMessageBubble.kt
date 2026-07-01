@@ -115,25 +115,9 @@ fun PhotoMessageBubble(
         }
     }
 
-    // View-once auto-open: tapping an undownloaded view-once photo starts the
-    // download but keeps isViewOnceOpened=false until a path exists (see
-    // ViewOnceOperations.handleOpenViewOnce). Once TDLib finishes downloading and
-    // content.path arrives, open the viewer automatically instead of requiring a
-    // second tap.
-    var pendingViewOnceOpen by remember(content.fileId) { mutableStateOf(false) }
-    LaunchedEffect(content.isViewOnce, content.isDownloading, content.path, content.fileId) {
-        // Not yet opened, no path yet, but a download is underway (or has just
-        // finished so fast we only see the resulting path) — arm the auto-open.
-        if (content.isViewOnce && !content.isViewOnceOpened && content.path.isNullOrBlank() && content.isDownloading) {
-            pendingViewOnceOpen = true
-        }
-    }
-    LaunchedEffect(content.path, pendingViewOnceOpen) {
-        if (pendingViewOnceOpen && !content.path.isNullOrBlank()) {
-            pendingViewOnceOpen = false
-            onOpenViewOnce(msg)
-        }
-    }
+    // View-once media is no longer auto-downloaded (see MessageContentMapper).
+    // The overlay shows a download icon until content.path exists, then shows
+    // the flame icon. Each state requires its own explicit tap — no auto-open.
 
     LaunchedEffect(content.path, content.isDownloading, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
         if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !AutoDownloadSuppression.isSuppressed(content.fileId)) {
@@ -263,8 +247,19 @@ fun PhotoMessageBubble(
                             detectTapGestures(
                                 onTap = {
                                     when {
-                                        content.isViewOnce && !content.isViewOnceOpened -> {
+                                        content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank() -> {
+                                            // Downloaded — flame icon tap opens the viewer.
                                             onOpenViewOnce(msg)
+                                        }
+                                        content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
+                                            // Download in progress — tap cancels it, same as a normal photo.
+                                            AutoDownloadSuppression.suppress(content.fileId)
+                                            onCancelDownload(content.fileId)
+                                        }
+                                        content.isViewOnce && !content.isViewOnceOpened -> {
+                                            // Not downloaded yet — tap starts the download.
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            onDownloadPhoto(content.fileId)
                                         }
                                         content.hasSpoiler -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
@@ -387,28 +382,19 @@ fun PhotoMessageBubble(
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.45f))
                         )
-                        // Center icon — flame (downloaded) or download/progress (not yet).
-                        // IMPORTANT: none of these inner boxes have their own click handler.
-                        // View-once photos are auto-downloaded in the background as soon as
-                        // the message arrives (see MessageContentMapper), so isDownloading is
-                        // true for most of this overlay's lifetime. A clickable() here used to
-                        // sit on top of — and swallow — the outer Box's tap gesture, so tapping
-                        // the "tap to view" bubble while the silent background download was
-                        // still running would fire onCancelDownload instead of onOpenViewOnce,
-                        // cancelling the very download the user was trying to open. Every tap
-                        // on this overlay, in any sub-state, must go through the single outer
-                        // pointerInput handler above, which always calls onOpenViewOnce for
-                        // view-once content.
+                        // Center icon reflects the current download state:
+                        //   - no path, not downloading -> download icon (tap starts download)
+                        //   - downloading -> progress ring (tap cancels, same as normal photo)
+                        //   - path exists -> flame icon (tap opens the view-once viewer)
+                        // Tap routing for all three states lives in the outer pointerInput
+                        // handler above, which dispatches based on content.path/isDownloading.
                         Box(
                             modifier = Modifier.align(Alignment.Center),
                             contentAlignment = Alignment.Center
                         ) {
                             when {
                                 content.isDownloading -> {
-                                    // Progress ring — informational only, not clickable.
-                                    // Tapping anywhere still routes to onOpenViewOnce via the
-                                    // outer handler, which will open the photo automatically
-                                    // once the download this progress ring reflects finishes.
+                                    // Progress ring — tap (via outer handler) cancels the download.
                                     Box(
                                         modifier = Modifier.size(64.dp),
                                         contentAlignment = Alignment.Center
@@ -428,9 +414,8 @@ fun PhotoMessageBubble(
                                     }
                                 }
                                 content.path == null -> {
-                                    // Not downloaded yet and no active download — tapping
-                                    // (via the outer handler) will call onOpenViewOnce, which
-                                    // starts the download itself.
+                                    // Not downloaded, no active download — tap (via outer
+                                    // handler) starts the download, like a normal photo.
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
@@ -446,7 +431,7 @@ fun PhotoMessageBubble(
                                     }
                                 }
                                 else -> {
-                                    // Downloaded — flame icon, tap anywhere to open
+                                    // Downloaded — flame icon, tap opens the view-once viewer.
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
