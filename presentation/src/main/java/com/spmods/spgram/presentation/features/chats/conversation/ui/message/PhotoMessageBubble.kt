@@ -262,6 +262,16 @@ fun PhotoMessageBubble(
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {
+                                    // TEMP DIAGNOSTIC — remove once the view-once bug is confirmed
+                                    // fixed. Shows exactly which branch fired and the content
+                                    // state at tap time, without needing logcat.
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "tap: isViewOnce=${content.isViewOnce} opened=${content.isViewOnceOpened} " +
+                                            "path=${content.path != null} downloading=${content.isDownloading} " +
+                                            "hasSpoiler=${content.hasSpoiler} fileId=${content.fileId}",
+                                        android.widget.Toast.LENGTH_LONG
+                                    ).show()
                                     when {
                                         content.isViewOnce && !content.isViewOnceOpened -> {
                                             onOpenViewOnce(msg)
