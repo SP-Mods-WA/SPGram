@@ -292,7 +292,12 @@ fun PhotoMessageBubble(
                     }
 
                     // --- Actual image (after download) ---
-                    if (hasPath) {
+                    // Guarded against isViewOnce && !isViewOnceOpened: view-once photos are
+                    // auto-downloaded in the background (see MessageContentMapper) before the
+                    // user ever taps, so hasPath can be true while the flame/blur overlay is
+                    // still showing. The real photo must never be composed underneath that
+                    // overlay — only the blurred thumbnail (handled inside the overlay below).
+                    if (hasPath && !(content.isViewOnce && !content.isViewOnceOpened)) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(displayPath)
@@ -382,21 +387,30 @@ fun PhotoMessageBubble(
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.45f))
                         )
-                        // Center icon — flame (downloaded) or download/progress (not yet)
+                        // Center icon — flame (downloaded) or download/progress (not yet).
+                        // IMPORTANT: none of these inner boxes have their own click handler.
+                        // View-once photos are auto-downloaded in the background as soon as
+                        // the message arrives (see MessageContentMapper), so isDownloading is
+                        // true for most of this overlay's lifetime. A clickable() here used to
+                        // sit on top of — and swallow — the outer Box's tap gesture, so tapping
+                        // the "tap to view" bubble while the silent background download was
+                        // still running would fire onCancelDownload instead of onOpenViewOnce,
+                        // cancelling the very download the user was trying to open. Every tap
+                        // on this overlay, in any sub-state, must go through the single outer
+                        // pointerInput handler above, which always calls onOpenViewOnce for
+                        // view-once content.
                         Box(
                             modifier = Modifier.align(Alignment.Center),
                             contentAlignment = Alignment.Center
                         ) {
                             when {
                                 content.isDownloading -> {
-                                    // Progress ring around cancel icon
+                                    // Progress ring — informational only, not clickable.
+                                    // Tapping anywhere still routes to onOpenViewOnce via the
+                                    // outer handler, which will open the photo automatically
+                                    // once the download this progress ring reflects finishes.
                                     Box(
-                                        modifier = Modifier
-                                            .size(64.dp)
-                                            .clickable {
-                                                AutoDownloadSuppression.suppress(content.fileId)
-                                                onCancelDownload(content.fileId)
-                                            },
+                                        modifier = Modifier.size(64.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         CircularWavyProgressIndicator(
@@ -406,7 +420,7 @@ fun PhotoMessageBubble(
                                             modifier = Modifier.size(64.dp)
                                         )
                                         Icon(
-                                            imageVector = Icons.Default.Close,
+                                            imageVector = Icons.Default.Whatshot,
                                             contentDescription = null,
                                             tint = Color.White,
                                             modifier = Modifier.size(20.dp)
@@ -414,15 +428,13 @@ fun PhotoMessageBubble(
                                     }
                                 }
                                 content.path == null -> {
-                                    // Not downloaded — show download icon, click to download
+                                    // Not downloaded yet and no active download — tapping
+                                    // (via the outer handler) will call onOpenViewOnce, which
+                                    // starts the download itself.
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
-                                            .background(Color.White.copy(alpha = 0.18f), CircleShape)
-                                            .clickable {
-                                                AutoDownloadSuppression.clear(content.fileId)
-                                                onDownloadPhoto(content.fileId)
-                                            },
+                                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
