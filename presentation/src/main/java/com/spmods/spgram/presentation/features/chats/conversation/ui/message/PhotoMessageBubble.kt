@@ -352,28 +352,16 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // --- VIEW-ONCE OVERLAY ---
-                    // ✅ FIX: Blur and scrim should NOT consume taps
+                    // --- VIEW-ONCE OVERLAY (BLUR REMOVED) ---
+                    // ✅ FIX: Removed blur completely - only dark scrim and icons
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // ✅ Blur overlay - non-interactive
+                        // Dark scrim only - NO BLUR
                         Box(
                             modifier = Modifier
                                 .matchParentSize()
+                                .background(Color.Black.copy(alpha = 0.45f))
                                 .pointerInput(Unit) {} // Consumes no taps - lets clicks pass through
-                        ) {
-                            MediaLoadingBackground(
-                                previewData = content.thumbnailPath ?: content.minithumbnail,
-                                contentScale = ContentScale.Crop,
-                                previewBlur = 20.dp
-                            )
-                            // Dark scrim - also non-interactive
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Black.copy(alpha = 0.45f))
-                                    .pointerInput(Unit) {} // Consumes no taps
-                            )
-                        }
+                        )
                         
                         // Center icon - display only (tap handled by outer pointerInput)
                         Box(
