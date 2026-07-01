@@ -45,18 +45,8 @@ interface MessageDao {
     )
     suspend fun updateMediaPathForMessage(chatId: Long, messageId: Long, fileId: Int, path: String)
 
-    // ✅ FIX: Previously this also nulled mediaThumbnailPath and mediaFileId, which broke
-    // instant correct-sized bubble rendering on chat re-entry: with thumbnailPath gone the
-    // blur preview had nothing to show (falling back to the lower-quality minithumbnail
-    // only), and with fileId=0 the file was unregistered from the download tracker so the
-    // live TDLib refresh didn't reliably relink it, causing a visible "tiny -> full size"
-    // jump once the live mapper eventually re-fetched fresh metadata. Only mediaPath (the
-    // full-resolution file, which is legitimately large/transient) is cleared here; the
-    // thumbnail path, fileId, and dimensions (contentMeta) are left intact so the bubble
-    // renders at the correct size with its blurred preview immediately, exactly like
-    // official Telegram clients, while the full photo re-downloads in the background.
     @Query(
-        "UPDATE messages SET mediaPath = NULL WHERE mediaPath IS NOT NULL AND contentType IN ('photo', 'video', 'video_note', 'document', 'gif', 'voice', 'sticker', 'audio')"
+        "UPDATE messages SET mediaFileId = 0, mediaPath = NULL, mediaThumbnailPath = NULL WHERE (mediaFileId != 0 OR mediaPath IS NOT NULL OR mediaThumbnailPath IS NOT NULL) AND contentType IN ('photo', 'video', 'video_note', 'document', 'gif', 'voice', 'sticker', 'audio')"
     )
     suspend fun clearCachedMediaPaths()
 
