@@ -1,7 +1,7 @@
 package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.clickable  // ✅ මෙතන add කරන්න!
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,16 +23,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -56,7 +57,6 @@ import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.util.IDownloadUtils
 import com.spmods.spgram.presentation.core.util.namespacedCacheKey
 import com.spmods.spgram.presentation.features.chats.conversation.AutoDownloadSuppression
-import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -91,6 +91,15 @@ fun PhotoMessageBubble(
     val smallCorner = 6.dp
     val tailCorner = 0.dp
 
+    // ✅ ROOT FIX: Compute display path directly from content on every recompose.
+    // Previously used remember{} + LaunchedEffect to track stablePath, but that caused
+    // a one-frame delay: remember initialises once (path=null → hasPath=false → tiny
+    // bubble), and LaunchedEffect only fires after composition, so the bubble was tiny
+    // on the first frame after re-entering the chat.
+    //
+    // Solution: val (not var/remember) so Compose recomputes it every time content
+    // changes — exactly like official Telegram clients do. Full photo takes priority;
+    // thumbnail is the fallback so something always shows even before full download.
     val displayPath: String? = content.path?.takeIf { it.isNotBlank() }
         ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
     val hasFullPhoto = !content.path.isNullOrBlank()
@@ -106,7 +115,10 @@ fun PhotoMessageBubble(
         }
     }
 
-    // Auto-download logic - view-once photos are EXCLUDED
+    // View-once media is no longer auto-downloaded (see MessageContentMapper).
+    // The overlay shows a download icon until content.path exists, then shows
+    // the flame icon. Each state requires its own explicit tap — no auto-open.
+
     LaunchedEffect(content.path, content.isDownloading, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
         if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !AutoDownloadSuppression.isSuppressed(content.fileId)) {
             val shouldDownload = when {
@@ -140,6 +152,16 @@ fun PhotoMessageBubble(
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
     var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
 
+    // Compute exact bubble size from photo pixel dimensions — same approach official
+    // Telegram uses. This avoids any dependency on aspectRatio + fillMaxWidth, which
+    // caused the "small bubble on first entry" bug: fillMaxWidth always used the max
+    // column width (340dp) regardless of the photo's real proportions, and aspectRatio
+    // was only correct once real dimensions arrived (often after the first composition).
+    //
+    // Here we scale the photo proportionally to fit within maxW×maxH, with a minimum
+    // size of minW×minH. Because content.width/height come from TDLib's sizes array
+    // metadata (always available, never 0 for real photos), the bubble is the exact
+    // right size from the very first frame — downloaded or not.
     val maxBubbleW = 260.dp
     val maxBubbleH = 320.dp
     val minBubbleW = 120.dp
@@ -148,12 +170,13 @@ fun PhotoMessageBubble(
     val bubbleSize = remember(content.width, content.height) {
         val pw = content.width.takeIf { it > 0 } ?: 4
         val ph = content.height.takeIf { it > 0 } ?: 3
+        // Scale so neither dimension exceeds the max
         val scaleW = maxBubbleW.value / pw
         val scaleH = maxBubbleH.value / ph
-        val scale = minOf(scaleW, scaleH, 1f)
+        val scale = minOf(scaleW, scaleH, 1f) // never upscale tiny photos
         val w = (pw * scale).coerceAtLeast(minBubbleW.value)
         val h = (ph * scale).coerceAtLeast(minBubbleH.value)
-        DpSize(w.dp, h.dp)
+        androidx.compose.ui.unit.DpSize(w.dp, h.dp)
     }
 
     Column(
@@ -162,11 +185,7 @@ fun PhotoMessageBubble(
     ) {
         Surface(
             shape = bubbleShape,
-            color = run { 
-                val d = LocalDarkTheme.current
-                if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) 
-                else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF))
-            },
+            color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
             Column(modifier = Modifier.width(IntrinsicSize.Max)) {
@@ -174,11 +193,7 @@ fun PhotoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(run { 
-                                val d = LocalDarkTheme.current
-                                if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) 
-                                else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF))
-                            })
+                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp)
                             .zIndex(1f)
                     ) {
@@ -190,11 +205,7 @@ fun PhotoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(run { 
-                                val d = LocalDarkTheme.current
-                                if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) 
-                                else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF))
-                            })
+                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -206,11 +217,7 @@ fun PhotoMessageBubble(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(run { 
-                                val d = LocalDarkTheme.current
-                                if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) 
-                                else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF))
-                            })
+                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
                             .padding(horizontal = 4.dp, vertical = 4.dp)
                             .zIndex(1f)
                     ) {
@@ -222,46 +229,70 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                val boxModifier = Modifier
-                    .size(bubbleSize.width, bubbleSize.height)
-                    .clipToBounds()
-                    .onGloballyPositioned { imagePosition = it.positionInWindow() }
+                val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
+                    Modifier
+                        .size(260.dp, 260.dp)
+                        .clipToBounds()
+                        .onGloballyPositioned { imagePosition = it.positionInWindow() }
+                } else {
+                    Modifier
+                        .size(bubbleSize.width, bubbleSize.height)
+                        .clipToBounds()
+                        .onGloballyPositioned { imagePosition = it.positionInWindow() }
+                }
 
                 Box(
                     modifier = boxModifier
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {
-                                    // ✅ SIMPLIFIED: Just check view-once state
-                                    if (content.isViewOnce && !content.isViewOnceOpened) {
-                                        if (hasFullPhoto) {
-                                            // Downloaded - open viewer
+                                    when {
+                                        content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank() -> {
+                                            // Downloaded — flame icon tap opens the viewer.
                                             onOpenViewOnce(msg)
-                                        } else if (content.isDownloading) {
-                                            // Downloading - cancel
+                                        }
+                                        content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
+                                            // Download in progress — tap cancels it.
                                             AutoDownloadSuppression.suppress(content.fileId)
                                             onCancelDownload(content.fileId)
-                                        } else {
-                                            // Not downloaded - start download
+                                        }
+                                        content.isViewOnce && !content.isViewOnceOpened -> {
+                                            // Not downloaded yet — tap starts the download.
                                             AutoDownloadSuppression.clear(content.fileId)
                                             onDownloadPhoto(content.fileId)
                                         }
-                                    } else if (content.hasSpoiler) {
-                                        isMediaSpoilerRevealed = !isMediaSpoilerRevealed
-                                    } else if (content.isDownloading) {
-                                        AutoDownloadSuppression.suppress(content.fileId)
-                                        onCancelDownload(content.fileId)
-                                    } else {
-                                        AutoDownloadSuppression.clear(content.fileId)
-                                        if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
+                                        content.hasSpoiler -> {
+                                            isMediaSpoilerRevealed = !isMediaSpoilerRevealed
+                                        }
+                                        content.isDownloading -> {
+                                            AutoDownloadSuppression.suppress(content.fileId)
+                                            onCancelDownload(content.fileId)
+                                        }
+                                        else -> {
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
+                                        }
                                     }
                                 },
                                 onLongPress = { offset -> onLongClick(imagePosition + offset) }
                             )
                         }
                 ) {
-                    // --- ONLY THE IMAGE - NO OVERLAYS AT ALL ---
-                    if (hasPath) {
+                    // --- Background layer (non-view-once only) ---
+                    if (!content.isViewOnce && !hasPath) {
+                        MediaLoadingBackground(
+                            previewData = content.thumbnailPath ?: content.minithumbnail,
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    // --- Actual image (after download) ---
+                    // Guarded against isViewOnce && !isViewOnceOpened: view-once photos are
+                    // auto-downloaded in the background (see MessageContentMapper) before the
+                    // user ever taps, so hasPath can be true while the flame/blur overlay is
+                    // still showing. The real photo must never be composed underneath that
+                    // overlay — only the blurred thumbnail (handled inside the overlay below).
+                    if (hasPath && !(content.isViewOnce && !content.isViewOnceOpened)) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(displayPath)
@@ -276,16 +307,184 @@ fun PhotoMessageBubble(
                             contentDescription = content.caption,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
+                            ) 
+                    }
+
+                    // --- Download action (CENTER) ---
+                    if (!hasFullPhoto && !content.isViewOnce) {
+                        Box(
+                            modifier = Modifier.matchParentSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (content.isDownloading) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(Color.Black.copy(alpha = 0.6f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularWavyProgressIndicator(
+                                        progress = { content.downloadProgress },
+                                        color = Color.White,
+                                        trackColor = Color.White.copy(alpha = 0.25f),
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clickable {
+                                                AutoDownloadSuppression.suppress(content.fileId)
+                                                onCancelDownload(content.fileId)
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = stringResource(R.string.cancel_button),
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                        .clickable {
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            onDownloadPhoto(content.fileId)
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Download,
+                                        contentDescription = stringResource(R.string.cd_download),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // --- View once overlay ---
+                    if (content.isViewOnce && !content.isViewOnceOpened) {
+                        // Blurred background: use full photo path when downloaded (better quality),
+                        // fall back to thumbnail/minithumbnail while waiting.
+                        val blurSource = content.path?.takeIf { it.isNotBlank() }
+                            ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
+                            ?: content.minithumbnail
+                        if (blurSource != null) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(blurSource)
+                                    .crossfade(false)
+                                    .build(),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .blur(25.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            MediaLoadingBackground(
+                                previewData = content.minithumbnail,
+                                contentScale = ContentScale.Crop,
+                                previewBlur = 20.dp
+                            )
+                        }
+                        // Dark scrim
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.45f))
                         )
-                    } else {
-                        // Show loading/placeholder if no path
-                        MediaLoadingBackground(
-                            previewData = content.thumbnailPath ?: content.minithumbnail,
-                            contentScale = ContentScale.Crop
+                        // Center icon reflects the current download state:
+                        //   - no path, not downloading -> download icon (tap starts download)
+                        //   - downloading -> progress ring (tap cancels, same as normal photo)
+                        //   - path exists -> flame icon (tap opens the view-once viewer)
+                        // Tap routing for all three states lives in the outer pointerInput
+                        // handler above, which dispatches based on content.path/isDownloading.
+                        Box(
+                            modifier = Modifier.align(Alignment.Center),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            when {
+                                content.isDownloading -> {
+                                    // Progress ring — tap (via outer handler) cancels the download.
+                                    Box(
+                                        modifier = Modifier.size(64.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularWavyProgressIndicator(
+                                            progress = { content.downloadProgress },
+                                            color = Color.White,
+                                            trackColor = Color.White.copy(alpha = 0.25f),
+                                            modifier = Modifier.size(64.dp)
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.Whatshot,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                content.path == null -> {
+                                    // Not downloaded, no active download — tap (via outer
+                                    // handler) starts the download, like a normal photo.
+                                    Box(
+                                        modifier = Modifier
+                                            .size(64.dp)
+                                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Download,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(30.dp)
+                                        )
+                                    }
+                                }
+                                else -> {
+                                    // Downloaded — flame icon, tap opens the view-once viewer.
+                                    Box(
+                                        modifier = Modifier
+                                            .size(64.dp)
+                                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Whatshot,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        // Timer label bottom
+                        val timerLabel = when {
+                            content.selfDestructSeconds <= 0 -> "Photo, tap to view"
+                            else -> {
+                                val s = content.selfDestructSeconds
+                                "🔥 ${s}s · tap to view"
+                            }
+                        }
+                        androidx.compose.material3.Text(
+                            text = timerLabel,
+                            color = Color.White,
+                            style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 10.dp)
                         )
                     }
 
-                    // --- Upload progress (only if uploading) ---
+                    // --- Upload progress ---
                     if (content.isUploading) {
                         Box(
                             modifier = Modifier
@@ -305,13 +504,26 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // --- Spoiler overlay (only if spoiler) ---
-                    if (content.hasSpoiler && !content.isViewOnce) {
-                        SpoilerWrapper(
-                            isRevealed = isMediaSpoilerRevealed,
-                            modifier = Modifier.matchParentSize()
-                        ) {
+                    // --- Spoiler overlay ---
+                    if (content.hasSpoiler) {
+                        SpoilerWrapper(isRevealed = isMediaSpoilerRevealed) {
                             Box(modifier = Modifier.fillMaxSize())
+                        }
+                    }
+
+                    // --- Metadata overlay ---
+                    if (!content.isViewOnce && content.caption.isEmpty() && showMetadata) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(6.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.45f),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            MessageMetadata(msg, isOutgoing, Color.White)
                         }
                     }
                 }
@@ -323,11 +535,7 @@ fun PhotoMessageBubble(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(run { 
-                                val d = LocalDarkTheme.current
-                                if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) 
-                                else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF))
-                            })
+                            .background(run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) })
                             .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp)
                             .zIndex(1f)
                     ) {
