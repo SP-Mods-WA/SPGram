@@ -243,7 +243,15 @@ fun PhotoMessageBubble(
 
                 Box(
                     modifier = boxModifier
-                        .pointerInput(Unit) {
+                        .pointerInput(
+                            content.isViewOnce,
+                            content.isViewOnceOpened,
+                            content.path,
+                            content.isDownloading,
+                            content.hasSpoiler,
+                            content.fileId,
+                            hasFullPhoto
+                        ) {
                             detectTapGestures(
                                 onTap = {
                                     when {
@@ -252,7 +260,7 @@ fun PhotoMessageBubble(
                                             onOpenViewOnce(msg)
                                         }
                                         content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
-                                            // Download in progress — tap cancels it.
+                                            // Download in progress — tap cancels it, same as a normal photo.
                                             AutoDownloadSuppression.suppress(content.fileId)
                                             onCancelDownload(content.fileId)
                                         }
@@ -370,30 +378,12 @@ fun PhotoMessageBubble(
 
                     // --- View once overlay ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Blurred background: use full photo path when downloaded (better quality),
-                        // fall back to thumbnail/minithumbnail while waiting.
-                        val blurSource = content.path?.takeIf { it.isNotBlank() }
-                            ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
-                            ?: content.minithumbnail
-                        if (blurSource != null) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(blurSource)
-                                    .crossfade(false)
-                                    .build(),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .blur(25.dp),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            MediaLoadingBackground(
-                                previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop,
-                                previewBlur = 20.dp
-                            )
-                        }
+                        // Blurred thumbnail background
+                        MediaLoadingBackground(
+                            previewData = content.thumbnailPath ?: content.minithumbnail,
+                            contentScale = ContentScale.Crop,
+                            previewBlur = 20.dp
+                        )
                         // Dark scrim
                         Box(
                             modifier = Modifier
