@@ -244,9 +244,7 @@ fun PhotoMessageBubble(
                                 onTap = {
                                     when {
                                         content.isViewOnce && !content.isViewOnceOpened -> {
-                                            // Only open if already downloaded; otherwise
-                                            // download is triggered by the center icon click
-                                            if (content.path != null) onOpenViewOnce(msg)
+                                            onOpenViewOnce(msg)
                                         }
                                         content.hasSpoiler -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
