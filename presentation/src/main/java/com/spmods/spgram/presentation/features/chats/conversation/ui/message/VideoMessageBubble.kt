@@ -6,13 +6,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -122,13 +122,23 @@ fun VideoMessageBubble(
     }
     var isAutoDownloadSuppressed by remember(msg.id, content.fileId) { mutableStateOf(false) }
 
-    // Aspect ratio must be recomputed whenever real width/height arrive (same fix as
-    // PhotoMessageBubble) — keying only on msg.id/fileId locks the 1.3f fallback in
-    // permanently if width/height are 0 on the first composition.
-    val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
-        if (content.width > 0 && content.height > 0)
-            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
-        else 1.3f
+    // Same fix as PhotoMessageBubble: compute exact bubble size from pixel dimensions
+    // instead of using fillMaxWidth + aspectRatio. This guarantees the correct size
+    // from the very first frame regardless of download state.
+    val maxBubbleW = 260.dp
+    val maxBubbleH = 320.dp
+    val minBubbleW = 120.dp
+    val minBubbleH = 120.dp
+
+    val bubbleSize = remember(content.width, content.height) {
+        val pw = content.width.takeIf { it > 0 } ?: 4
+        val ph = content.height.takeIf { it > 0 } ?: 3
+        val scaleW = maxBubbleW.value / pw
+        val scaleH = maxBubbleH.value / ph
+        val scale = minOf(scaleW, scaleH, 1f)
+        val w = (pw * scale).coerceAtLeast(minBubbleW.value)
+        val h = (ph * scale).coerceAtLeast(minBubbleH.value)
+        DpSize(w.dp, h.dp)
     }
 
     LaunchedEffect(content.path, content.fileId) {
@@ -195,9 +205,7 @@ fun VideoMessageBubble(
             color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
-            Column(modifier = Modifier
-                .widthIn(max = 280.dp)
-            ) {
+            Column(modifier = Modifier.width(IntrinsicSize.Max)) {
                 msg.forwardInfo?.let { forward ->
                     Box(
                         modifier = Modifier
@@ -225,27 +233,17 @@ fun VideoMessageBubble(
                     }
                 }
 
-                val ratio = stableAspectRatio
-
-                // ✅ FIXED: Official style - View Once: square with padding, Normal: min/max height
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                     Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)  // Padding around view once
-                        .aspectRatio(1f)  // Square
+                        .size(200.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                         .clipToBounds()
-                        .onGloballyPositioned {
-                            layoutTracker.videoPosition = it.positionInWindow()
-                        }
+                        .onGloballyPositioned { layoutTracker.videoPosition = it.positionInWindow() }
                 } else {
                     Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 120.dp, max = 420.dp)  // ✅ Min 120, Max 360
-                        .aspectRatio(ratio)
+                        .size(bubbleSize.width, bubbleSize.height)
                         .clipToBounds()
-                        .onGloballyPositioned {
-                            layoutTracker.videoPosition = it.positionInWindow()
-                        }
+                        .onGloballyPositioned { layoutTracker.videoPosition = it.positionInWindow() }
                 }
 
                 Box(modifier = boxModifier) {
