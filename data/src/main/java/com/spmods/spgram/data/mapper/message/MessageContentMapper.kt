@@ -108,7 +108,13 @@ internal class MessageContentMapper(
                 val isQueued = photoFile?.let { fileHelper.isFileQueued(it.id) } ?: false
                 val downloadProgress = photoFile?.let(fileHelper::computeDownloadProgress) ?: 0f
 
-                val photoIsViewOnce = content.isSecret
+                val isViewOnce = content.isSecret
+                val selfDestructSeconds = when (val t = msg.selfDestructType) {
+                    is TdApi.MessageSelfDestructTypeImmediately -> 0
+                    is TdApi.MessageSelfDestructTypeTimer -> t.selfDestructTime
+                    else -> 0
+                }
+                val photoIsViewOnce = isViewOnce || selfDestructSeconds > 0
                 // Auto-download view-once photos immediately so they are ready to open.
                 // TDLib destroys them server-side after openMessageContent(), so we save
                 // locally first. isViewOnceOpened starts false; ViewOnceOperations updates
@@ -146,7 +152,8 @@ internal class MessageContentMapper(
                     minithumbnail = content.photo.minithumbnail?.data,
                     hasSpoiler = content.hasSpoiler,
                     isViewOnce = photoIsViewOnce,
-                    isViewOnceOpened = photoOpened
+                    isViewOnceOpened = photoOpened,
+                    selfDestructSeconds = selfDestructSeconds
                 )
             }
 
@@ -161,7 +168,12 @@ internal class MessageContentMapper(
 
                 if (thumbFile != null) {
                     fileHelper.registerCachedFile(thumbFile.id, context.chatId, context.messageId)
-                    if (thumbnailPath == null && context.networkAutoDownload) {
+                    // Thumbnail is a tiny preview image (~2-10 KB) used only for the
+                    // blur/placeholder shown before the full video downloads. It should
+                    // always be fetched regardless of the user's auto-download setting,
+                    // exactly like photo thumbnails — otherwise the bubble stays blurred
+                    // permanently when auto-download is off, which is wrong UX.
+                    if (thumbnailPath == null) {
                         fileHelper.enqueueDownload(
                             thumbFile.id,
                             1,
@@ -192,11 +204,18 @@ internal class MessageContentMapper(
                     )
                 }
 
+                // TDLib sometimes reports video.width/height = 0 before the thumbnail
+                // is downloaded. Fallback to the thumbnail's own dimensions so the bubble
+                // renders at the correct aspect ratio immediately — same approach photo
+                // mapper uses with sizes.maxByOrNull{}.
+                val effectiveWidth = if (video.width > 0) video.width else video.thumbnail?.width ?: 0
+                val effectiveHeight = if (video.height > 0) video.height else video.thumbnail?.height ?: 0
+
                 MessageContent.Video(
                     path = path,
                     thumbnailPath = thumbnailPath,
-                    width = video.width,
-                    height = video.height,
+                    width = effectiveWidth,
+                    height = effectiveHeight,
                     duration = video.duration,
                     caption = content.caption.text,
                     entities = mapEntities(
