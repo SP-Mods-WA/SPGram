@@ -247,19 +247,18 @@ fun PhotoMessageBubble(
                             detectTapGestures(
                                 onTap = {
                                     when {
-                                        content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank() -> {
-                                            // Downloaded — flame icon tap opens the viewer.
-                                            onOpenViewOnce(msg)
-                                        }
                                         content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
-                                            // Download in progress — tap cancels it.
+                                            // keep current download state
+ {
+                                            // Download in progress — tap cancels it, same as a normal photo.
                                             AutoDownloadSuppression.suppress(content.fileId)
                                             onCancelDownload(content.fileId)
                                         }
                                         content.isViewOnce && !content.isViewOnceOpened -> {
-                                            // Not downloaded yet — tap starts the download.
-                                            AutoDownloadSuppression.clear(content.fileId)
-                                            onDownloadPhoto(content.fileId)
+                                            // Always delegate to ViewOnce handler.
+                                            // It opens immediately if path exists,
+                                            // otherwise triggers download and opens later.
+                                            onOpenViewOnce(msg)
                                         }
                                         content.hasSpoiler -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
@@ -370,30 +369,12 @@ fun PhotoMessageBubble(
 
                     // --- View once overlay ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Blurred background: use full photo path when downloaded (better quality),
-                        // fall back to thumbnail/minithumbnail while waiting.
-                        val blurSource = content.path?.takeIf { it.isNotBlank() }
-                            ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
-                            ?: content.minithumbnail
-                        if (blurSource != null) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(blurSource)
-                                    .crossfade(false)
-                                    .build(),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .blur(25.dp),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            MediaLoadingBackground(
-                                previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop,
-                                previewBlur = 20.dp
-                            )
-                        }
+                        // Blurred thumbnail background
+                        MediaLoadingBackground(
+                            previewData = content.thumbnailPath ?: content.minithumbnail,
+                            contentScale = ContentScale.Crop,
+                            previewBlur = 20.dp
+                        )
                         // Dark scrim
                         Box(
                             modifier = Modifier
