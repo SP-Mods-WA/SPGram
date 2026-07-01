@@ -106,6 +106,11 @@ sealed interface MessageContent {
         val isViewOnceOpened: Boolean = false,
         val selfDestructSeconds: Int = 0
     ) : MessageContent {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Photo
 
             if (width != other.width) return false
             if (height != other.height) return false
