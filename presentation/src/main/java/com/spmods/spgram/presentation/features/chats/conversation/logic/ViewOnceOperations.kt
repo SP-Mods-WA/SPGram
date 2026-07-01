@@ -83,11 +83,10 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                         messageIds = listOf(latest.id)
                     )
                 } else {
-                    // Not downloaded yet: kick off the download and leave the overlay
-                    // in place (openMessageContent is NOT sent yet — see above). The
-                    // auto-open effect in PhotoMessageBubble watches for content.path
-                    // to arrive and will call this function again automatically —
-                    // no second tap required.
+                    // Should not normally happen: PhotoMessageBubble only calls
+                    // onOpenViewOnce once content.path is non-null (undownloaded
+                    // taps go straight to onDownloadPhoto instead). Kept as a
+                    // safety net — just kick off the download if we get here.
                     Log.d("ViewOnce", "Photo not downloaded yet — triggering download")
                     onDownloadFile(content.fileId)
                 }
@@ -97,6 +96,7 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                 if (path != null) {
                     onOpenVideo(path = path, messageId = latest.id, caption = content.caption)
                 } else {
+                    // Same safety net as above for video.
                     Log.w("ViewOnce", "Video tapped but path still null — download in progress")
                     onDownloadFile(content.fileId)
                 }
