@@ -232,50 +232,35 @@ fun PhotoMessageBubble(
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {
-                                    when {
-                                        // Spoiler check first (only for non-view-once)
-                                        content.hasSpoiler && !content.isViewOnce -> {
-                                            isMediaSpoilerRevealed = !isMediaSpoilerRevealed
-                                        }
-                                        // VIEW-ONCE: Downloaded - OPEN VIEWER
-                                        content.isViewOnce && !content.isViewOnceOpened && hasFullPhoto -> {
+                                    // ✅ SIMPLIFIED: Just check view-once state
+                                    if (content.isViewOnce && !content.isViewOnceOpened) {
+                                        if (hasFullPhoto) {
+                                            // Downloaded - open viewer
                                             onOpenViewOnce(msg)
-                                        }
-                                        // View-once: Downloading - cancel
-                                        content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
+                                        } else if (content.isDownloading) {
+                                            // Downloading - cancel
                                             AutoDownloadSuppression.suppress(content.fileId)
                                             onCancelDownload(content.fileId)
-                                        }
-                                        // View-once: Not downloaded - start download
-                                        content.isViewOnce && !content.isViewOnceOpened -> {
+                                        } else {
+                                            // Not downloaded - start download
                                             AutoDownloadSuppression.clear(content.fileId)
                                             onDownloadPhoto(content.fileId)
                                         }
-                                        // Normal photo: Downloading - cancel
-                                        content.isDownloading -> {
-                                            AutoDownloadSuppression.suppress(content.fileId)
-                                            onCancelDownload(content.fileId)
-                                        }
-                                        // Normal photo: Default behavior
-                                        else -> {
-                                            AutoDownloadSuppression.clear(content.fileId)
-                                            if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
-                                        }
+                                    } else if (content.hasSpoiler) {
+                                        isMediaSpoilerRevealed = !isMediaSpoilerRevealed
+                                    } else if (content.isDownloading) {
+                                        AutoDownloadSuppression.suppress(content.fileId)
+                                        onCancelDownload(content.fileId)
+                                    } else {
+                                        AutoDownloadSuppression.clear(content.fileId)
+                                        if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
                                     }
                                 },
                                 onLongPress = { offset -> onLongClick(imagePosition + offset) }
                             )
                         }
                 ) {
-                    // --- Background layer (non-view-once only) ---
-                    if (!content.isViewOnce && !hasPath) {
-                        MediaLoadingBackground(
-                            previewData = content.thumbnailPath ?: content.minithumbnail,
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-
-                    // --- Show real image for ALL photos including view-once ---
+                    // --- ONLY THE IMAGE - NO OVERLAYS AT ALL ---
                     if (hasPath) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -292,153 +277,15 @@ fun PhotoMessageBubble(
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
-                    }
-
-                    // --- Download action (CENTER) - only for non-view-once ---
-                    if (!hasFullPhoto && !content.isViewOnce) {
-                        Box(
-                            modifier = Modifier.matchParentSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (content.isDownloading) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .background(Color.Black.copy(alpha = 0.6f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularWavyProgressIndicator(
-                                        progress = { content.downloadProgress },
-                                        color = Color.White,
-                                        trackColor = Color.White.copy(alpha = 0.25f),
-                                        modifier = Modifier.size(40.dp)
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .clickable {
-                                                AutoDownloadSuppression.suppress(content.fileId)
-                                                onCancelDownload(content.fileId)
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = stringResource(R.string.cancel_button),
-                                            tint = Color.White,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                                        .clickable {
-                                            AutoDownloadSuppression.clear(content.fileId)
-                                            onDownloadPhoto(content.fileId)
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Download,
-                                        contentDescription = stringResource(R.string.cd_download),
-                                        tint = Color.White,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // --- VIEW-ONCE OVERLAY (BLUR REMOVED) ---
-                    // ✅ FIX: Removed blur completely - only dark scrim and icons
-                    if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Dark scrim only - NO BLUR
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.45f))
-                                .pointerInput(Unit) {} // Consumes no taps - lets clicks pass through
-                        )
-                        
-                        // Center icon - display only (tap handled by outer pointerInput)
-                        Box(
-                            modifier = Modifier.align(Alignment.Center),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            when {
-                                content.isDownloading -> {
-                                    Box(
-                                        modifier = Modifier.size(64.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularWavyProgressIndicator(
-                                            progress = { content.downloadProgress },
-                                            color = Color.White,
-                                            trackColor = Color.White.copy(alpha = 0.25f),
-                                            modifier = Modifier.size(64.dp)
-                                        )
-                                        Icon(
-                                            imageVector = Icons.Default.Whatshot,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                                !hasFullPhoto -> {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(64.dp)
-                                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Download,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(30.dp)
-                                        )
-                                    }
-                                }
-                                else -> {
-                                    // Downloaded - flame icon
-                                    Box(
-                                        modifier = Modifier
-                                            .size(64.dp)
-                                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Whatshot,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(32.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Timer label - non-interactive
-                        val timerLabel = when {
-                            content.selfDestructSeconds <= 0 -> "Photo, tap to view"
-                            else -> "🔥 ${content.selfDestructSeconds}s · tap to view"
-                        }
-                        Text(
-                            text = timerLabel,
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 10.dp)
-                                .pointerInput(Unit) {} // Non-interactive
+                    } else {
+                        // Show loading/placeholder if no path
+                        MediaLoadingBackground(
+                            previewData = content.thumbnailPath ?: content.minithumbnail,
+                            contentScale = ContentScale.Crop
                         )
                     }
 
-                    // --- Upload progress ---
+                    // --- Upload progress (only if uploading) ---
                     if (content.isUploading) {
                         Box(
                             modifier = Modifier
@@ -458,29 +305,13 @@ fun PhotoMessageBubble(
                         }
                     }
 
-                    // --- Spoiler overlay ---
-                    if (content.hasSpoiler) {
+                    // --- Spoiler overlay (only if spoiler) ---
+                    if (content.hasSpoiler && !content.isViewOnce) {
                         SpoilerWrapper(
                             isRevealed = isMediaSpoilerRevealed,
                             modifier = Modifier.matchParentSize()
                         ) {
                             Box(modifier = Modifier.fillMaxSize())
-                        }
-                    }
-
-                    // --- Metadata overlay ---
-                    if (!content.isViewOnce && content.caption.isEmpty() && showMetadata) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(6.dp)
-                                .background(
-                                    Color.Black.copy(alpha = 0.45f),
-                                    RoundedCornerShape(12.dp)
-                                )
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            MessageMetadata(msg, isOutgoing, Color.White)
                         }
                     }
                 }
