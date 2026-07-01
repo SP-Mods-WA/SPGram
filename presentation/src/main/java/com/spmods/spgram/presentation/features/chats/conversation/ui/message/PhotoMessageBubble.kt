@@ -34,9 +34,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -181,7 +181,7 @@ fun PhotoMessageBubble(
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
         Surface(
-            shape = bubbleShape,
+            shape = if (content.isViewOnce && !content.isViewOnceOpened) CircleShape else bubbleShape,
             color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
@@ -228,9 +228,8 @@ fun PhotoMessageBubble(
 
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                     Modifier
-                        .size(200.dp)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .clipToBounds()
+                        .size(220.dp)
+                        .clip(CircleShape)
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 } else {
                     Modifier
@@ -245,7 +244,7 @@ fun PhotoMessageBubble(
                             detectTapGestures(
                                 onTap = {
                                     when {
-                                        content.isViewOnce && !content.isViewOnceOpened && content.path == null -> {
+                                        content.isViewOnce && !content.isViewOnceOpened -> {
                                             onOpenViewOnce(msg)
                                         }
                                         content.hasSpoiler -> {
@@ -267,38 +266,12 @@ fun PhotoMessageBubble(
                             )
                         }
                 ) {
-                    // --- Background layer ---
-                    if (content.isViewOnce && !hasFullPhoto) {
-                        if (content.minithumbnail != null) {
-                            MediaLoadingBackground(
-    previewData = content.thumbnailPath ?: content.minithumbnail,
-    contentScale = ContentScale.Crop,
-    previewBlur = 14.dp
-)
-                        } else {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                Box(modifier = Modifier.fillMaxSize().background(Color(0xFF4A6FA5)))
-                                Box(modifier = Modifier.fillMaxSize().background(
-                                    Brush.radialGradient(
-                                        colors = listOf(Color(0x886B9FD4), Color.Transparent),
-                                        radius = 400f
-                                    )
-                                ))
-                                Box(modifier = Modifier.fillMaxSize().background(
-                                    Brush.radialGradient(
-                                        colors = listOf(Color(0x55A87FC1), Color.Transparent),
-                                        center = Offset(Float.MAX_VALUE, Float.MAX_VALUE),
-                                        radius = 500f
-                                    )
-                                ))
-                                Box(modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.12f)))
-                            }
-                        }
-                    } else if (!hasPath) {
+                    // --- Background layer (non-view-once only) ---
+                    if (!content.isViewOnce && !hasPath) {
                         MediaLoadingBackground(
-    previewData = content.thumbnailPath ?: content.minithumbnail,
-    contentScale = ContentScale.Crop
-)
+                            previewData = content.thumbnailPath ?: content.minithumbnail,
+                            contentScale = ContentScale.Crop
+                        )
                     }
 
                     // --- Actual image (after download) ---
@@ -385,26 +358,47 @@ fun PhotoMessageBubble(
                     }
 
                     // --- View once overlay ---
+                    // Official Telegram style: blurred thumbnail fills the bubble,
+                    // dark scrim on top, large flame icon + "Photo, tap to view" label.
                     if (content.isViewOnce && !content.isViewOnceOpened) {
+                        // Blurred thumbnail background (always shown, even before download)
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            MediaLoadingBackground(
+                                previewData = content.thumbnailPath ?: content.minithumbnail,
+                                contentScale = ContentScale.Crop,
+                                previewBlur = 20.dp
+                            )
+                        }
+                        // Dark scrim
                         Box(
                             modifier = Modifier
-                                .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.45f))
+                        )
+                        // Flame icon + label
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(64.dp)
-                                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                                    .size(56.dp)
+                                    .background(Color.White.copy(alpha = 0.18f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Whatshot,
                                     contentDescription = null,
                                     tint = Color.White,
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(30.dp)
                                 )
                             }
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.size(8.dp))
+                            androidx.compose.material3.Text(
+                                text = "Photo, tap to view",
+                                color = Color.White,
+                                style = androidx.compose.material3.MaterialTheme.typography.labelMedium
+                            )
                         }
                     }
 
