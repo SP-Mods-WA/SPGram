@@ -29,19 +29,30 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
             Log.e("ViewOnce", "openMessageContent failed: msgId=${latest.id}", e)
         }
 
-        // Immediately mark as opened in local state so the UI stops showing the
-        // "View" button without waiting for the TDLib UpdateMessageContentOpened
-        // round-trip. TDLib will send the authoritative update shortly after, but
-        // this prevents the button from remaining tappable in the meantime.
+        // Only mark Photo/Video as "opened" once we actually have a path to show —
+        // otherwise the view-once overlay (flame icon / download progress / "tap to
+        // view" label) disappears the instant the user taps, before the file has even
+        // downloaded, and nothing is left on screen to auto-open once it's ready.
+        // Voice/VideoNote open inline via their own players, so it's safe to flip
+        // those immediately.
+        val passedPhoto = message.content as? MessageContent.Photo
+        val passedVideo = message.content as? MessageContent.Video
+        val currentPhotoPath = (latest.content as? MessageContent.Photo)?.path ?: passedPhoto?.path
+        val currentVideoPath = (latest.content as? MessageContent.Video)?.path ?: passedVideo?.path
+
         _state.update { state ->
             state.copy(
                 messages = state.messages.map { msg ->
                     if (msg.id != latest.id) return@map msg
                     when (val content = msg.content) {
                         is MessageContent.Photo ->
-                            msg.copy(content = content.copy(isViewOnceOpened = true))
+                            if (currentPhotoPath != null) {
+                                msg.copy(content = content.copy(isViewOnceOpened = true))
+                            } else msg
                         is MessageContent.Video ->
-                            msg.copy(content = content.copy(isViewOnceOpened = true))
+                            if (currentVideoPath != null) {
+                                msg.copy(content = content.copy(isViewOnceOpened = true))
+                            } else msg
                         is MessageContent.Voice ->
                             msg.copy(content = content.copy(isViewOnceOpened = true))
                         is MessageContent.VideoNote ->
@@ -57,8 +68,7 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                 // Prefer the path from the passed-in message (which the UI already
                 // confirmed is non-null by showing the flame icon), falling back to
                 // latest state in case a fresh updateFile arrived in between.
-                val passedContent = message.content as? MessageContent.Photo
-                val path = content.path ?: passedContent?.path
+                val path = currentPhotoPath
                 if (path != null) {
                     onOpenImages(
                         images = listOf(path),
@@ -68,16 +78,21 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                         messageIds = listOf(latest.id)
                     )
                 } else {
+                    // Not downloaded yet: kick off the download and leave the overlay
+                    // in place. ViewOnceAutoOpen (in PhotoMessageBubble) watches for
+                    // content.path to arrive and will open the viewer automatically —
+                    // no second tap required.
                     Log.d("ViewOnce", "Photo not downloaded yet — triggering download")
-                    onDownloadPhoto(content.fileId)
+                    onDownloadFile(content.fileId)
                 }
             }
             is MessageContent.Video -> {
-                val path = content.path
+                val path = currentVideoPath
                 if (path != null) {
                     onOpenVideo(path = path, messageId = latest.id, caption = content.caption)
                 } else {
                     Log.w("ViewOnce", "Video tapped but path still null — download in progress")
+                    onDownloadFile(content.fileId)
                 }
             }
             // Voice: VoiceMessageBubble calls togglePlayPause directly after onOpenViewOnce.
