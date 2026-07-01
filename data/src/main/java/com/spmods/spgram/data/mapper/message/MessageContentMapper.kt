@@ -76,9 +76,27 @@ internal class MessageContentMapper(
                 val path = fileHelper.findBestAvailablePath(photoFile, sizes)
                 val thumbnailPath = fileHelper.resolveLocalFilePath(thumbnailFile)
 
+                // ✅ FIX: isViewOnce/selfDestructSeconds must be computed BEFORE the
+                // auto-download decision below — previously they were computed after,
+                // so the photo auto-download block had no way to check them and ended
+                // up unconditionally enqueueing a download for view-once photos too
+                // (unlike the video branch, which correctly guards with !videoIsViewOnce).
+                // TDLib does not like the full file being fetched before openMessageContent
+                // is sent for self-destructing media, so this silently left content.path
+                // stuck at null — the flame icon never appeared and tapping the bubble
+                // did nothing forever. Videos never had this problem because they already
+                // withheld auto-download until the user tapped.
+                val isViewOnce = content.isSecret
+                val selfDestructSeconds = when (val t = msg.selfDestructType) {
+                    is TdApi.MessageSelfDestructTypeImmediately -> 0
+                    is TdApi.MessageSelfDestructTypeTimer -> t.selfDestructTime
+                    else -> 0
+                }
+                val photoIsViewOnce = isViewOnce || selfDestructSeconds > 0
+
                 if (photoFile != null) {
                     fileHelper.registerCachedFile(photoFile.id, context.chatId, context.messageId)
-                    if (path == null && context.networkAutoDownload) {
+                    if (!photoIsViewOnce && path == null && context.networkAutoDownload) {
                         fileHelper.enqueueDownload(
                             photoFile.id,
                             1,
@@ -107,14 +125,6 @@ internal class MessageContentMapper(
                 val isDownloading = photoFile?.local?.isDownloadingActive ?: false
                 val isQueued = photoFile?.let { fileHelper.isFileQueued(it.id) } ?: false
                 val downloadProgress = photoFile?.let(fileHelper::computeDownloadProgress) ?: 0f
-
-                val isViewOnce = content.isSecret
-                val selfDestructSeconds = when (val t = msg.selfDestructType) {
-                    is TdApi.MessageSelfDestructTypeImmediately -> 0
-                    is TdApi.MessageSelfDestructTypeTimer -> t.selfDestructTime
-                    else -> 0
-                }
-                val photoIsViewOnce = isViewOnce || selfDestructSeconds > 0
                 // View-once photos are NOT auto-downloaded anymore. The overlay shows a
                 // download icon (like a normal undownloaded photo); tapping it starts the
                 // download with visible progress. Only once content.path is non-null does
