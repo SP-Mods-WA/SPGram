@@ -54,7 +54,11 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
 
         when (val content = latest.content) {
             is MessageContent.Photo -> {
-                val path = content.path
+                // Prefer the path from the passed-in message (which the UI already
+                // confirmed is non-null by showing the flame icon), falling back to
+                // latest state in case a fresh updateFile arrived in between.
+                val passedContent = message.content as? MessageContent.Photo
+                val path = content.path ?: passedContent?.path
                 if (path != null) {
                     onOpenImages(
                         images = listOf(path),
@@ -64,7 +68,8 @@ internal fun DefaultChatComponent.handleOpenViewOnce(message: MessageModel) {
                         messageIds = listOf(latest.id)
                     )
                 } else {
-                    Log.w("ViewOnce", "Photo tapped but path still null — download in progress")
+                    Log.d("ViewOnce", "Photo not downloaded yet — triggering download")
+                    onDownloadPhoto(content.fileId)
                 }
             }
             is MessageContent.Video -> {
