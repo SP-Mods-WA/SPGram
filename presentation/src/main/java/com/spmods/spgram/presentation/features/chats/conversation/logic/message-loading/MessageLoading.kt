@@ -53,7 +53,9 @@ private fun firstUsableAvatarPath(vararg candidates: String?): String? {
 }
 
 private fun mergeSenderVisuals(previous: MessageModel, incoming: MessageModel): MessageModel {
-    if (previous.senderId != incoming.senderId) return incoming
+    if (previous.senderId != incoming.senderId) {
+        return incoming.copy(content = mergeViewOnceOpenedState(previous.content, incoming.content))
+    }
 
     val mergedAvatar = firstUsableAvatarPath(
         incoming.senderAvatar,
@@ -74,8 +76,30 @@ private fun mergeSenderVisuals(previous: MessageModel, incoming: MessageModel): 
         senderPersonalAvatar = mergedPersonalAvatar,
         senderCustomTitle = incoming.senderCustomTitle ?: previous.senderCustomTitle,
         senderStatusEmojiPath = incoming.senderStatusEmojiPath ?: previous.senderStatusEmojiPath,
-        reactions = incoming.reactions.ifEmpty { previous.reactions }
+        reactions = incoming.reactions.ifEmpty { previous.reactions },
+        content = mergeViewOnceOpenedState(previous.content, incoming.content)
     )
+}
+
+// The mapper that builds MessageContent from a fresh TDLib update always sets
+// isViewOnceOpened = false — it has no access to the previous UI state, so it
+// can't know the user already tapped to open this view-once photo/video/voice
+// note. Without this, every background file-update event that arrives right
+// after the tap (view-once media auto-downloads immediately) overwrites the
+// in-memory "opened" flag back to false, instantly reverting the bubble to
+// its "tap to view" overlay and making it look like the tap did nothing.
+private fun mergeViewOnceOpenedState(previous: MessageContent, incoming: MessageContent): MessageContent {
+    return when {
+        previous is MessageContent.Photo && incoming is MessageContent.Photo && previous.isViewOnceOpened ->
+            incoming.copy(isViewOnceOpened = true)
+        previous is MessageContent.Video && incoming is MessageContent.Video && previous.isViewOnceOpened ->
+            incoming.copy(isViewOnceOpened = true)
+        previous is MessageContent.Voice && incoming is MessageContent.Voice && previous.isViewOnceOpened ->
+            incoming.copy(isViewOnceOpened = true)
+        previous is MessageContent.VideoNote && incoming is MessageContent.VideoNote && previous.isViewOnceOpened ->
+            incoming.copy(isViewOnceOpened = true)
+        else -> incoming
+    }
 }
 
 private fun MessageModel.needsSenderRefresh(): Boolean {
