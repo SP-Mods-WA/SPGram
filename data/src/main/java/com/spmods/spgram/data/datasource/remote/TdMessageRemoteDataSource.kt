@@ -1154,13 +1154,20 @@ class TdMessageRemoteDataSource(
     }
 
     private fun MessageSendOptions.toSelfDestructType(): TdApi.MessageSelfDestructType? {
-        return when {
-            selfDestructImmediately -> TdApi.MessageSelfDestructTypeImmediately()
-            selfDestructSeconds != null && selfDestructSeconds == 0 -> TdApi.MessageSelfDestructTypeImmediately()
-            selfDestructSeconds != null && selfDestructSeconds > 0 -> TdApi.MessageSelfDestructTypeTimer(selfDestructSeconds)
-            else -> null
+    return when {
+        selfDestructImmediately -> TdApi.MessageSelfDestructTypeImmediately()
+        // ✅ මෙතන smart cast එක වෙනුවට safe call + let use කරන්න
+        selfDestructSeconds != null -> {
+            val seconds = selfDestructSeconds as? Int ?: return null
+            when {
+                seconds == 0 -> TdApi.MessageSelfDestructTypeImmediately()
+                seconds > 0 -> TdApi.MessageSelfDestructTypeTimer(seconds)
+                else -> null
+            }
         }
+        else -> null
     }
+}
 
     private fun MessageSendOptions.toTdMessageSendOptions(): TdApi.MessageSendOptions {
         return TdApi.MessageSendOptions().apply {
