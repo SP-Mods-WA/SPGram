@@ -163,7 +163,9 @@ fun ChannelVideoMessageBubble(
         }
     }
 
-    LaunchedEffect(content.path, content.isDownloading, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
+    LaunchedEffect(content.path, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
+        // Exclude content.isDownloading from keys: including it re-fires when cancel finishes,
+        // immediately restarting the download the user just cancelled.
         if (content.path.isNullOrBlank() && !content.isDownloading && !content.supportsStreaming && !isAutoDownloadSuppressed && !AutoDownloadSuppression.isSuppressed(
                 content.fileId
             )
@@ -371,7 +373,7 @@ fun ChannelVideoMessageBubble(
                                         imageVector = if (content.isDownloading) Icons.Default.Close else Icons.Default.Download,
                                         contentDescription = null,
                                         tint = Color.White,
-                                        modifier = Modifier.size(10.dp)
+                                        modifier = Modifier.size(14.dp)
                                     )
                                     androidx.compose.foundation.layout.Column {
                                         Text(
