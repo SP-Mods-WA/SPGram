@@ -234,9 +234,10 @@ fun VideoMessageBubble(
                 }
 
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
+                    // ✅ Matches PhotoMessageBubble's view-once box exactly: fixed
+                    // 260x260dp square, no padding.
                     Modifier
-                        .size(200.dp)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .size(260.dp, 260.dp)
                         .clipToBounds()
                         .onGloballyPositioned { layoutTracker.videoPosition = it.positionInWindow() }
                 } else {
@@ -247,13 +248,14 @@ fun VideoMessageBubble(
                 }
 
                 Box(modifier = boxModifier) {
-                    if ((hasFullVideo || content.supportsStreaming) && content.isViewOnce && !content.isViewOnceOpened) {
-                        VideoLoadingLayer(
-                            content = content,
-                            isViewOnce = true,
-                            onCancelDownload = {},
-                            onStartDownload = { onOpenViewOnce(msg) }
-                        )
+                    if (content.isViewOnce && !content.isViewOnceOpened) {
+                        // ✅ Matches PhotoMessageBubble's view-once overlay exactly:
+                        // blurred thumbnail bg, 45% scrim, center icon that swaps
+                        // between download / progress-ring / flame depending on
+                        // state, "tap to view" label at the bottom. Tap routing is
+                        // unchanged — still handled by VideoInteractionOverlay /
+                        // onStartDownload below, only what's drawn changed here.
+                        VideoViewOnceOverlay(content = content)
                     } else if (hasFullVideo || content.supportsStreaming) {
                             if (autoplayVideos) {
                                 val videoPath = displayPath ?: "http://streaming/${content.fileId}"
@@ -340,20 +342,16 @@ fun VideoMessageBubble(
                     } else {
                         VideoLoadingLayer(
                             content = content,
-                            isViewOnce = content.isViewOnce && !content.isViewOnceOpened,
+                            isViewOnce = false,
                             onCancelDownload = {
                                 isAutoDownloadSuppressed = true
                                 AutoDownloadSuppression.suppress(content.fileId)
                                 onCancelDownloadState(content.fileId)
                             },
                             onStartDownload = {
-                                if (content.isViewOnce && !content.isViewOnceOpened) {
-                                    onOpenViewOnce(msg)
-                                } else {
-                                    isAutoDownloadSuppressed = false
-                                    AutoDownloadSuppression.clear(content.fileId)
-                                    onVideoClickState(msg)
-                                }
+                                isAutoDownloadSuppressed = false
+                                AutoDownloadSuppression.clear(content.fileId)
+                                onVideoClickState(msg)
                             }
                         )
                     }
@@ -480,6 +478,99 @@ fun VideoMessageBubble(
 
 // ==================== Helper Composables (unchanged) ====================
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun VideoViewOnceOverlay(
+    content: MessageContent.Video
+) {
+    // ✅ Mirrors PhotoMessageBubble's view-once overlay 1:1 — same blur amount,
+    // same scrim opacity, same icon sizes/backgrounds, same label placement.
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Blurred thumbnail background
+        MediaLoadingBackground(
+            previewData = content.thumbnailPath ?: content.minithumbnail,
+            contentScale = ContentScale.Crop,
+            previewBlur = 20.dp
+        )
+        // Dark scrim
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.45f))
+        )
+        // Center icon reflects the current download state:
+        //   - no path/streaming, not downloading -> download icon
+        //   - downloading -> progress ring (with small flame badge, like the photo bubble)
+        //   - path/streaming ready -> flame icon (tap opens the view-once viewer)
+        val hasVideoReady = !content.path.isNullOrBlank() || content.supportsStreaming
+        Box(
+            modifier = Modifier.align(Alignment.Center),
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                content.isDownloading -> {
+                    Box(
+                        modifier = Modifier.size(64.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularWavyProgressIndicator(
+                            progress = { content.downloadProgress },
+                            color = Color.White,
+                            trackColor = Color.White.copy(alpha = 0.25f),
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Whatshot,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                !hasVideoReady -> {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+                }
+                else -> {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Whatshot,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
+        }
+        // Bottom label — same placement/style as the photo bubble.
+        Text(
+            text = "Video, tap to view",
+            color = Color.White,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 10.dp)
+        )
+    }
+}
+
 @Composable
 private fun VideoMuteToggle(
     modifier: Modifier = Modifier,
@@ -517,7 +608,7 @@ private fun VideoLoadingLayer(
         MediaLoadingBackground(
             previewData = content.minithumbnail,
             contentScale = ContentScale.Crop,
-            previewBlur = 14.dp
+            previewBlur = 0.dp
         )
 
         Box(
