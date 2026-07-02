@@ -6,11 +6,14 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -45,7 +49,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -109,6 +112,21 @@ fun PhotoMessageBubble(
         namespacedCacheKey("chat_photo:${content.fileId}", displayPath)
     }
 
+    // Aspect ratio must be recomputed whenever real width/height arrive. TDLib can
+    // report width=0/height=0 for a brief moment before the photo's metadata (or even
+    // the thumbnail) is loaded — if we lock onto the 1.3f fallback at that instant and
+    // key remember() only on msg.id/fileId, the bubble is stuck at the wrong aspect
+    // ratio for the rest of that screen's lifetime, even after the real dimensions
+    // arrive. Re-entering the chat recreates the composable, which is why the bug
+    // appeared to "fix itself" on navigating back. Keying on width/height as well
+    // ensures we recompute the instant real data shows up, while still avoiding
+    // recomputation (and any layout jump) once the real ratio is known and stable.
+    val stableAspectRatio = remember(msg.id, content.fileId, content.width, content.height) {
+        if (content.width > 0 && content.height > 0)
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
+        else 1.3f
+    }
+
     LaunchedEffect(content.path, content.fileId) {
         if (!content.path.isNullOrBlank()) {
             AutoDownloadSuppression.clear(content.fileId)
@@ -148,35 +166,8 @@ fun PhotoMessageBubble(
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
     var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
 
-    // Compute exact bubble size from photo pixel dimensions — same approach official
-    // Telegram uses. This avoids any dependency on aspectRatio + fillMaxWidth, which
-    // caused the "small bubble on first entry" bug: fillMaxWidth always used the max
-    // column width (340dp) regardless of the photo's real proportions, and aspectRatio
-    // was only correct once real dimensions arrived (often after the first composition).
-    //
-    // Here we scale the photo proportionally to fit within maxW×maxH, with a minimum
-    // size of minW×minH. Because content.width/height come from TDLib's sizes array
-    // metadata (always available, never 0 for real photos), the bubble is the exact
-    // right size from the very first frame — downloaded or not.
-    val maxBubbleW = 260.dp
-    val maxBubbleH = 320.dp
-    val minBubbleW = 120.dp
-    val minBubbleH = 120.dp
-
-    val bubbleSize = remember(content.width, content.height) {
-        val pw = content.width.takeIf { it > 0 } ?: 4
-        val ph = content.height.takeIf { it > 0 } ?: 3
-        // Scale so neither dimension exceeds the max
-        val scaleW = maxBubbleW.value / pw
-        val scaleH = maxBubbleH.value / ph
-        val scale = minOf(scaleW, scaleH, 1f) // never upscale tiny photos
-        val w = (pw * scale).coerceAtLeast(minBubbleW.value)
-        val h = (ph * scale).coerceAtLeast(minBubbleH.value)
-        androidx.compose.ui.unit.DpSize(w.dp, h.dp)
-    }
-
     Column(
-        modifier = modifier,
+        modifier = modifier.width(IntrinsicSize.Max),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
         Surface(
@@ -184,7 +175,7 @@ fun PhotoMessageBubble(
             color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
-            Column(modifier = Modifier.width(IntrinsicSize.Max)) {
+            Column(modifier = Modifier.widthIn(max = 340.dp)) {
                 if (isGroup && !isOutgoing && !isSameSenderAbove) {
                     Box(
                         modifier = Modifier
@@ -227,12 +218,16 @@ fun PhotoMessageBubble(
 
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                     Modifier
-                        .size(260.dp, 260.dp)
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .aspectRatio(1f)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 } else {
                     Modifier
-                        .size(bubbleSize.width, bubbleSize.height)
+                        .fillMaxWidth()
+                        .heightIn(min = 120.dp, max = 420.dp)
+                        .aspectRatio(stableAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 }
@@ -243,7 +238,7 @@ fun PhotoMessageBubble(
                             detectTapGestures(
                                 onTap = {
                                     when {
-                                        content.isViewOnce && !content.isViewOnceOpened -> {
+                                        content.isViewOnce && !content.isViewOnceOpened && content.path == null -> {
                                             onOpenViewOnce(msg)
                                         }
                                         content.hasSpoiler -> {
@@ -255,6 +250,8 @@ fun PhotoMessageBubble(
                                         }
                                         else -> {
                                             AutoDownloadSuppression.clear(content.fileId)
+                                            // If full photo is ready open the viewer; if only
+                                            // thumbnail is available start downloading the full photo.
                                             if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
                                         }
                                     }
@@ -263,12 +260,38 @@ fun PhotoMessageBubble(
                             )
                         }
                 ) {
-                    // --- Background layer (non-view-once only) ---
-                    if (!content.isViewOnce && !hasPath) {
+                    // --- Background layer ---
+                    if (content.isViewOnce && !hasFullPhoto) {
+                        if (content.minithumbnail != null) {
+                            MediaLoadingBackground(
+    previewData = content.thumbnailPath ?: content.minithumbnail,
+    contentScale = ContentScale.Crop,
+    previewBlur = 14.dp
+)
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                Box(modifier = Modifier.fillMaxSize().background(Color(0xFF4A6FA5)))
+                                Box(modifier = Modifier.fillMaxSize().background(
+                                    Brush.radialGradient(
+                                        colors = listOf(Color(0x886B9FD4), Color.Transparent),
+                                        radius = 400f
+                                    )
+                                ))
+                                Box(modifier = Modifier.fillMaxSize().background(
+                                    Brush.radialGradient(
+                                        colors = listOf(Color(0x55A87FC1), Color.Transparent),
+                                        center = Offset(Float.MAX_VALUE, Float.MAX_VALUE),
+                                        radius = 500f
+                                    )
+                                ))
+                                Box(modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.12f)))
+                            }
+                        }
+                    } else if (!hasPath) {
                         MediaLoadingBackground(
-                            previewData = content.thumbnailPath ?: content.minithumbnail,
-                            contentScale = ContentScale.Crop
-                        )
+    previewData = content.thumbnailPath ?: content.minithumbnail,
+    contentScale = ContentScale.Crop
+)
                     }
 
                     // --- Actual image (after download) ---
@@ -290,7 +313,11 @@ fun PhotoMessageBubble(
                             ) 
                     }
 
-                    // --- Download action (CENTER) ---
+                    // --- Download action (CENTER - fixed clickable) ---
+                    // Show the download/cancel button only when the full-resolution photo
+                    // is not yet available. If we already have the thumbnail (hasPath=true
+                    // but hasFullPhoto=false) the button still shows so the user can fetch
+                    // the full photo; it just sits on top of the thumbnail preview.
                     if (!hasFullPhoto && !content.isViewOnce) {
                         Box(
                             modifier = Modifier.matchParentSize(),
@@ -309,6 +336,7 @@ fun PhotoMessageBubble(
                                         trackColor = Color.White.copy(alpha = 0.25f),
                                         modifier = Modifier.size(40.dp)
                                     )
+                                    // Cancel button
                                     Box(
                                         modifier = Modifier
                                             .size(48.dp)
@@ -327,6 +355,7 @@ fun PhotoMessageBubble(
                                     }
                                 }
                             } else {
+                                // Download button
                                 Box(
                                     modifier = Modifier
                                         .size(48.dp)
@@ -350,103 +379,26 @@ fun PhotoMessageBubble(
 
                     // --- View once overlay ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Blurred thumbnail background
-                        MediaLoadingBackground(
-                            previewData = content.thumbnailPath ?: content.minithumbnail,
-                            contentScale = ContentScale.Crop,
-                            previewBlur = 20.dp
-                        )
-                        // Dark scrim
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.45f))
-                        )
-                        // Center icon — flame (downloaded) or download/progress (not yet)
-                        Box(
-                            modifier = Modifier.align(Alignment.Center),
+                                .matchParentSize()
+                                .background(Color.Black.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            when {
-                                content.isDownloading -> {
-                                    // Progress ring around cancel icon
-                                    Box(
-                                        modifier = Modifier
-                                            .size(64.dp)
-                                            .clickable {
-                                                AutoDownloadSuppression.suppress(content.fileId)
-                                                onCancelDownload(content.fileId)
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularWavyProgressIndicator(
-                                            progress = { content.downloadProgress },
-                                            color = Color.White,
-                                            trackColor = Color.White.copy(alpha = 0.25f),
-                                            modifier = Modifier.size(64.dp)
-                                        )
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                                content.path == null -> {
-                                    // Not downloaded — show download icon, click to download
-                                    Box(
-                                        modifier = Modifier
-                                            .size(64.dp)
-                                            .background(Color.White.copy(alpha = 0.18f), CircleShape)
-                                            .clickable {
-                                                AutoDownloadSuppression.clear(content.fileId)
-                                                onDownloadPhoto(content.fileId)
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Download,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(30.dp)
-                                        )
-                                    }
-                                }
-                                else -> {
-                                    // Downloaded — flame icon, tap anywhere to open
-                                    Box(
-                                        modifier = Modifier
-                                            .size(64.dp)
-                                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Whatshot,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(32.dp)
-                                        )
-                                    }
-                                }
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Whatshot,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(32.dp)
+                                )
                             }
                         }
-                        // Timer label bottom
-                        val timerLabel = when {
-                            content.selfDestructSeconds <= 0 -> "Photo, tap to view"
-                            else -> {
-                                val s = content.selfDestructSeconds
-                                "🔥 ${s}s · tap to view"
-                            }
-                        }
-                        androidx.compose.material3.Text(
-                            text = timerLabel,
-                            color = Color.White,
-                            style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 10.dp)
-                        )
                     }
 
                     // --- Upload progress ---
