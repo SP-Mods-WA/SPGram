@@ -153,7 +153,11 @@ fun VideoMessageBubble(
         }
     }
 
-    LaunchedEffect(content.path, content.isDownloading, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
+    LaunchedEffect(content.path, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
+        // Only trigger auto-download when path is still blank and not suppressed.
+        // We deliberately exclude content.isDownloading from the keys here:
+        // including it would re-fire this effect when a cancel finishes (isDownloading→false),
+        // immediately restarting the download the user just cancelled.
         if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !content.supportsStreaming && !isAutoDownloadSuppressed && !AutoDownloadSuppression.isSuppressed(
                 content.fileId
             )
@@ -796,7 +800,7 @@ private fun VideoPlaybackBadge(
                     imageVector = if (isDownloading) Icons.Default.Close else Icons.Default.Download,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(10.dp)
+                    modifier = Modifier.size(14.dp)
                 )
                 Column {
                     // Show playback position when playing, otherwise show duration
