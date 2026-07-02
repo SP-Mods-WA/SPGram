@@ -710,9 +710,7 @@ class TdMessageRemoteDataSource(
                 }
             } catch (_: Exception) {}
             this.caption = TdApi.FormattedText(caption, captionEntities.toTdTextEntities(caption))
-            if (sendOptions.selfDestructImmediately) {
-                this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
-            }
+            sendOptions.toSelfDestructType()?.let { this.selfDestructType = it }
         }
         val replyTo = if (replyToMsgId != null && replyToMsgId != 0L) TdApi.InputMessageReplyToMessage(replyToMsgId, null, 0, "") else null
         val topicId = resolveTopicId(chatId, threadId)
@@ -751,9 +749,7 @@ class TdMessageRemoteDataSource(
                 this.duration = dur
             }
             this.caption = TdApi.FormattedText(caption, captionEntities.toTdTextEntities(caption))
-            if (sendOptions.selfDestructImmediately) {
-                this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
-            }
+            sendOptions.toSelfDestructType()?.let { this.selfDestructType = it }
         }
         val replyTo = if (replyToMsgId != null && replyToMsgId != 0L) TdApi.InputMessageReplyToMessage(replyToMsgId, null, 0, "") else null
         val topicId = resolveTopicId(chatId, threadId)
@@ -966,9 +962,7 @@ class TdMessageRemoteDataSource(
                         this.duration = dur
                     }
                     this.caption = cap
-                    if (sendOptions.selfDestructImmediately) {
-                        this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
-                    }
+                    sendOptions.toSelfDestructType()?.let { this.selfDestructType = it }
                 }
                 else TdApi.InputMessagePhoto().apply {
                     this.photo = TdApi.InputFileLocal(path)
@@ -981,9 +975,7 @@ class TdMessageRemoteDataSource(
                         }
                     } catch (_: Exception) {}
                     this.caption = cap
-                    if (sendOptions.selfDestructImmediately) {
-                        this.selfDestructType = TdApi.MessageSelfDestructTypeImmediately()
-                    }
+                    sendOptions.toSelfDestructType()?.let { this.selfDestructType = it }
                 }
             }
         }.toTypedArray()
@@ -1158,6 +1150,15 @@ class TdMessageRemoteDataSource(
             TdApi.MessageTopicForum(threadId.toInt())
         } else {
             TdApi.MessageTopicThread(threadId)
+        }
+    }
+
+    private fun MessageSendOptions.toSelfDestructType(): TdApi.MessageSelfDestructType? {
+        return when {
+            selfDestructImmediately -> TdApi.MessageSelfDestructTypeImmediately()
+            selfDestructSeconds != null && selfDestructSeconds == 0 -> TdApi.MessageSelfDestructTypeImmediately()
+            selfDestructSeconds != null && selfDestructSeconds > 0 -> TdApi.MessageSelfDestructTypeTimer(selfDestructSeconds)
+            else -> null
         }
     }
 
