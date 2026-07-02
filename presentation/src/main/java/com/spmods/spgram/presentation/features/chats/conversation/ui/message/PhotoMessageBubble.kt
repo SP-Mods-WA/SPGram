@@ -6,12 +6,13 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -92,15 +93,6 @@ fun PhotoMessageBubble(
     val smallCorner = 6.dp
     val tailCorner = 0.dp
 
-    // ✅ ROOT FIX: Compute display path directly from content on every recompose.
-    // Previously used remember{} + LaunchedEffect to track stablePath, but that caused
-    // a one-frame delay: remember initialises once (path=null → hasPath=false → tiny
-    // bubble), and LaunchedEffect only fires after composition, so the bubble was tiny
-    // on the first frame after re-entering the chat.
-    //
-    // Solution: val (not var/remember) so Compose recomputes it every time content
-    // changes — exactly like official Telegram clients do. Full photo takes priority;
-    // thumbnail is the fallback so something always shows even before full download.
     val displayPath: String? = content.path?.takeIf { it.isNotBlank() }
         ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
     val hasFullPhoto = !content.path.isNullOrBlank()
@@ -115,10 +107,6 @@ fun PhotoMessageBubble(
             AutoDownloadSuppression.clear(content.fileId)
         }
     }
-
-    // View-once media is no longer auto-downloaded (see MessageContentMapper).
-    // The overlay shows a download icon until content.path exists, then shows
-    // the flame icon. Each state requires its own explicit tap — no auto-open.
 
     LaunchedEffect(content.path, content.isDownloading, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
         if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !AutoDownloadSuppression.isSuppressed(content.fileId)) {
@@ -153,31 +141,14 @@ fun PhotoMessageBubble(
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
     var isMediaSpoilerRevealed by remember { mutableStateOf(!content.hasSpoiler) }
 
-    // Compute exact bubble size from photo pixel dimensions — same approach official
-    // Telegram uses. This avoids any dependency on aspectRatio + fillMaxWidth, which
-    // caused the "small bubble on first entry" bug: fillMaxWidth always used the max
-    // column width (340dp) regardless of the photo's real proportions, and aspectRatio
-    // was only correct once real dimensions arrived (often after the first composition).
-    //
-    // Here we scale the photo proportionally to fit within maxW×maxH, with a minimum
-    // size of minW×minH. Because content.width/height come from TDLib's sizes array
-    // metadata (always available, never 0 for real photos), the bubble is the exact
-    // right size from the very first frame — downloaded or not.
-    val maxBubbleW = 260.dp
-    val maxBubbleH = 320.dp
-    val minBubbleW = 120.dp
-    val minBubbleH = 120.dp
-
-    val bubbleSize = remember(content.width, content.height) {
+    // Photo aspect ratio for sizing — official Telegram approach:
+    // fillMaxWidth() + aspectRatio() so bubble fills the available width
+    // and height follows naturally from the photo's proportions.
+    // Capped at maxHeight to avoid portrait photos becoming enormous.
+    val photoAspectRatio = remember(content.width, content.height) {
         val pw = content.width.takeIf { it > 0 } ?: 4
         val ph = content.height.takeIf { it > 0 } ?: 3
-        // Scale so neither dimension exceeds the max
-        val scaleW = maxBubbleW.value / pw
-        val scaleH = maxBubbleH.value / ph
-        val scale = minOf(scaleW, scaleH, 1f) // never upscale tiny photos
-        val w = (pw * scale).coerceAtLeast(minBubbleW.value)
-        val h = (ph * scale).coerceAtLeast(minBubbleH.value)
-        androidx.compose.ui.unit.DpSize(w.dp, h.dp)
+        pw.toFloat() / ph.toFloat()
     }
 
     Column(
@@ -189,7 +160,7 @@ fun PhotoMessageBubble(
             color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
-            Column(modifier = Modifier.width(IntrinsicSize.Max).widthIn(max = if (content.isViewOnce && !content.isViewOnceOpened) 260.dp else bubbleSize.width)) {
+            Column(modifier = Modifier.width(IntrinsicSize.Max)) {
                 if (isGroup && !isOutgoing && !isSameSenderAbove) {
                     Box(
                         modifier = Modifier
@@ -230,6 +201,7 @@ fun PhotoMessageBubble(
                     }
                 }
 
+                // View-once: fixed 260×260. Normal: fillMaxWidth + aspectRatio capped at 320dp.
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
                     Modifier
                         .size(260.dp, 260.dp)
@@ -237,30 +209,30 @@ fun PhotoMessageBubble(
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 } else {
                     Modifier
-                        .size(bubbleSize.width, bubbleSize.height)
+                        .fillMaxWidth()
+                        .heightIn(max = 320.dp)
+                        .aspectRatio(photoAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 }
 
                 Box(
                     modifier = boxModifier
-                        .pointerInput(Unit) {
+                        .pointerInput(
+                            content.isViewOnce,
+                            content.isViewOnceOpened,
+                            content.path,
+                            content.isDownloading,
+                            content.hasSpoiler,
+                            content.fileId,
+                            hasFullPhoto,
+                            isMediaSpoilerRevealed
+                        ) {
                             detectTapGestures(
                                 onTap = {
                                     when {
-                                        content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank() -> {
-                                            // Downloaded — flame icon tap opens the viewer.
+                                        content.isViewOnce && !content.isViewOnceOpened && content.path == null -> {
                                             onOpenViewOnce(msg)
-                                        }
-                                        content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
-                                            // Download in progress — tap cancels it, same as a normal photo.
-                                            AutoDownloadSuppression.suppress(content.fileId)
-                                            onCancelDownload(content.fileId)
-                                        }
-                                        content.isViewOnce && !content.isViewOnceOpened -> {
-                                            // Not downloaded yet — tap starts the download.
-                                            AutoDownloadSuppression.clear(content.fileId)
-                                            onDownloadPhoto(content.fileId)
                                         }
                                         content.hasSpoiler -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
@@ -287,12 +259,6 @@ fun PhotoMessageBubble(
                         )
                     }
 
-                    // --- Actual image (after download) ---
-                    // Guarded against isViewOnce && !isViewOnceOpened: view-once photos are
-                    // auto-downloaded in the background (see MessageContentMapper) before the
-                    // user ever taps, so hasPath can be true while the flame/blur overlay is
-                    // still showing. The real photo must never be composed underneath that
-                    // overlay — only the blurred thumbnail (handled inside the overlay below).
                     if (hasPath && !(content.isViewOnce && !content.isViewOnceOpened)) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -371,31 +337,22 @@ fun PhotoMessageBubble(
 
                     // --- View once overlay ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Blurred thumbnail background
                         MediaLoadingBackground(
                             previewData = content.thumbnailPath ?: content.minithumbnail,
                             contentScale = ContentScale.Crop,
                             previewBlur = 20.dp
                         )
-                        // Dark scrim
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.45f))
                         )
-                        // Center icon reflects the current download state:
-                        //   - no path, not downloading -> download icon (tap starts download)
-                        //   - downloading -> progress ring (tap cancels, same as normal photo)
-                        //   - path exists -> flame icon (tap opens the view-once viewer)
-                        // Tap routing for all three states lives in the outer pointerInput
-                        // handler above, which dispatches based on content.path/isDownloading.
                         Box(
                             modifier = Modifier.align(Alignment.Center),
                             contentAlignment = Alignment.Center
                         ) {
                             when {
                                 content.isDownloading -> {
-                                    // Progress ring — tap (via outer handler) cancels the download.
                                     Box(
                                         modifier = Modifier.size(64.dp),
                                         contentAlignment = Alignment.Center
@@ -415,8 +372,6 @@ fun PhotoMessageBubble(
                                     }
                                 }
                                 content.path == null -> {
-                                    // Not downloaded, no active download — tap (via outer
-                                    // handler) starts the download, like a normal photo.
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
@@ -432,7 +387,6 @@ fun PhotoMessageBubble(
                                     }
                                 }
                                 else -> {
-                                    // Downloaded — flame icon, tap opens the view-once viewer.
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
@@ -449,7 +403,6 @@ fun PhotoMessageBubble(
                                 }
                             }
                         }
-                        // Timer label bottom
                         val timerLabel = when {
                             content.selfDestructSeconds <= 0 -> "Photo, tap to view"
                             else -> {
