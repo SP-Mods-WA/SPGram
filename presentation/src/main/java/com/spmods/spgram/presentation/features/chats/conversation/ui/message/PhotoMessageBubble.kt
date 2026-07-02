@@ -320,8 +320,7 @@ fun PhotoMessageBubble(
                                 .build(),
                             contentDescription = content.caption,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            alignment = Alignment.Center
+                            contentScale = ContentScale.Crop
                             ) 
                     }
 
