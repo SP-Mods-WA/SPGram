@@ -189,7 +189,7 @@ fun PhotoMessageBubble(
             color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
-            Column(modifier = Modifier.width(bubbleSize.width)) {
+            Column(modifier = Modifier.width(IntrinsicSize.Max).widthIn(max = if (content.isViewOnce && !content.isViewOnceOpened) 260.dp else bubbleSize.width)) {
                 if (isGroup && !isOutgoing && !isSameSenderAbove) {
                     Box(
                         modifier = Modifier
