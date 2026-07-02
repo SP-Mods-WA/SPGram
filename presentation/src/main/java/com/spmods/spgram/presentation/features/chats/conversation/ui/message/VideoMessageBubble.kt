@@ -188,6 +188,17 @@ fun VideoMessageBubble(
     val layoutTracker = remember { VideoBubbleLayoutTracker() }
     var isMuted by remember { mutableStateOf(true) }
     var isVisible by remember { mutableStateOf(false) }
+    // Progressive playback: true when user taps play on a not-yet-fully-downloaded video.
+    // This triggers streaming playback (download + play simultaneously) even when autoplay is off.
+    var isProgressivePlayActive by remember(msg.id, content.fileId) { mutableStateOf(false) }
+
+    // Reset progressive play if the video finishes downloading (full path available)
+    // so the next time it plays from the local file normally.
+    LaunchedEffect(content.path) {
+        if (!content.path.isNullOrBlank()) {
+            isProgressivePlayActive = false
+        }
+    }
     val resources = LocalResources.current
     val screenHeightPx = remember { resources.displayMetrics.heightPixels }
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
@@ -264,9 +275,17 @@ fun VideoMessageBubble(
                         // unchanged — still handled by VideoInteractionOverlay /
                         // onStartDownload below, only what's drawn changed here.
                         VideoViewOnceOverlay(content = content)
-                    } else if (hasFullVideo || content.supportsStreaming) {
-                            if (autoplayVideos) {
-                                val videoPath = displayPath ?: "http://streaming/${content.fileId}"
+                    } else if (hasFullVideo || content.supportsStreaming || isProgressivePlayActive) {
+                            // Show video player when:
+                            // 1. Full video is downloaded (hasFullVideo)
+                            // 2. Video supports streaming (supportsStreaming)
+                            // 3. User tapped play to start progressive playback (isProgressivePlayActive)
+                            if (autoplayVideos || isProgressivePlayActive) {
+                                val videoPath = when {
+                                    !content.path.isNullOrBlank() -> content.path!!
+                                    content.supportsStreaming || isProgressivePlayActive -> "http://streaming/${content.fileId}"
+                                    else -> displayPath ?: "http://streaming/${content.fileId}"
+                                }
                                 VideoStickerPlayer(
                                     path = videoPath,
                                     type = VideoType.Gif,
@@ -336,7 +355,14 @@ fun VideoMessageBubble(
                                     modifier = Modifier
                                         .align(Alignment.Center)
                                         .size(48.dp)
-                                        .background(Color.Black.copy(alpha = 0.45f), CircleShape),
+                                        .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                                        .clickable {
+                                            // Trigger progressive playback: start streaming + download simultaneously
+                                            isProgressivePlayActive = true
+                                            isAutoDownloadSuppressed = false
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            onVideoClickState(msg)
+                                        },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -372,12 +398,16 @@ fun VideoMessageBubble(
                         onRevealSpoiler = { isMediaSpoilerRevealed = true },
                         onCancelDownload = {
                             isAutoDownloadSuppressed = true
+                            isProgressivePlayActive = false
                             AutoDownloadSuppression.suppress(content.fileId)
                             onCancelDownloadState(content.fileId)
                         },
                         onOpenVideo = {
                             isAutoDownloadSuppressed = false
                             AutoDownloadSuppression.clear(content.fileId)
+                            if (!hasFullVideo && !content.supportsStreaming) {
+                                isProgressivePlayActive = true
+                            }
                             onVideoClickState(msg)
                         },
                         onLongClick = { anchor -> onLongClickState(anchor) }
@@ -390,7 +420,7 @@ fun VideoMessageBubble(
                             .zIndex(2f),
                         durationSeconds = content.duration,
                         currentPositionSeconds = currentPositionSeconds,
-                        showCurrentProgress = (hasFullVideo || content.supportsStreaming) && autoplayVideos,
+                        showCurrentProgress = (hasFullVideo || content.supportsStreaming || isProgressivePlayActive) && (autoplayVideos || isProgressivePlayActive),
                         isDownloading = content.isDownloading,
                         downloadProgress = content.downloadProgress,
                         fileSize = content.fileSize,
@@ -402,6 +432,7 @@ fun VideoMessageBubble(
                         },
                         onCancelClick = {
                             isAutoDownloadSuppressed = true
+                            isProgressivePlayActive = false
                             AutoDownloadSuppression.suppress(content.fileId)
                             onCancelDownloadState(content.fileId)
                         }
@@ -728,8 +759,9 @@ private fun VideoPlaybackBadge(
     onDownloadClick: (() -> Unit)? = null,
     onCancelClick: (() -> Unit)? = null
 ) {
-    // Badge shows download info when: not fully downloaded AND has known size AND not in playback-progress mode
-    val showDownloadInfo = !isFullyDownloaded && fileSize > 0L && !showCurrentProgress
+    // Show download info when: not fully downloaded AND has known size
+    // (even during progressive play — show both playback time AND download progress)
+    val showDownloadInfo = !isFullyDownloaded && fileSize > 0L
 
     // Badge is clickable only when showing download info:
     // - downloading → click = cancel
@@ -767,12 +799,18 @@ private fun VideoPlaybackBadge(
                     modifier = Modifier.size(10.dp)
                 )
                 Column {
+                    // Show playback position when playing, otherwise show duration
                     Text(
-                        text = formatDuration(durationSeconds),
+                        text = if (showCurrentProgress) {
+                            "${formatDuration(currentPositionSeconds)} / ${formatDuration(durationSeconds)}"
+                        } else {
+                            formatDuration(durationSeconds)
+                        },
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         color = Color.White,
                         lineHeight = 12.sp
                     )
+                    // Always show download progress when not fully downloaded
                     Text(
                         text = if (isDownloading) "$downloadedStr / $totalStr" else totalStr,
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
