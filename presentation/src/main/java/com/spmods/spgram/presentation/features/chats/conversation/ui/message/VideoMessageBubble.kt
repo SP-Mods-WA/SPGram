@@ -274,7 +274,7 @@ fun VideoMessageBubble(
                                         }
                                     },
                                     fileId = content.fileId,
-                                    thumbnailData = content.minithumbnail
+                                    thumbnailData = content.thumbnailPath ?: content.minithumbnail
                                 )
 
                                 VideoMuteToggle(
@@ -606,7 +606,7 @@ private fun VideoLoadingLayer(
         contentAlignment = Alignment.Center
     ) {
         MediaLoadingBackground(
-            previewData = content.minithumbnail,
+            previewData = content.thumbnailPath ?: content.minithumbnail,
             contentScale = ContentScale.Crop,
             previewBlur = 0.dp
         )
