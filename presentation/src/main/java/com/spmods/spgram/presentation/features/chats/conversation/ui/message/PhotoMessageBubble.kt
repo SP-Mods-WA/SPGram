@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -188,7 +189,7 @@ fun PhotoMessageBubble(
             color = run { val d = LocalDarkTheme.current; if (isOutgoing) (if (d) Color(0xFF2B5278) else Color(0xFFEEFFDE)) else (if (d) Color(0xFF182533) else Color(0xFFFFFFFF)) },
             contentColor = if (LocalDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF212121),
         ) {
-            Column(modifier = Modifier.width(IntrinsicSize.Max)) {
+            Column(modifier = Modifier.width(bubbleSize.width)) {
                 if (isGroup && !isOutgoing && !isSameSenderAbove) {
                     Box(
                         modifier = Modifier
@@ -243,35 +244,23 @@ fun PhotoMessageBubble(
 
                 Box(
                     modifier = boxModifier
-                        // ✅ FIX: was pointerInput(Unit), which sets up the tap-gesture
-                        // coroutine ONCE on first composition and never restarts it. The
-                        // lambda below closes over `content`, but with key = Unit that
-                        // closure keeps referencing the *original* content forever (the
-                        // one from the very first frame) — later recompositions build a
-                        // new lambda that Compose simply throws away instead of running.
-                        // Keying on the actual values this handler reads makes Compose
-                        // restart the tap-gesture coroutine (and rebuild the closure) any
-                        // time they change, so the branch below always sees fresh state.
-                        //
-                        // NOTE: the condition below stays `content.path == null` (not
-                        // flipped to !isNullOrBlank()) — onOpenViewOnce/handleOpenViewOnce
-                        // already owns the full download-then-open flow for view-once
-                        // photos, so this tap needs to fire while path is still null too.
-                        .pointerInput(
-                            content.isViewOnce,
-                            content.isViewOnceOpened,
-                            content.path,
-                            content.isDownloading,
-                            content.hasSpoiler,
-                            content.fileId,
-                            hasFullPhoto,
-                            isMediaSpoilerRevealed
-                        ) {
+                        .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {
                                     when {
-                                        content.isViewOnce && !content.isViewOnceOpened && content.path == null -> {
+                                        content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank() -> {
+                                            // Downloaded — flame icon tap opens the viewer.
                                             onOpenViewOnce(msg)
+                                        }
+                                        content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
+                                            // Download in progress — tap cancels it, same as a normal photo.
+                                            AutoDownloadSuppression.suppress(content.fileId)
+                                            onCancelDownload(content.fileId)
+                                        }
+                                        content.isViewOnce && !content.isViewOnceOpened -> {
+                                            // Not downloaded yet — tap starts the download.
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            onDownloadPhoto(content.fileId)
                                         }
                                         content.hasSpoiler -> {
                                             isMediaSpoilerRevealed = !isMediaSpoilerRevealed
@@ -282,8 +271,6 @@ fun PhotoMessageBubble(
                                         }
                                         else -> {
                                             AutoDownloadSuppression.clear(content.fileId)
-                                            // If full photo is ready open the viewer; if only
-                                            // thumbnail is available start downloading the full photo.
                                             if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
                                         }
                                     }
