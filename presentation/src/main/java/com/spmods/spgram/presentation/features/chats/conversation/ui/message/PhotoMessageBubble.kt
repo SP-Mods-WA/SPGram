@@ -235,11 +235,14 @@ fun PhotoMessageBubble(
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 } else {
-                    Modifier
-                        .size(bubbleSize.width, bubbleSize.height)
-                        .clipToBounds()
-                        .onGloballyPositioned { imagePosition = it.positionInWindow() }
-                }
+    Modifier
+        // 🔴 මෙන්න මේ කොටස වෙනස් කරන්න:
+        .widthIn(min = bubbleSize.width) // අඩුම තරමේ ෆොටෝ එකේ ඔරිජිනල් පළල ගන්නවා
+        .fillMaxWidth()                  // ටෙක්ස්ට් එක දිග නම් ඒ පළලටම ඉමේජ් එකත් ලොකු වෙනවා
+        .height(bubbleSize.height)       // උස කලින් සෙට් කරපු ගාණම තියෙනවා
+        .clipToBounds()
+        .onGloballyPositioned { imagePosition = it.positionInWindow() }
+}
 
                 Box(
                     modifier = boxModifier
