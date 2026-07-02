@@ -240,7 +240,7 @@ fun ChannelVideoMessageBubble(
                                     }
                                 },
                                 fileId = content.fileId,
-                                thumbnailData = content.minithumbnail
+                                thumbnailData = content.thumbnailPath ?: content.minithumbnail
                             )
 
                             // Volume Toggle
@@ -343,8 +343,9 @@ fun ChannelVideoMessageBubble(
                             contentAlignment = Alignment.Center
                         ) {
                             MediaLoadingBackground(
-                                previewData = content.minithumbnail,
-                                contentScale = ContentScale.FillWidth  // No crop!
+                                previewData = content.thumbnailPath ?: content.minithumbnail,
+                                contentScale = ContentScale.FillWidth,  // No crop!
+                                previewBlur = 0.dp
                             )
 
                             MediaLoadingAction(
