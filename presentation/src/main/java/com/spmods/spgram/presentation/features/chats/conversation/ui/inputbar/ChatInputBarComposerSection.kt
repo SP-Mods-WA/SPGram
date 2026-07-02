@@ -23,6 +23,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -93,10 +100,12 @@ internal fun ChatInputBarComposerSection(
     onInputFocus: () -> Unit,
     onOpenFullScreenEditor: () -> Unit,
     onOpenScheduledMessages: () -> Unit,
+    isPrivateChat: Boolean = false,
     onSendWithOptions: (MessageSendOptions) -> Unit,
     onShowSendOptionsMenu: () -> Unit,
     onSendAsDocument: () -> Unit,
     onSendViewOnce: () -> Unit,
+    onSendMediaWithTtl: (Int?) -> Unit = {},
     onCameraClick: () -> Unit,
     onVideoModeToggle: () -> Unit,
     onVoiceStart: () -> Unit,
@@ -265,8 +274,10 @@ internal fun ChatInputBarComposerSection(
                     onInputFocus = onInputFocus,
                     onOpenFullScreenEditor = onOpenFullScreenEditor,
                     onOpenScheduledMessages = onOpenScheduledMessages,
+                    isPrivateChat = isPrivateChat,
                     onSendWithOptions = onSendWithOptions,
                     onShowSendOptionsMenu = onShowSendOptionsMenu,
+                    onSendMediaWithTtl = onSendMediaWithTtl,
                     onCameraClick = onCameraClick,
                     onVideoModeToggle = onVideoModeToggle,
                     onVoiceStart = onVoiceStart,
@@ -278,10 +289,8 @@ internal fun ChatInputBarComposerSection(
                     expanded = rowState.showSendOptionsSheet,
                     scheduledMessagesCount = attachments.scheduledMessagesCount,
                     showSendAsDocument = attachments.pendingMediaPaths.isNotEmpty(),
-                    showSendViewOnce = attachments.pendingMediaPaths.size == 1,
                     onDismiss = onDismissSendOptions,
                     onSendAsDocument = onSendAsDocument,
-                    onSendViewOnce = onSendViewOnce,
                     onSendSilent = onSendSilent,
                     onScheduleMessage = onScheduleMessage,
                     onOpenScheduledMessages = onOpenScheduledMessagesFromPopup
@@ -376,8 +385,10 @@ private fun ComposerMainRow(
     onInputFocus: () -> Unit,
     onOpenFullScreenEditor: () -> Unit,
     onOpenScheduledMessages: () -> Unit,
+    isPrivateChat: Boolean = false,
     onSendWithOptions: (MessageSendOptions) -> Unit,
     onShowSendOptionsMenu: () -> Unit,
+    onSendMediaWithTtl: (Int?) -> Unit = {},
     onCameraClick: () -> Unit,
     onVideoModeToggle: () -> Unit,
     onVoiceStart: () -> Unit,
@@ -413,9 +424,11 @@ private fun ComposerMainRow(
             attachments = attachments,
             sendButtonState = sendButtonState,
             voiceRecorder = voiceRecorder,
+            isPrivateChat = isPrivateChat,
             onOpenScheduledMessages = onOpenScheduledMessages,
             onSendWithOptions = onSendWithOptions,
             onShowSendOptionsMenu = onShowSendOptionsMenu,
+            onSendMediaWithTtl = onSendMediaWithTtl,
             onCameraClick = onCameraClick,
             onVideoModeToggle = onVideoModeToggle,
             onVoiceStart = onVoiceStart,
@@ -497,15 +510,19 @@ private fun ComposerActionsSlot(
     attachments: ComposerAttachmentState,
     sendButtonState: InputBarSendButtonState,
     voiceRecorder: VoiceRecorderState,
+    isPrivateChat: Boolean = false,
     onOpenScheduledMessages: () -> Unit,
     onSendWithOptions: (MessageSendOptions) -> Unit,
     onShowSendOptionsMenu: () -> Unit,
+    onSendMediaWithTtl: (Int?) -> Unit = {},
     onCameraClick: () -> Unit,
     onVideoModeToggle: () -> Unit,
     onVoiceStart: () -> Unit,
     onVoiceStop: (Boolean) -> Unit,
     onVoiceLock: () -> Unit
 ) {
+    var showTtlMenu by remember { mutableStateOf(false) }
+
     if (!voiceRecorder.isLocked) {
         if (attachments.scheduledMessagesCount > 0) {
             IconButton(onClick = onOpenScheduledMessages) {
@@ -514,6 +531,55 @@ private fun ComposerActionsSlot(
                     contentDescription = stringResource(R.string.action_scheduled_messages),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+
+        // View-once timer button — only for DMs with exactly 1 media item
+        if (isPrivateChat && attachments.pendingMediaPaths.size == 1) {
+            Box {
+                IconButton(
+                    onClick = { showTtlMenu = true },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Timer,
+                        contentDescription = "Set media timer",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = showTtlMenu,
+                    onDismissRequest = { showTtlMenu = false }
+                ) {
+                    Text(
+                        text = "Choose how long the media\nwill be kept after opening.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("View Once") },
+                        onClick = { showTtlMenu = false; onSendMediaWithTtl(0) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("3 seconds") },
+                        onClick = { showTtlMenu = false; onSendMediaWithTtl(3) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("10 seconds") },
+                        onClick = { showTtlMenu = false; onSendMediaWithTtl(10) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("30 seconds") },
+                        onClick = { showTtlMenu = false; onSendMediaWithTtl(30) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Do Not Delete") },
+                        onClick = { showTtlMenu = false; onSendMediaWithTtl(null) }
+                    )
+                }
             }
         }
 
@@ -539,10 +605,8 @@ private fun ComposerSendOptionsPopup(
     expanded: Boolean,
     scheduledMessagesCount: Int,
     showSendAsDocument: Boolean,
-    showSendViewOnce: Boolean,
     onDismiss: () -> Unit,
     onSendAsDocument: () -> Unit,
-    onSendViewOnce: () -> Unit,
     onSendSilent: () -> Unit,
     onScheduleMessage: () -> Unit,
     onOpenScheduledMessages: () -> Unit
@@ -551,10 +615,8 @@ private fun ComposerSendOptionsPopup(
         expanded = expanded,
         scheduledMessagesCount = scheduledMessagesCount,
         showSendAsDocument = showSendAsDocument,
-        showSendViewOnce = showSendViewOnce,
         onDismiss = onDismiss,
         onSendAsDocument = onSendAsDocument,
-        onSendViewOnce = onSendViewOnce,
         onSendSilent = onSendSilent,
         onScheduleMessage = onScheduleMessage,
         onOpenScheduledMessages = onOpenScheduledMessages
