@@ -148,7 +148,7 @@ fun PhotoMessageBubble(
     val photoAspectRatio = remember(content.width, content.height) {
         val pw = content.width.takeIf { it > 0 } ?: 4
         val ph = content.height.takeIf { it > 0 } ?: 3
-        pw.toFloat() / ph.toFloat()
+        (pw.toFloat() / ph.toFloat()).coerceIn(0.5f, 2.0f)
     }
 
     Column(
@@ -210,7 +210,6 @@ fun PhotoMessageBubble(
                 } else {
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 320.dp)
                         .aspectRatio(photoAspectRatio)
                         .clipToBounds()
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
