@@ -169,6 +169,7 @@ sealed interface MessageContent {
         val downloadProgress: Float = 0f,
         val downloadError: Boolean = false,
         val fileId: Int = 0,
+        val fileSize: Long = 0L,
         val minithumbnail: ByteArray? = null,
         val supportsStreaming: Boolean = false,
         val hasSpoiler: Boolean = false,
