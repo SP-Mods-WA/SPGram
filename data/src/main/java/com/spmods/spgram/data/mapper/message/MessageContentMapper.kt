@@ -228,6 +228,7 @@ internal class MessageContentMapper(
                     isDownloading = isDownloading || isQueued,
                     downloadProgress = downloadProgress,
                     fileId = videoFile.id,
+                    fileSize = videoFile.size.toLong(),
                     minithumbnail = video.minithumbnail?.data,
                     supportsStreaming = video.supportsStreaming,
                     hasSpoiler = content.hasSpoiler,
