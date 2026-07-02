@@ -18,9 +18,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Stream
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -120,6 +124,13 @@ fun ChannelVideoMessageBubble(
     var isMuted by remember { mutableStateOf(true) }
     var currentPositionSeconds by remember { mutableIntStateOf(0) }
     var isVisible by remember { mutableStateOf(false) }
+    var isProgressivePlayActive by remember(msg.id, content.fileId) { mutableStateOf(false) }
+
+    LaunchedEffect(content.path) {
+        if (!content.path.isNullOrBlank()) {
+            isProgressivePlayActive = false
+        }
+    }
 
     val context = LocalContext.current
     val resource = LocalResources.current
@@ -222,9 +233,13 @@ fun ChannelVideoMessageBubble(
                         .clipToBounds()
                         .onGloballyPositioned { videoPosition = it.positionInWindow() }
                 ) {
-                    if (hasPath || content.supportsStreaming) {
-                        if (autoplayVideos) {
-                            val videoPath = stablePath ?: "http://streaming/${content.fileId}"
+                    if (hasPath || content.supportsStreaming || isProgressivePlayActive) {
+                        if (autoplayVideos || isProgressivePlayActive) {
+                            val videoPath = when {
+                                !stablePath.isNullOrBlank() -> stablePath!!
+                                content.supportsStreaming || isProgressivePlayActive -> "http://streaming/${content.fileId}"
+                                else -> "http://streaming/${content.fileId}"
+                            }
                             VideoStickerPlayer(
                                 path = videoPath,
                                 type = VideoType.Gif,
@@ -303,7 +318,13 @@ fun ChannelVideoMessageBubble(
                                 modifier = Modifier
                                     .align(Alignment.Center)
                                     .size(48.dp)
-                                    .background(Color.Black.copy(alpha = 0.45f), CircleShape),
+                                    .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                                    .clickable {
+                                        isProgressivePlayActive = true
+                                        isAutoDownloadSuppressed = false
+                                        AutoDownloadSuppression.clear(content.fileId)
+                                        onVideoClick(msg)
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -315,26 +336,77 @@ fun ChannelVideoMessageBubble(
                             }
                         }
 
-                        // Duration Tag
+                        // Duration / Download Badge
+                        val showDownloadInfo = !hasPath && content.fileSize > 0L
+                        val badgeClickAction: (() -> Unit)? = when {
+                            !showDownloadInfo -> null
+                            content.isDownloading -> ({
+                                isProgressivePlayActive = false
+                                isAutoDownloadSuppressed = true
+                                AutoDownloadSuppression.suppress(content.fileId)
+                                onCancelDownload(content.fileId)
+                            })
+                            else -> ({
+                                isAutoDownloadSuppressed = false
+                                AutoDownloadSuppression.clear(content.fileId)
+                                onVideoClick(msg)
+                            })
+                        }
+
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .padding(8.dp)
-                                .background(
-                                    Color.Black.copy(alpha = 0.45f),
-                                    RoundedCornerShape(6.dp)
-                                )
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                                .then(if (badgeClickAction != null) Modifier.clickable(onClick = badgeClickAction) else Modifier)
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
-                            Text(
-                                text = if ((hasPath || content.supportsStreaming) && autoplayVideos) {
-                                    "${formatDuration(context, currentPositionSeconds)} / ${formatDuration(context, content.duration)}"
-                                } else {
-                                    formatDuration(context, content.duration)
-                                },
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White
-                            )
+                            if (showDownloadInfo) {
+                                val downloadedBytes = (content.fileSize * content.downloadProgress).toLong()
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (content.isDownloading) Icons.Default.Close else Icons.Default.Download,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(10.dp)
+                                    )
+                                    androidx.compose.foundation.layout.Column {
+                                        Text(
+                                            text = if (isProgressivePlayActive) {
+                                                "${formatDuration(context, currentPositionSeconds)} / ${formatDuration(context, content.duration)}"
+                                            } else {
+                                                formatDuration(context, content.duration)
+                                            },
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                            color = Color.White,
+                                            lineHeight = 12.sp
+                                        )
+                                        Text(
+                                            text = if (content.isDownloading) {
+                                                "${formatFileSize(downloadedBytes)} / ${formatFileSize(content.fileSize)}"
+                                            } else {
+                                                formatFileSize(content.fileSize)
+                                            },
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                            color = Color.White,
+                                            lineHeight = 12.sp
+                                        )
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = if ((hasPath || content.supportsStreaming || isProgressivePlayActive) && (autoplayVideos || isProgressivePlayActive)) {
+                                        "${formatDuration(context, currentPositionSeconds)} / ${formatDuration(context, content.duration)}"
+                                    } else {
+                                        formatDuration(context, content.duration)
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White
+                                )
+                            }
                         }
                     } else {
                         // Placeholder / Download State
@@ -379,17 +451,22 @@ fun ChannelVideoMessageBubble(
                                 content.isDownloading,
                                 content.fileId,
                                 stablePath,
-                                content.supportsStreaming
+                                content.supportsStreaming,
+                                isProgressivePlayActive
                             ) {
                                 detectTapGestures(
                                     onTap = {
                                         if (content.isDownloading) {
+                                            isProgressivePlayActive = false
                                             isAutoDownloadSuppressed = true
                                             AutoDownloadSuppression.suppress(content.fileId)
                                             onCancelDownload(content.fileId)
                                         } else {
                                             isAutoDownloadSuppressed = false
                                             AutoDownloadSuppression.clear(content.fileId)
+                                            if (!hasPath && !content.supportsStreaming) {
+                                                isProgressivePlayActive = true
+                                            }
                                             onVideoClick(msg)
                                         }
                                     },
@@ -495,5 +572,15 @@ fun ChannelVideoMessageBubble(
                 modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp)
             )
         }
+    }
+}
+
+private fun formatFileSize(bytes: Long): String {
+    return when {
+        bytes <= 0L -> "0 B"
+        bytes < 1024L -> "${bytes} B"
+        bytes < 1024L * 1024L -> String.format("%.1f KB", bytes / 1024f)
+        bytes < 1024L * 1024L * 1024L -> String.format("%.1f MB", bytes / (1024f * 1024f))
+        else -> String.format("%.2f GB", bytes / (1024f * 1024f * 1024f))
     }
 }
