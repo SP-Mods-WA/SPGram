@@ -25,7 +25,6 @@ import androidx.compose.material.icons.automirrored.outlined.Subject
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.NotificationsOff
-import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -53,10 +52,8 @@ fun SendOptionsPopup(
     expanded: Boolean,
     scheduledMessagesCount: Int,
     showSendAsDocument: Boolean,
-    showSendViewOnce: Boolean,
     onDismiss: () -> Unit,
     onSendAsDocument: () -> Unit,
-    onSendViewOnce: () -> Unit,
     onSendSilent: () -> Unit,
     onScheduleMessage: () -> Unit,
     onOpenScheduledMessages: () -> Unit
@@ -145,24 +142,6 @@ fun SendOptionsPopup(
                                     )
                                 },
                                 onClick = onSendAsDocument
-                            )
-                        }
-
-                        if (showSendViewOnce) {
-                            DropdownMenuItem(
-                                text = {
-                                    SendOptionsMenuLabel(
-                                        title = stringResource(R.string.action_send_view_once)
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Visibility,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                },
-                                onClick = onSendViewOnce
                             )
                         }
 
