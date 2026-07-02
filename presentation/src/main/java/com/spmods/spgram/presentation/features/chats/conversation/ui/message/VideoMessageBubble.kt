@@ -4,9 +4,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.PlayArrow
@@ -378,10 +381,25 @@ fun VideoMessageBubble(
                     VideoPlaybackBadge(
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(8.dp),
+                            .padding(8.dp)
+                            .zIndex(2f),
                         durationSeconds = content.duration,
                         currentPositionSeconds = currentPositionSeconds,
-                        showCurrentProgress = (hasFullVideo || content.supportsStreaming) && autoplayVideos
+                        showCurrentProgress = (hasFullVideo || content.supportsStreaming) && autoplayVideos,
+                        isDownloading = content.isDownloading,
+                        downloadProgress = content.downloadProgress,
+                        fileSize = content.fileSize,
+                        isFullyDownloaded = hasFullVideo,
+                        onDownloadClick = {
+                            isAutoDownloadSuppressed = false
+                            AutoDownloadSuppression.clear(content.fileId)
+                            onVideoClickState(msg)
+                        },
+                        onCancelClick = {
+                            isAutoDownloadSuppressed = true
+                            AutoDownloadSuppression.suppress(content.fileId)
+                            onCancelDownloadState(content.fileId)
+                        }
                     )
 
                     VideoUploadOverlay(
@@ -697,22 +715,88 @@ private fun VideoPlaybackBadge(
     modifier: Modifier = Modifier,
     durationSeconds: Int,
     currentPositionSeconds: Int,
-    showCurrentProgress: Boolean
+    showCurrentProgress: Boolean,
+    isDownloading: Boolean = false,
+    downloadProgress: Float = 0f,
+    fileSize: Long = 0L,
+    isFullyDownloaded: Boolean = false,
+    onDownloadClick: (() -> Unit)? = null,
+    onCancelClick: (() -> Unit)? = null
 ) {
+    // Badge shows download info when: not fully downloaded AND has known size AND not in playback-progress mode
+    val showDownloadInfo = !isFullyDownloaded && fileSize > 0L && !showCurrentProgress
+
+    // Badge is clickable only when showing download info:
+    // - downloading → click = cancel
+    // - not downloading, not downloaded → click = start download
+    val badgeClickAction: (() -> Unit)? = when {
+        !showDownloadInfo -> null
+        isDownloading -> onCancelClick
+        else -> onDownloadClick
+    }
+
     Box(
         modifier = modifier
             .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .then(
+                if (badgeClickAction != null)
+                    Modifier.clickable(onClick = badgeClickAction)
+                else Modifier
+            )
+            .padding(horizontal = 6.dp, vertical = 3.dp)
     ) {
-        Text(
-            text = if (showCurrentProgress) {
-                "${formatDuration(currentPositionSeconds)} / ${formatDuration(durationSeconds)}"
-            } else {
-                formatDuration(durationSeconds)
-            },
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White
-        )
+        if (showDownloadInfo && fileSize > 0L) {
+            val downloadedBytes = (fileSize * downloadProgress).toLong()
+            val downloadedStr = formatFileSize(downloadedBytes)
+            val totalStr = formatFileSize(fileSize)
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                // Icon: ✕ when downloading (tap = cancel), ↓ when not (tap = download)
+                Icon(
+                    imageVector = if (isDownloading) Icons.Default.Close else Icons.Default.Download,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(10.dp)
+                )
+                Column {
+                    Text(
+                        text = formatDuration(durationSeconds),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        color = Color.White,
+                        lineHeight = 12.sp
+                    )
+                    Text(
+                        text = if (isDownloading) "$downloadedStr / $totalStr" else totalStr,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        color = Color.White,
+                        lineHeight = 12.sp
+                    )
+                }
+            }
+        } else {
+            Text(
+                text = if (showCurrentProgress) {
+                    "${formatDuration(currentPositionSeconds)} / ${formatDuration(durationSeconds)}"
+                } else {
+                    formatDuration(durationSeconds)
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White
+            )
+        }
+    }
+}
+
+private fun formatFileSize(bytes: Long): String {
+    return when {
+        bytes <= 0L -> "0 B"
+        bytes < 1024L -> "${bytes} B"
+        bytes < 1024L * 1024L -> String.format("%.1f KB", bytes / 1024f)
+        bytes < 1024L * 1024L * 1024L -> String.format("%.1f MB", bytes / (1024f * 1024f))
+        else -> String.format("%.2f GB", bytes / (1024f * 1024f * 1024f))
     }
 }
 
