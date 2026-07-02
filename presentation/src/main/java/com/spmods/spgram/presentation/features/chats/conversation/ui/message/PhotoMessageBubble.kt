@@ -26,6 +26,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -241,39 +242,40 @@ fun PhotoMessageBubble(
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 }
 
+                // Resolve tap action OUTSIDE pointerInput — same pattern as VideoMessageBubble.
+                // pointerInput(Unit) freezes captured values at first composition; reading
+                // content.path inside it always sees the initial null even after download.
+                // Using rememberUpdatedState + a stable lambda avoids that entirely.
+                val onTapAction by rememberUpdatedState<() -> Unit> {
+                    when {
+                        content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank() ->
+                            onOpenViewOnce(msg)
+                        content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
+                            AutoDownloadSuppression.suppress(content.fileId)
+                            onCancelDownload(content.fileId)
+                        }
+                        content.isViewOnce && !content.isViewOnceOpened -> {
+                            AutoDownloadSuppression.clear(content.fileId)
+                            onDownloadPhoto(content.fileId)
+                        }
+                        content.hasSpoiler ->
+                            isMediaSpoilerRevealed = !isMediaSpoilerRevealed
+                        content.isDownloading -> {
+                            AutoDownloadSuppression.suppress(content.fileId)
+                            onCancelDownload(content.fileId)
+                        }
+                        else -> {
+                            AutoDownloadSuppression.clear(content.fileId)
+                            if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
+                        }
+                    }
+                }
+
                 Box(
                     modifier = boxModifier
                         .pointerInput(Unit) {
                             detectTapGestures(
-                                onTap = {
-                                    when {
-                                        content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank() -> {
-                                            // Downloaded — flame icon tap opens the viewer.
-                                            onOpenViewOnce(msg)
-                                        }
-                                        content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
-                                            // Download in progress — tap cancels it.
-                                            AutoDownloadSuppression.suppress(content.fileId)
-                                            onCancelDownload(content.fileId)
-                                        }
-                                        content.isViewOnce && !content.isViewOnceOpened -> {
-                                            // Not downloaded yet — tap starts the download.
-                                            AutoDownloadSuppression.clear(content.fileId)
-                                            onDownloadPhoto(content.fileId)
-                                        }
-                                        content.hasSpoiler -> {
-                                            isMediaSpoilerRevealed = !isMediaSpoilerRevealed
-                                        }
-                                        content.isDownloading -> {
-                                            AutoDownloadSuppression.suppress(content.fileId)
-                                            onCancelDownload(content.fileId)
-                                        }
-                                        else -> {
-                                            AutoDownloadSuppression.clear(content.fileId)
-                                            if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
-                                        }
-                                    }
-                                },
+                                onTap = { onTapAction() },
                                 onLongPress = { offset -> onLongClick(imagePosition + offset) }
                             )
                         }
@@ -370,30 +372,12 @@ fun PhotoMessageBubble(
 
                     // --- View once overlay ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Blurred background: use full photo path when downloaded (better quality),
-                        // fall back to thumbnail/minithumbnail while waiting.
-                        val blurSource = content.path?.takeIf { it.isNotBlank() }
-                            ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
-                            ?: content.minithumbnail
-                        if (blurSource != null) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(blurSource)
-                                    .crossfade(false)
-                                    .build(),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .blur(25.dp),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            MediaLoadingBackground(
-                                previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop,
-                                previewBlur = 20.dp
-                            )
-                        }
+                        // Blurred thumbnail background
+                        MediaLoadingBackground(
+                            previewData = content.thumbnailPath ?: content.minithumbnail,
+                            contentScale = ContentScale.Crop,
+                            previewBlur = 20.dp
+                        )
                         // Dark scrim
                         Box(
                             modifier = Modifier
