@@ -168,23 +168,16 @@ fun PhotoMessageBubble(
     val minBubbleH = 120.dp
 
     val bubbleSize = remember(content.width, content.height) {
-    val pw = content.width.takeIf { it > 0 } ?: 4
-    val ph = content.height.takeIf { it > 0 } ?: 3
-    val aspectRatio = pw.toFloat() / ph.toFloat()
-
-    val w: Float
-    val h: Float
-
-    if (aspectRatio >= 1f) {
-        w = maxBubbleW.value
-        h = (maxBubbleW.value / aspectRatio).coerceAtMost(maxBubbleH.value)
-    } else {
-        h = maxBubbleH.value
-        w = (maxBubbleH.value * aspectRatio).coerceAtLeast(minBubbleW.value)
+        val pw = content.width.takeIf { it > 0 } ?: 4
+        val ph = content.height.takeIf { it > 0 } ?: 3
+        // Scale so neither dimension exceeds the max
+        val scaleW = maxBubbleW.value / pw
+        val scaleH = maxBubbleH.value / ph
+        val scale = minOf(scaleW, scaleH, 1f) // never upscale tiny photos
+        val w = (pw * scale).coerceAtLeast(minBubbleW.value)
+        val h = (ph * scale).coerceAtLeast(minBubbleH.value)
+        androidx.compose.ui.unit.DpSize(w.dp, h.dp)
     }
-
-    DpSize(w.dp, h.dp)
-}
 
     Column(
         modifier = modifier,
@@ -327,7 +320,8 @@ fun PhotoMessageBubble(
                                 .build(),
                             contentDescription = content.caption,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
+                            alignment = Alignment.Center
                             ) 
                     }
 
