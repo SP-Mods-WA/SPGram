@@ -145,7 +145,7 @@ fun ChannelVideoMessageBubble(
     val videoMiniCacheKey = remember(content.minithumbnail, content.fileId) {
         content.minithumbnail?.let { namespacedCacheKey("channel_video_mini:${content.fileId}", it) }
     }
-    var isAutoDownloadSuppressed by remember(msg.id) { mutableStateOf(false) }
+    // AutoDownloadSuppression is the single source of truth — no local mirror needed.
 
     // Official style: wider aspect ratio range (0.3f - 3f)
     val stableAspectRatio = remember(msg.id, content.fileId) {
@@ -158,17 +158,12 @@ fun ChannelVideoMessageBubble(
     LaunchedEffect(content.path) {
         if (!content.path.isNullOrBlank()) {
             stablePath = content.path
-            isAutoDownloadSuppressed = false
             AutoDownloadSuppression.clear(content.fileId)
         }
     }
 
     LaunchedEffect(content.path, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
-        // Exclude content.isDownloading from keys: including it re-fires when cancel finishes,
-        // immediately restarting the download the user just cancelled.
-        if (content.path.isNullOrBlank() && !content.isDownloading && !content.supportsStreaming && !isAutoDownloadSuppressed && !AutoDownloadSuppression.isSuppressed(
-                content.fileId
-            )
+        if (content.path.isNullOrBlank() && !content.isDownloading && !content.supportsStreaming && !AutoDownloadSuppression.isSuppressed(content.fileId)
         ) {
             val shouldDownload = when {
                 downloadUtils.isWifiConnected() -> autoDownloadWifi
@@ -323,7 +318,6 @@ fun ChannelVideoMessageBubble(
                                     .background(Color.Black.copy(alpha = 0.45f), CircleShape)
                                     .clickable {
                                         isProgressivePlayActive = true
-                                        isAutoDownloadSuppressed = false
                                         AutoDownloadSuppression.clear(content.fileId)
                                         onVideoClick(msg)
                                     },
@@ -344,12 +338,10 @@ fun ChannelVideoMessageBubble(
                             !showDownloadInfo -> null
                             content.isDownloading -> ({
                                 isProgressivePlayActive = false
-                                isAutoDownloadSuppressed = true
                                 AutoDownloadSuppression.suppress(content.fileId)
                                 onCancelDownload(content.fileId)
                             })
                             else -> ({
-                                isAutoDownloadSuppressed = false
                                 AutoDownloadSuppression.clear(content.fileId)
                                 onVideoClick(msg)
                             })
@@ -432,12 +424,10 @@ fun ChannelVideoMessageBubble(
                                     stringResource(R.string.cd_download)
                                 },
                                 onCancelClick = {
-                                    isAutoDownloadSuppressed = true
                                     AutoDownloadSuppression.suppress(content.fileId)
                                     onCancelDownload(content.fileId)
                                 },
                                 onIdleClick = {
-                                    isAutoDownloadSuppressed = false
                                     AutoDownloadSuppression.clear(content.fileId)
                                     onVideoClick(msg)
                                 }
@@ -460,11 +450,9 @@ fun ChannelVideoMessageBubble(
                                     onTap = {
                                         if (content.isDownloading) {
                                             isProgressivePlayActive = false
-                                            isAutoDownloadSuppressed = true
                                             AutoDownloadSuppression.suppress(content.fileId)
                                             onCancelDownload(content.fileId)
                                         } else {
-                                            isAutoDownloadSuppressed = false
                                             AutoDownloadSuppression.clear(content.fileId)
                                             if (!hasPath && !content.supportsStreaming) {
                                                 isProgressivePlayActive = true
