@@ -242,10 +242,6 @@ fun PhotoMessageBubble(
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 }
 
-                // Resolve tap action OUTSIDE pointerInput — same pattern as VideoMessageBubble.
-                // pointerInput(Unit) freezes captured values at first composition; reading
-                // content.path inside it always sees the initial null even after download.
-                // Using rememberUpdatedState + a stable lambda avoids that entirely.
                 val onTapAction by rememberUpdatedState<() -> Unit> {
                     when {
                         content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank() ->
@@ -258,8 +254,7 @@ fun PhotoMessageBubble(
                             AutoDownloadSuppression.clear(content.fileId)
                             onDownloadPhoto(content.fileId)
                         }
-                        content.hasSpoiler ->
-                            isMediaSpoilerRevealed = !isMediaSpoilerRevealed
+                        content.hasSpoiler -> isMediaSpoilerRevealed = !isMediaSpoilerRevealed
                         content.isDownloading -> {
                             AutoDownloadSuppression.suppress(content.fileId)
                             onCancelDownload(content.fileId)
@@ -271,7 +266,7 @@ fun PhotoMessageBubble(
                     }
                 }
 
-                Box(
+                                Box(
                     modifier = boxModifier
                         .pointerInput(Unit) {
                             detectTapGestures(
@@ -372,18 +367,12 @@ fun PhotoMessageBubble(
 
                     // --- View once overlay ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Blurred thumbnail background
-                        MediaLoadingBackground(
-                            previewData = content.thumbnailPath ?: content.minithumbnail,
-                            contentScale = ContentScale.Crop,
-                            previewBlur = 20.dp
+                        // Plain dark background (matches original Telegram style)
+                        Box(modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF1C2733))
                         )
-                        // Dark scrim
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.45f))
-                        )
+                        // Dark scrim drawn as drawBehind on the blur layer — no Box so touches pass through
                         // Center icon reflects the current download state:
                         //   - no path, not downloading -> download icon (tap starts download)
                         //   - downloading -> progress ring (tap cancels, same as normal photo)
