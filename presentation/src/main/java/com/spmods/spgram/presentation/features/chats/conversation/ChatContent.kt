@@ -609,6 +609,13 @@ fun ChatContent(
                                             if (validPath != null || supportsStreaming) {
                                                 currentKeyboardController.value?.hide()
                                                 currentFocusManager.value.clearFocus()
+                                                // ✅ If streaming but not fully downloaded yet, also
+                                                // kick off a background download so the file saves
+                                                // locally while the user watches via streaming.
+                                                if (supportsStreaming && validPath == null) {
+                                                    val fileId = (msg.content as? MessageContent.Video)?.fileId ?: 0
+                                                    if (fileId != 0) component.onDownloadFile(fileId)
+                                                }
                                                 component.onOpenVideo(path = validPath, messageId = msg.id, caption = caption)
                                             } else {
                                                 val fileId = when (val c = msg.content) {
