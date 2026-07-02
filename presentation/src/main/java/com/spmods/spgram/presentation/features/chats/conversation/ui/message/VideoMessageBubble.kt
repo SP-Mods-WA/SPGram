@@ -237,18 +237,21 @@ fun VideoMessageBubble(
                 }
 
                 val boxModifier = if (content.isViewOnce && !content.isViewOnceOpened) {
-                    // ✅ Matches PhotoMessageBubble's view-once box exactly: fixed
-                    // 260x260dp square, no padding.
-                    Modifier
-                        .size(260.dp, 260.dp)
-                        .clipToBounds()
-                        .onGloballyPositioned { layoutTracker.videoPosition = it.positionInWindow() }
-                } else {
-                    Modifier
-                        .size(bubbleSize.width, bubbleSize.height)
-                        .clipToBounds()
-                        .onGloballyPositioned { layoutTracker.videoPosition = it.positionInWindow() }
-                }
+    // ✅ Matches PhotoMessageBubble's view-once box exactly: fixed 260x260dp square, no padding.
+    Modifier
+        .size(260.dp, 260.dp)
+        .clipToBounds()
+        .onGloballyPositioned { layoutTracker.videoPosition = it.positionInWindow() }
+} else {
+    // 🔴 FIX: ස්ථිර size එකක් දෙනවා වෙනුවට width එක flex කළා
+    Modifier
+        .widthIn(min = bubbleSize.width) // අඩුම තරමේ වීඩියෝ එකේ ඔරිජිනල් පළල ගන්නවා
+        .fillMaxWidth()                  // කැප්ෂන් එක දිග නම් ඒ පළලටම වීඩියෝ බොක්ස් එකත් ලොකු වෙනවා
+        .height(bubbleSize.height)       // උස කලින් සෙට් කරපු ගාණම තියෙනවා
+        .clipToBounds()
+        .onGloballyPositioned { layoutTracker.videoPosition = it.positionInWindow() }
+}
+
 
                 Box(modifier = boxModifier) {
                     if (content.isViewOnce && !content.isViewOnceOpened) {
@@ -266,7 +269,7 @@ fun VideoMessageBubble(
                                     path = videoPath,
                                     type = VideoType.Gif,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.FillWidth,  // ✅ No crop!
+                                    contentScale = ContentScale.Crop,
                                     animate = isVisible && !isAnyViewerOpen,
                                     volume = if (isMuted) 0f else 1f,
                                     reportProgress = true,
@@ -304,7 +307,7 @@ fun VideoMessageBubble(
                                         ),
                                         contentDescription = content.caption,
                                         modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.FillWidth  // ✅ No crop!
+                                        contentScale = ContentScale.Crop
                                     )
                                 } else {
                                     if (content.minithumbnail != null) {
@@ -322,7 +325,7 @@ fun VideoMessageBubble(
                                             ),
                                             contentDescription = null,
                                             modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.FillWidth  // ✅ No crop!
+                                            contentScale = ContentScale.Crop
                                         )
                                     }
                                 }
