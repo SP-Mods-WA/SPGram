@@ -493,7 +493,7 @@ private fun MessageContentSelector(
                     onReactionClick = { onReactionClick(msg.id, it) },
                     toProfile = toProfile,
                     onForwardOriginClick = onForwardOriginClick,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.wrapContentSize(),
                     downloadUtils = downloadUtils
                 )
             }
@@ -519,7 +519,7 @@ private fun MessageContentSelector(
                     onReactionClick = { onReactionClick(msg.id, it) },
                     toProfile = toProfile,
                     onForwardOriginClick = onForwardOriginClick,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.wrapContentSize(),
                     downloadUtils = downloadUtils,
                     isAnyViewerOpen = isAnyViewerOpen
                 )
