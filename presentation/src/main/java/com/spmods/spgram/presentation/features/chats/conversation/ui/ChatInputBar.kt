@@ -867,6 +867,15 @@ fun ChatInputBar(
                             showSendOptionsSheet = false
                             sendWithOptions(MessageSendOptions(selfDestructImmediately = true))
                         },
+                        isPrivateChat = !state.isChannel && !state.isBot,
+                        onSendMediaWithTtl = { seconds ->
+                            sendWithOptions(
+                                MessageSendOptions(
+                                    selfDestructImmediately = seconds == 0,
+                                    selfDestructSeconds = seconds
+                                )
+                            )
+                        },
                         onCameraClick = {
                             hideKeyboardAndClearFocus()
                             actions.onCameraClick()
