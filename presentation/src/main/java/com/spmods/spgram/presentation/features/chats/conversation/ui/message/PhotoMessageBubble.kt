@@ -26,7 +26,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -115,10 +114,6 @@ fun PhotoMessageBubble(
             AutoDownloadSuppression.clear(content.fileId)
         }
     }
-
-    // View-once media is no longer auto-downloaded (see MessageContentMapper).
-    // The overlay shows a download icon until content.path exists, then shows
-    // the flame icon. Each state requires its own explicit tap — no auto-open.
 
     LaunchedEffect(content.path, content.isDownloading, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
         if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !AutoDownloadSuppression.isSuppressed(content.fileId)) {
@@ -242,35 +237,28 @@ fun PhotoMessageBubble(
                         .onGloballyPositioned { imagePosition = it.positionInWindow() }
                 }
 
-                val onTapAction by rememberUpdatedState<() -> Unit> {
-                    when {
-                        content.isViewOnce && !content.isViewOnceOpened && !content.path.isNullOrBlank() ->
-                            onOpenViewOnce(msg)
-                        content.isViewOnce && !content.isViewOnceOpened && content.isDownloading -> {
-                            AutoDownloadSuppression.suppress(content.fileId)
-                            onCancelDownload(content.fileId)
-                        }
-                        content.isViewOnce && !content.isViewOnceOpened -> {
-                            AutoDownloadSuppression.clear(content.fileId)
-                            onDownloadPhoto(content.fileId)
-                        }
-                        content.hasSpoiler -> isMediaSpoilerRevealed = !isMediaSpoilerRevealed
-                        content.isDownloading -> {
-                            AutoDownloadSuppression.suppress(content.fileId)
-                            onCancelDownload(content.fileId)
-                        }
-                        else -> {
-                            AutoDownloadSuppression.clear(content.fileId)
-                            if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
-                        }
-                    }
-                }
-
-                                Box(
+                Box(
                     modifier = boxModifier
                         .pointerInput(Unit) {
                             detectTapGestures(
-                                onTap = { onTapAction() },
+                                onTap = {
+                                    when {
+                                        content.isViewOnce && !content.isViewOnceOpened -> {
+                                            onOpenViewOnce(msg)
+                                        }
+                                        content.hasSpoiler -> {
+                                            isMediaSpoilerRevealed = !isMediaSpoilerRevealed
+                                        }
+                                        content.isDownloading -> {
+                                            AutoDownloadSuppression.suppress(content.fileId)
+                                            onCancelDownload(content.fileId)
+                                        }
+                                        else -> {
+                                            AutoDownloadSuppression.clear(content.fileId)
+                                            if (hasFullPhoto) onPhotoClick(msg) else onDownloadPhoto(content.fileId)
+                                        }
+                                    }
+                                },
                                 onLongPress = { offset -> onLongClick(imagePosition + offset) }
                             )
                         }
@@ -284,12 +272,7 @@ fun PhotoMessageBubble(
                     }
 
                     // --- Actual image (after download) ---
-                    // Guarded against isViewOnce && !isViewOnceOpened: view-once photos are
-                    // auto-downloaded in the background (see MessageContentMapper) before the
-                    // user ever taps, so hasPath can be true while the flame/blur overlay is
-                    // still showing. The real photo must never be composed underneath that
-                    // overlay — only the blurred thumbnail (handled inside the overlay below).
-                    if (hasPath && !(content.isViewOnce && !content.isViewOnceOpened)) {
+                    if (hasPath) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(displayPath)
@@ -367,27 +350,33 @@ fun PhotoMessageBubble(
 
                     // --- View once overlay ---
                     if (content.isViewOnce && !content.isViewOnceOpened) {
-                        // Plain dark background (matches original Telegram style)
-                        Box(modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color(0xFF1C2733))
+                        // Blurred thumbnail background
+                        MediaLoadingBackground(
+                            previewData = content.thumbnailPath ?: content.minithumbnail,
+                            contentScale = ContentScale.Crop,
+                            previewBlur = 20.dp
                         )
-                        // Dark scrim drawn as drawBehind on the blur layer — no Box so touches pass through
-                        // Center icon reflects the current download state:
-                        //   - no path, not downloading -> download icon (tap starts download)
-                        //   - downloading -> progress ring (tap cancels, same as normal photo)
-                        //   - path exists -> flame icon (tap opens the view-once viewer)
-                        // Tap routing for all three states lives in the outer pointerInput
-                        // handler above, which dispatches based on content.path/isDownloading.
+                        // Dark scrim
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.45f))
+                        )
+                        // Center icon — flame (downloaded) or download/progress (not yet)
                         Box(
                             modifier = Modifier.align(Alignment.Center),
                             contentAlignment = Alignment.Center
                         ) {
                             when {
                                 content.isDownloading -> {
-                                    // Progress ring — tap (via outer handler) cancels the download.
+                                    // Progress ring around cancel icon
                                     Box(
-                                        modifier = Modifier.size(64.dp),
+                                        modifier = Modifier
+                                            .size(64.dp)
+                                            .clickable {
+                                                AutoDownloadSuppression.suppress(content.fileId)
+                                                onCancelDownload(content.fileId)
+                                            },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         CircularWavyProgressIndicator(
@@ -397,7 +386,7 @@ fun PhotoMessageBubble(
                                             modifier = Modifier.size(64.dp)
                                         )
                                         Icon(
-                                            imageVector = Icons.Default.Whatshot,
+                                            imageVector = Icons.Default.Close,
                                             contentDescription = null,
                                             tint = Color.White,
                                             modifier = Modifier.size(20.dp)
@@ -405,12 +394,15 @@ fun PhotoMessageBubble(
                                     }
                                 }
                                 content.path == null -> {
-                                    // Not downloaded, no active download — tap (via outer
-                                    // handler) starts the download, like a normal photo.
+                                    // Not downloaded — show download icon, click to download
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
-                                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
+                                            .background(Color.White.copy(alpha = 0.18f), CircleShape)
+                                            .clickable {
+                                                AutoDownloadSuppression.clear(content.fileId)
+                                                onDownloadPhoto(content.fileId)
+                                            },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
@@ -422,7 +414,7 @@ fun PhotoMessageBubble(
                                     }
                                 }
                                 else -> {
-                                    // Downloaded — flame icon, tap opens the view-once viewer.
+                                    // Downloaded — flame icon, tap anywhere to open
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
