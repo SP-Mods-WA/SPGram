@@ -125,7 +125,10 @@ fun VideoMessageBubble(
     val videoMiniCacheKey = remember(content.minithumbnail, content.fileId) {
         content.minithumbnail?.let { namespacedCacheKey("chat_video_mini:${content.fileId}", it) }
     }
-    var isAutoDownloadSuppressed by remember(msg.id, content.fileId) { mutableStateOf(false) }
+    // Use AutoDownloadSuppression as the single source of truth — no local mirror.
+    // A local `var` resets on recomposition key change (msg.id, fileId), causing the
+    // cancelled download to restart. The global object persists across recompositions.
+    // We read it directly in the LaunchedEffect guard and in click handlers.
 
     // Same fix as PhotoMessageBubble: compute exact bubble size from pixel dimensions
     // instead of using fillMaxWidth + aspectRatio. This guarantees the correct size
@@ -148,19 +151,15 @@ fun VideoMessageBubble(
 
     LaunchedEffect(content.path, content.fileId) {
         if (!content.path.isNullOrBlank()) {
-            isAutoDownloadSuppressed = false
             AutoDownloadSuppression.clear(content.fileId)
         }
     }
 
     LaunchedEffect(content.path, autoDownloadMobile, autoDownloadWifi, autoDownloadRoaming) {
-        // Only trigger auto-download when path is still blank and not suppressed.
-        // We deliberately exclude content.isDownloading from the keys here:
-        // including it would re-fire this effect when a cancel finishes (isDownloading→false),
-        // immediately restarting the download the user just cancelled.
-        if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !content.supportsStreaming && !isAutoDownloadSuppressed && !AutoDownloadSuppression.isSuppressed(
-                content.fileId
-            )
+        // Only trigger auto-download when path is blank and not suppressed.
+        // content.isDownloading excluded from keys: including it re-fires on cancel→false,
+        // restarting the download. AutoDownloadSuppression is the single source of truth.
+        if (!content.isViewOnce && content.path.isNullOrBlank() && !content.isDownloading && !content.supportsStreaming && !AutoDownloadSuppression.isSuppressed(content.fileId)
         ) {
             val shouldDownload = when {
                 downloadUtils.isWifiConnected() -> autoDownloadWifi
@@ -363,7 +362,6 @@ fun VideoMessageBubble(
                                         .clickable {
                                             // Trigger progressive playback: start streaming + download simultaneously
                                             isProgressivePlayActive = true
-                                            isAutoDownloadSuppressed = false
                                             AutoDownloadSuppression.clear(content.fileId)
                                             onVideoClickState(msg)
                                         },
@@ -382,12 +380,10 @@ fun VideoMessageBubble(
                             content = content,
                             isViewOnce = false,
                             onCancelDownload = {
-                                isAutoDownloadSuppressed = true
                                 AutoDownloadSuppression.suppress(content.fileId)
                                 onCancelDownloadState(content.fileId)
                             },
                             onStartDownload = {
-                                isAutoDownloadSuppressed = false
                                 AutoDownloadSuppression.clear(content.fileId)
                                 onVideoClickState(msg)
                             }
@@ -401,13 +397,11 @@ fun VideoMessageBubble(
                         videoPosition = { layoutTracker.videoPosition },
                         onRevealSpoiler = { isMediaSpoilerRevealed = true },
                         onCancelDownload = {
-                            isAutoDownloadSuppressed = true
                             isProgressivePlayActive = false
                             AutoDownloadSuppression.suppress(content.fileId)
                             onCancelDownloadState(content.fileId)
                         },
                         onOpenVideo = {
-                            isAutoDownloadSuppressed = false
                             AutoDownloadSuppression.clear(content.fileId)
                             if (!hasFullVideo && !content.supportsStreaming) {
                                 isProgressivePlayActive = true
@@ -430,12 +424,10 @@ fun VideoMessageBubble(
                         fileSize = content.fileSize,
                         isFullyDownloaded = hasFullVideo,
                         onDownloadClick = {
-                            isAutoDownloadSuppressed = false
                             AutoDownloadSuppression.clear(content.fileId)
                             onVideoClickState(msg)
                         },
                         onCancelClick = {
-                            isAutoDownloadSuppressed = true
                             isProgressivePlayActive = false
                             AutoDownloadSuppression.suppress(content.fileId)
                             onCancelDownloadState(content.fileId)
