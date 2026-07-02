@@ -207,10 +207,10 @@ class AppPreferences(
     private val _isNotoEmojiDownloaded = MutableStateFlow(prefs.getBoolean(KEY_NOTO_EMOJI_DOWNLOADED, false))
     val isNotoEmojiDownloaded: StateFlow<Boolean> = _isNotoEmojiDownloaded
 
-    private val _autoDownloadMobile = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_MOBILE, true))
+    private val _autoDownloadMobile = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_MOBILE, false))
     override val autoDownloadMobile: StateFlow<Boolean> = _autoDownloadMobile
 
-    private val _autoDownloadWifi = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_WIFI, true))
+    private val _autoDownloadWifi = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_WIFI, false))
     override val autoDownloadWifi: StateFlow<Boolean> = _autoDownloadWifi
 
     private val _autoDownloadRoaming = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_ROAMING, false))
@@ -219,16 +219,16 @@ class AppPreferences(
     private val _autoDownloadFiles = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_FILES, false))
     override val autoDownloadFiles: StateFlow<Boolean> = _autoDownloadFiles
 
-    private val _autoDownloadStickers = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_STICKERS, true))
+    private val _autoDownloadStickers = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_STICKERS, false))
     override val autoDownloadStickers: StateFlow<Boolean> = _autoDownloadStickers
 
-    private val _autoDownloadVideoNotes = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_VIDEO_NOTES, true))
+    private val _autoDownloadVideoNotes = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_VIDEO_NOTES, false))
     override val autoDownloadVideoNotes: StateFlow<Boolean> = _autoDownloadVideoNotes
 
-    private val _autoplayGifs = MutableStateFlow(prefs.getBoolean(KEY_AUTOPLAY_GIFS, true))
+    private val _autoplayGifs = MutableStateFlow(prefs.getBoolean(KEY_AUTOPLAY_GIFS, false))
     val autoplayGifs: StateFlow<Boolean> = _autoplayGifs
 
-    private val _autoplayVideos = MutableStateFlow(prefs.getBoolean(KEY_AUTOPLAY_VIDEOS, true))
+    private val _autoplayVideos = MutableStateFlow(prefs.getBoolean(KEY_AUTOPLAY_VIDEOS, false))
     val autoplayVideos: StateFlow<Boolean> = _autoplayVideos
 
     private val _enableStreaming = MutableStateFlow(prefs.getBoolean(KEY_ENABLE_STREAMING, true))
