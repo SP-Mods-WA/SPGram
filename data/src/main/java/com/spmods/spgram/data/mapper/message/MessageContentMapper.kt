@@ -10,6 +10,7 @@ import com.spmods.spgram.data.mapper.TdFileHelper
 import com.spmods.spgram.data.mapper.WebPageMapper
 import com.spmods.spgram.data.mapper.toMessageEntityOrNull
 import com.spmods.spgram.domain.models.MessageContent
+import com.spmods.spgram.domain.models.CallDiscardReason
 import com.spmods.spgram.domain.models.MessageEntity
 import com.spmods.spgram.domain.models.MessageEntityType
 import com.spmods.spgram.domain.models.PollOption
@@ -568,9 +569,19 @@ internal class MessageContentMapper(
             }
 
             is TdApi.MessageCall -> {
-                val label = stringProvider.getString("chat_mapper_call")
-                val text = if (content.duration > 0) "$label (${content.duration}s)" else label
-                MessageContent.Text(text)
+                val discardReason = when (content.discardReason) {
+                    is TdApi.CallDiscardReasonMissed -> CallDiscardReason.MISSED
+                    is TdApi.CallDiscardReasonDeclined -> CallDiscardReason.DECLINED
+                    is TdApi.CallDiscardReasonDisconnected -> CallDiscardReason.DISCONNECTED
+                    is TdApi.CallDiscardReasonHungUp -> CallDiscardReason.HUNG_UP
+                    else -> CallDiscardReason.EMPTY
+                }
+                MessageContent.Call(
+                    isVideo = content.isVideo,
+                    isOutgoing = context.isOutgoing,
+                    discardReason = discardReason,
+                    duration = content.duration
+                )
             }
             is TdApi.MessageContact -> {
                 val contact = content.contact
