@@ -1374,6 +1374,7 @@ class DefaultProfileComponent(
             is MessageContent.Venue -> stringProvider.getString("profile_statistics_preview_venue_format", title)
             is MessageContent.Poll -> stringProvider.getString("profile_statistics_preview_poll_format", question)
             is MessageContent.Service -> text.ifBlank { stringProvider.getString("profile_statistics_preview_service_message") }
+            is MessageContent.Call -> if (isVideo) stringProvider.getString("reply_content_video") else stringProvider.getString("reply_content_voice_message")
             MessageContent.Unsupported -> stringProvider.getString("logs_media_unsupported")
         }
     }
