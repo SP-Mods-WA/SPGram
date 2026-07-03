@@ -251,6 +251,12 @@ fun MessagePreview(
                         )
                     }
 
+                    is MessageContent.Call -> {
+                        Text(
+                            if (content.isVideo) stringResource(R.string.reply_content_video) else stringResource(R.string.reply_content_voice_message),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                     MessageContent.Unsupported -> {
                         Text(
                             stringResource(R.string.logs_media_unsupported),
