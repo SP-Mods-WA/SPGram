@@ -442,7 +442,25 @@ sealed interface MessageContent {
         val venueType: String
     ) : MessageContent
 
+    data class Call(
+        val isVideo: Boolean,
+        val isOutgoing: Boolean,
+        val discardReason: CallDiscardReason,
+        val duration: Int   // seconds; 0 if not answered
+    ) : MessageContent
+
     object Unsupported : MessageContent
+}
+
+enum class CallDiscardReason {
+    EMPTY,       // answered / normal end
+    MISSED,      // incoming, not answered
+    DECLINED,    // receiver rejected (outgoing: cancelled before answer)
+    DISCONNECTED,// network dropped
+    HUNG_UP;     // one side ended after connecting
+
+    val isMissed: Boolean get() = this == MISSED
+    val isDeclined: Boolean get() = this == DECLINED
 }
 
 enum class ServiceKind {
