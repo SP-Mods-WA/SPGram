@@ -330,12 +330,12 @@ private fun messagePreviewText(message: MessageModel): String =
         is MessageContent.Service -> content.text.ifBlank { stringResource(R.string.profile_statistics_preview_service_message) }
         is MessageContent.Poll -> content.question.ifBlank { stringResource(R.string.logs_media_poll) }
         is MessageContent.Call -> if (content.isVideo) stringResource(R.string.reply_content_video) else stringResource(R.string.reply_content_voice_message)
-        is MessageContent.Unsupported -> stringResource(R.string.reply_content_message)
+        is MessageContent.Unsupported -> stringResource(R.string.logs_media_unsupported)
     }
 
 @Composable
 private fun scheduledMessageTypeLabel(message: MessageModel): String =
-    when (message.content) {
+    when (val content = message.content) {
         is MessageContent.Text -> stringResource(R.string.photo_editor_tool_text)
         is MessageContent.Photo -> stringResource(R.string.reply_content_photo)
         is MessageContent.Video -> stringResource(R.string.reply_content_video)
