@@ -205,6 +205,9 @@ fun ChatInputBar(
     var showScheduleTimePicker by rememberSaveable { mutableStateOf(false) }
     var pendingScheduleDateMillis by rememberSaveable { mutableStateOf<Long?>(null) }
     var showScheduledMessagesSheet by rememberSaveable { mutableStateOf(false) }
+    // TTL chosen from the timer menu: null = Do Not Delete (default), 0 = ViewOnce, N = seconds.
+    // Reset whenever pending media changes so the default (Do Not Delete) is restored.
+    var pendingMediaTtl by remember(state.pendingMediaPaths) { mutableStateOf<Int?>(null) }
 
     val knownCustomEmojis = remember { mutableStateMapOf<Long, StickerModel>() }
 
@@ -373,7 +376,15 @@ fun ChatInputBar(
         }
 
         if (state.pendingMediaPaths.isNotEmpty() && canUseMediaPicker) {
-            actions.onSendMedia(state.pendingMediaPaths, textValue.text, captionEntities, it)
+            // Apply any pending TTL choice from the timer icon menu
+            val ttlOptions = if (pendingMediaTtl != null) {
+                it.copy(
+                    selfDestructImmediately = pendingMediaTtl == 0,
+                    selfDestructSeconds = pendingMediaTtl
+                )
+            } else it
+            actions.onSendMedia(state.pendingMediaPaths, textValue.text, captionEntities, ttlOptions)
+            pendingMediaTtl = null
             textValue = TextFieldValue("")
             knownCustomEmojis.clear()
             sentInstantMessage = !isScheduling
@@ -869,12 +880,10 @@ fun ChatInputBar(
                         },
                         isPrivateChat = !state.isChannel && !state.isBot,
                         onSendMediaWithTtl = { seconds ->
-                            sendWithOptions(
-                                MessageSendOptions(
-                                    selfDestructImmediately = seconds == 0,
-                                    selfDestructSeconds = seconds
-                                )
-                            )
+                            // Just save the choice — do NOT send yet.
+                            // The actual send happens when the user taps the Send button,
+                            // using pendingMediaTtl via the sendWithOptions call below.
+                            pendingMediaTtl = seconds
                         },
                         onCameraClick = {
                             hideKeyboardAndClearFocus()
