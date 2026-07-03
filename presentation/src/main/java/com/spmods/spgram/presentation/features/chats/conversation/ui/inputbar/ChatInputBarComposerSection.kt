@@ -28,6 +28,10 @@ import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -523,6 +527,23 @@ private fun ComposerActionsSlot(
     onVoiceLock: () -> Unit
 ) {
     var showTtlMenu by remember { mutableStateOf(false) }
+    // null = Do Not Delete (default), 0 = View Once, 3/10/30 = seconds TTL
+    // Reset whenever the media selection changes
+    var pendingTtl by remember(attachments.pendingMediaPaths) { mutableStateOf<Int?>(null) }
+
+    // Detect if the single pending media file is a video
+    val singleMediaPath = attachments.pendingMediaPaths.singleOrNull()
+    val isVideo = singleMediaPath != null && (
+        singleMediaPath.endsWith(".mp4", ignoreCase = true) ||
+        singleMediaPath.endsWith(".mkv", ignoreCase = true) ||
+        singleMediaPath.endsWith(".mov", ignoreCase = true) ||
+        singleMediaPath.endsWith(".avi", ignoreCase = true) ||
+        singleMediaPath.endsWith(".webm", ignoreCase = true) ||
+        singleMediaPath.contains("/video/", ignoreCase = true)
+    )
+
+    // Icon turns blue when any option other than "Do Not Delete" (null) is selected
+    val timerIsActive = pendingTtl != null
 
     if (!voiceRecorder.isLocked) {
         if (attachments.scheduledMessagesCount > 0) {
@@ -535,51 +556,72 @@ private fun ComposerActionsSlot(
             }
         }
 
-        // View-once timer button — only for DMs with exactly 1 media item
+        // Timer button — only for DMs with exactly 1 media item
         if (isPrivateChat && attachments.pendingMediaPaths.size == 1) {
             Box {
                 IconButton(
-                    onClick = { showTtlMenu = true },
+                    onClick = {
+                        if (isVideo) {
+                            // Videos: toggle ViewOnce only (tap on = ViewOnce, tap again = off)
+                            val newTtl = if (pendingTtl == 0) null else 0
+                            pendingTtl = newTtl
+                            onSendMediaWithTtl(newTtl)
+                        } else {
+                            // Images: open selection menu
+                            showTtlMenu = true
+                        }
+                    },
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Timer,
                         contentDescription = "Set media timer",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (timerIsActive) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(22.dp)
                     )
                 }
-                DropdownMenu(
-                    expanded = showTtlMenu,
-                    onDismissRequest = { showTtlMenu = false }
-                ) {
-                    Text(
-                        text = "Choose how long the media\nwill be kept after opening.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text("View Once") },
-                        onClick = { showTtlMenu = false; onSendMediaWithTtl(0) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("3 seconds") },
-                        onClick = { showTtlMenu = false; onSendMediaWithTtl(3) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("10 seconds") },
-                        onClick = { showTtlMenu = false; onSendMediaWithTtl(10) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("30 seconds") },
-                        onClick = { showTtlMenu = false; onSendMediaWithTtl(30) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Do Not Delete") },
-                        onClick = { showTtlMenu = false; onSendMediaWithTtl(null) }
-                    )
+
+                // Image menu: shows selection with RadioButton checkmarks.
+                // Selecting an item saves the choice (pendingTtl) but does NOT send yet.
+                // The actual send happens when the user taps the Send button.
+                if (!isVideo) {
+                    DropdownMenu(
+                        expanded = showTtlMenu,
+                        onDismissRequest = { showTtlMenu = false }
+                    ) {
+                        Text(
+                            text = "Choose how long the media\nwill be kept after opening.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                        HorizontalDivider()
+
+                        listOf(
+                            "View Once" to 0,
+                            "3 seconds" to 3,
+                            "10 seconds" to 10,
+                            "30 seconds" to 30,
+                            "Do Not Delete" to null
+                        ).forEach { (label, value) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                leadingIcon = {
+                                    RadioButton(
+                                        selected = pendingTtl == value,
+                                        onClick = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                onClick = {
+                                    pendingTtl = value
+                                    onSendMediaWithTtl(value)
+                                    showTtlMenu = false
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
