@@ -162,14 +162,15 @@ fun CallMessageBubble(
 
                 // Forward info
                 msg.forwardInfo?.let { forward ->
-                    ForwardHeader(forward, onForwardOriginClick)
+                    ForwardContent(forward, isOutgoing, onForwardClick = onForwardOriginClick)
                 }
 
                 // Reply
                 msg.replyToMsg?.let { reply ->
-                    ReplyPreview(
-                        replyMsg   = reply,
-                        onReplyClick = { onReplyClick(reply) }
+                    ReplyContent(
+                        replyToMsg = reply,
+                        isOutgoing = isOutgoing,
+                        onClick = { onReplyClick(reply) }
                     )
                 }
 
@@ -224,10 +225,10 @@ fun CallMessageBubble(
 
         // Reactions
         if (msg.reactions.isNotEmpty()) {
-            MessageReactionsRow(
-                reactions    = msg.reactions,
+            MessageReactionsView(
+                reactions = msg.reactions,
                 onReactionClick = onReactionClick,
-                isOutgoing   = isOutgoing
+                modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp)
             )
         }
     }
