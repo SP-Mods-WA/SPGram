@@ -32,6 +32,7 @@ internal fun rememberChatInputBarState(
             isAdmin = state.isAdmin,
             isChannel = state.isChannel,
             isBot = state.isBot,
+            isGroup = state.isGroup,
             botCommands = state.botCommands,
             botMenuButton = state.botMenuButton,
             replyMarkup = state.messages.firstOrNull {
