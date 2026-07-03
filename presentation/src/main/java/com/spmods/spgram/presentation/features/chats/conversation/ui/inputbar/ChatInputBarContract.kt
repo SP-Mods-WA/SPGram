@@ -33,6 +33,7 @@ data class ChatInputBarState(
     val isAdmin: Boolean = false,
     val isChannel: Boolean = false,
     val isBot: Boolean = false,
+    val isGroup: Boolean = false,
     val botCommands: List<BotCommandModel> = emptyList(),
     val botMenuButton: BotMenuButtonModel = BotMenuButtonModel.Default,
     val replyMarkup: ReplyMarkupModel? = null,
