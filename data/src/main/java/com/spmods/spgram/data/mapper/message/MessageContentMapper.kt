@@ -578,7 +578,7 @@ internal class MessageContentMapper(
                 }
                 MessageContent.Call(
                     isVideo = content.isVideo,
-                    isOutgoing = context.isOutgoing,
+                    isOutgoing = msg.isOutgoing,
                     discardReason = discardReason,
                     duration = content.duration
                 )
