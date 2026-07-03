@@ -51,6 +51,7 @@ import com.spmods.spgram.presentation.features.chats.conversation.ui.message.Rep
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.StickerMessageBubble
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.TextMessageBubble
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.VenueMessageBubble
+import com.spmods.spgram.presentation.features.chats.conversation.ui.message.CallMessageBubble
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.VideoMessageBubble
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.VideoNoteBubble
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.VoiceMessageBubble
@@ -716,6 +717,24 @@ private fun MessageContentSelector(
                     onReplyClick = onGoToReply,
                     onReactionClick = { onReactionClick(msg.id, it) },
                     toProfile = toProfile,
+                    onForwardOriginClick = onForwardOriginClick
+                )
+            }
+
+            is MessageContent.Call -> {
+                CallMessageBubble(
+                    content          = content,
+                    msg              = msg,
+                    isOutgoing       = isOutgoing,
+                    isSameSenderAbove = senderGrouping.isSameSenderAbove,
+                    isSameSenderBelow = senderGrouping.isSameSenderBelow,
+                    bubbleRadius     = appearance.bubbleRadius,
+                    isGroup          = isGroup,
+                    onClick          = { onGoToReply(msg) },
+                    onLongClick      = onBubbleCenterLongClick,
+                    onReplyClick     = onGoToReply,
+                    onReactionClick  = { onReactionClick(msg.id, it) },
+                    toProfile        = toProfile,
                     onForwardOriginClick = onForwardOriginClick
                 )
             }
