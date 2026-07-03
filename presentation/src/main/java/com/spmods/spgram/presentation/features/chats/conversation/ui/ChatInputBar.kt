@@ -878,7 +878,7 @@ fun ChatInputBar(
                             showSendOptionsSheet = false
                             sendWithOptions(MessageSendOptions(selfDestructImmediately = true))
                         },
-                        isPrivateChat = !state.isChannel && !state.isBot,
+                        isPrivateChat = !state.isChannel && !state.isBot && !state.isGroup,
                         onSendMediaWithTtl = { seconds ->
                             // Just save the choice — do NOT send yet.
                             // The actual send happens when the user taps the Send button,
