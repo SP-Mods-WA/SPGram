@@ -329,6 +329,7 @@ private fun messagePreviewText(message: MessageModel): String =
 
         is MessageContent.Service -> content.text.ifBlank { stringResource(R.string.profile_statistics_preview_service_message) }
         is MessageContent.Poll -> content.question.ifBlank { stringResource(R.string.logs_media_poll) }
+        is MessageContent.Call -> if (content.isVideo) stringResource(R.string.reply_content_video) else stringResource(R.string.reply_content_voice_message)
         is MessageContent.Unsupported -> stringResource(R.string.logs_media_unsupported)
     }
 
@@ -349,6 +350,7 @@ private fun scheduledMessageTypeLabel(message: MessageModel): String =
         is MessageContent.Venue -> stringResource(R.string.logs_media_venue)
         is MessageContent.Poll -> stringResource(R.string.logs_media_poll)
         is MessageContent.Service -> stringResource(R.string.profile_statistics_preview_service_message)
+        is MessageContent.Call -> if (content.isVideo) stringResource(R.string.reply_content_video) else stringResource(R.string.reply_content_voice_message)
         MessageContent.Unsupported -> stringResource(R.string.reply_content_message)
     }
 
