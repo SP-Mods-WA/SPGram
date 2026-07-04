@@ -747,7 +747,7 @@ fun MessageOptionsMenu(
                         if (sections.hasQuoteAction) {
                             val msgText = (message.content as? MessageContent.Text)?.text ?: ""
                             InternalMenuOptionItem(
-                                icon = Icons.Rounded.FormatListBulleted,
+                                icon = Icons.AutoMirrored.Rounded.Reply,
                                 text = stringResource(R.string.menu_quote),
                                 onClick = {
                                     animateOutAndDismiss { onQuote(msgText) }
