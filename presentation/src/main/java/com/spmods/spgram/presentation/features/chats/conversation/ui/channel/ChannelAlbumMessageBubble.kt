@@ -271,6 +271,8 @@ fun ChannelAlbumMessageBubble(
                                 lineHeight = (fontSize * 1.375f).sp
                             ),
                             color = MaterialTheme.colorScheme.onSurface,
+                            entities = entities,
+                            isOutgoing = false,
                             onSpoilerClick = { index ->
                                 if (revealedSpoilers.contains(index)) {
                                     revealedSpoilers.remove(index)
