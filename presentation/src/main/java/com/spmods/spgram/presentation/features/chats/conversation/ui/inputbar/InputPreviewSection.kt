@@ -83,6 +83,7 @@ sealed class InputPreviewState {
 fun InputPreviewSection(
     editingMessage: MessageModel?,
     replyMessage: MessageModel?,
+    replyQuoteText: String? = null,
     pendingMediaPaths: List<String>,
     pendingDocumentPaths: List<String>,
     onCancelEdit: () -> Unit,
@@ -96,7 +97,7 @@ fun InputPreviewSection(
     onMediaClick: (String) -> Unit
 ) {
     val previewState =
-        remember(editingMessage, replyMessage, pendingMediaPaths, pendingDocumentPaths) {
+        remember(editingMessage, replyMessage, replyQuoteText, pendingMediaPaths, pendingDocumentPaths) {
         when {
             pendingMediaPaths.isNotEmpty() -> InputPreviewState.Media(pendingMediaPaths)
             pendingDocumentPaths.isNotEmpty() -> InputPreviewState.Documents(pendingDocumentPaths)
@@ -119,7 +120,7 @@ fun InputPreviewSection(
     ) { state ->
         when (state) {
             is InputPreviewState.Edit -> EditPreview(message = state.message, onCancel = onCancelEdit)
-            is InputPreviewState.Reply -> ReplyPreview(message = state.message, onCancel = onCancelReply)
+            is InputPreviewState.Reply -> ReplyPreview(message = state.message, quoteText = replyQuoteText, onCancel = onCancelReply)
             is InputPreviewState.Media -> MediaPreview(
                 paths = state.paths,
                 onCancel = onCancelMedia,
@@ -254,9 +255,10 @@ private fun formatFileSize(bytes: Long): String {
 @Composable
 private fun ReplyPreview(
     message: MessageModel,
+    quoteText: String? = null,
     onCancel: () -> Unit
 ) {
-    val data = buildReplyPreviewData(message = message)
+    val data = buildReplyPreviewData(message = message, quoteText = quoteText)
     InputContextPreviewCard(
         data = data,
         accentColor = MaterialTheme.colorScheme.primary,
@@ -406,7 +408,7 @@ private fun InputContextPreviewCard(
 }
 
 @Composable
-private fun buildReplyPreviewData(message: MessageModel): InputContextPreviewData {
+private fun buildReplyPreviewData(message: MessageModel, quoteText: String? = null): InputContextPreviewData {
     val mediaTypeMessage = stringResource(R.string.media_type_message)
     val mediaTypePhoto = stringResource(R.string.media_type_photo)
     val mediaTypeVideo = stringResource(R.string.media_type_video)
@@ -415,6 +417,8 @@ private fun buildReplyPreviewData(message: MessageModel): InputContextPreviewDat
     val mediaTypeVideoNote = stringResource(R.string.media_type_video_note)
     val mediaTypeGif = stringResource(R.string.media_type_gif)
     val mediaTypeLocation = stringResource(R.string.media_type_location)
+    val menuQuote = stringResource(R.string.menu_quote)
+    val menuReply = stringResource(R.string.menu_reply)
 
     val previewContent = message.content.toPreviewContent(
         mediaTypeMessage = mediaTypeMessage,
@@ -427,12 +431,16 @@ private fun buildReplyPreviewData(message: MessageModel): InputContextPreviewDat
         mediaTypeLocation = mediaTypeLocation
     )
 
+    val displayText = if (!quoteText.isNullOrEmpty()) "\"$quoteText\"" else previewContent.text
+    val displayEntities = if (!quoteText.isNullOrEmpty()) emptyList() else previewContent.entities
+    val title = if (!quoteText.isNullOrEmpty()) menuQuote else menuReply
+
     return InputContextPreviewData(
-        title = stringResource(R.string.menu_reply),
+        title = title,
         sender = message.senderName,
         mediaTypeLabel = previewContent.mediaTypeLabel,
-        previewText = previewContent.text,
-        previewEntities = previewContent.entities,
+        previewText = displayText,
+        previewEntities = displayEntities,
         previewThumbnailPath = previewContent.thumbnailPath,
         cancelDescription = stringResource(R.string.action_cancel_reply),
         maxPreviewLines = 2
