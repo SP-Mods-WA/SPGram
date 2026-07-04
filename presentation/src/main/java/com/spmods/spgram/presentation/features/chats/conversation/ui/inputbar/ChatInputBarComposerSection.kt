@@ -68,6 +68,7 @@ internal fun ChatInputBarComposerSection(
     modifier: Modifier = Modifier,
     editingMessage: MessageModel?,
     replyMessage: MessageModel?,
+    replyQuoteText: String? = null,
     attachments: ComposerAttachmentState,
     suggestions: ComposerSuggestionState,
     botState: ComposerBotState,
@@ -203,6 +204,7 @@ internal fun ChatInputBarComposerSection(
             InputPreviewSection(
                 editingMessage = editingMessage,
                 replyMessage = replyMessage,
+                replyQuoteText = replyQuoteText,
                 pendingMediaPaths = attachments.pendingMediaPaths,
                 pendingDocumentPaths = attachments.pendingDocumentPaths,
                 onCancelEdit = onCancelEdit,
