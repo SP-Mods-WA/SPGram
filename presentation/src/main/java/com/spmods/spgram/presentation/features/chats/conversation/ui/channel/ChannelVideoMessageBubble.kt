@@ -514,6 +514,8 @@ fun ChannelVideoMessageBubble(
                                     letterSpacing = letterSpacing.sp,
                                     lineHeight = (fontSize * 1.35f).sp
                                 ),
+                                entities = content.entities,
+                                isOutgoing = false,
                                 onSpoilerClick = { index ->
                                     if (revealedSpoilers.contains(index)) {
                                         revealedSpoilers.remove(index)
