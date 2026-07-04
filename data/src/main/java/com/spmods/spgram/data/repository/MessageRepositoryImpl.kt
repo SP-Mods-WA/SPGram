@@ -330,9 +330,11 @@ class MessageRepositoryImpl(
         replyToMsgId: Long?,
         entities: List<MessageEntity>,
         threadId: Long?,
-        sendOptions: MessageSendOptions
+        sendOptions: MessageSendOptions,
+        quoteText: String?,
+        quotePosition: Int
     ) {
-        messageRemoteDataSource.sendMessage(chatId, text, replyToMsgId, entities, threadId, sendOptions)
+        messageRemoteDataSource.sendMessage(chatId, text, replyToMsgId, entities, threadId, sendOptions, quoteText, quotePosition)
     }
 
     override suspend fun sendStoryReply(
