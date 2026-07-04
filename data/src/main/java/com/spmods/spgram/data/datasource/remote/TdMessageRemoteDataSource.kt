@@ -648,7 +648,9 @@ class TdMessageRemoteDataSource(
         replyToMsgId: Long?,
         entities: List<MessageEntity>,
         threadId: Long?,
-        sendOptions: MessageSendOptions
+        sendOptions: MessageSendOptions,
+        quoteText: String?,
+        quotePosition: Int
     ): TdApi.Message? {
         val parsedText = TdApi.FormattedText(
             text,
@@ -658,7 +660,12 @@ class TdMessageRemoteDataSource(
             this.text = parsedText
             this.clearDraft = true
         }
-        val replyTo = if (replyToMsgId != null && replyToMsgId != 0L) TdApi.InputMessageReplyToMessage(replyToMsgId, null, 0, "") else null
+        val replyTo = if (replyToMsgId != null && replyToMsgId != 0L) {
+            val quote = if (!quoteText.isNullOrEmpty())
+                TdApi.InputTextQuote(TdApi.FormattedText(quoteText, emptyArray()), quotePosition)
+            else null
+            TdApi.InputMessageReplyToMessage(replyToMsgId, quote, 0, "")
+        } else null
         val topicId = resolveTopicId(chatId, threadId)
         val req = TdApi.SendMessage().apply {
             this.chatId = chatId
