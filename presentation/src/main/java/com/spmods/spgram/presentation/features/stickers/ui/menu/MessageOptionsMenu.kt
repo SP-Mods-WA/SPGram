@@ -191,6 +191,7 @@ fun MessageOptionsMenu(
     bubbleRadius: Float = 18f,
     splitOffset: Int? = null,
     onReply: () -> Unit,
+    onQuote: (selectedText: String) -> Unit = {},
     onPin: () -> Unit,
     onEdit: () -> Unit,
     onDelete: (Boolean) -> Unit,
@@ -743,6 +744,17 @@ fun MessageOptionsMenu(
                             )
                         }
 
+                        if (sections.hasQuoteAction) {
+                            val msgText = (message.content as? MessageContent.Text)?.text ?: ""
+                            InternalMenuOptionItem(
+                                icon = Icons.Rounded.FormatQuote,
+                                text = stringResource(R.string.menu_quote),
+                                onClick = {
+                                    animateOutAndDismiss { onQuote(msgText) }
+                                }
+                            )
+                        }
+
                         if (sections.hasPinAction) {
                             InternalMenuOptionItem(
                                 icon = Icons.Rounded.PushPin,
@@ -1157,6 +1169,7 @@ private data class MessageMenuSections(
     val hasViewersSection: Boolean,
     val hasPackAction: Boolean,
     val hasReplyAction: Boolean,
+    val hasQuoteAction: Boolean,
     val hasPinAction: Boolean,
     val hasEditAction: Boolean,
     val hasCopyAction: Boolean,
@@ -1180,6 +1193,7 @@ private data class MessageMenuSections(
             hasViewersSection = hasViewersSection || other.hasViewersSection,
             hasPackAction = hasPackAction || other.hasPackAction,
             hasReplyAction = hasReplyAction || other.hasReplyAction,
+            hasQuoteAction = hasQuoteAction || other.hasQuoteAction,
             hasPinAction = hasPinAction || other.hasPinAction,
             hasEditAction = hasEditAction || other.hasEditAction,
             hasCopyAction = hasCopyAction || other.hasCopyAction,
@@ -1207,6 +1221,7 @@ private data class MessageMenuSections(
                     it.hasViewersSection,
                     it.hasPackAction,
                     it.hasReplyAction,
+                    it.hasQuoteAction,
                     it.hasPinAction,
                     it.hasEditAction,
                     it.hasCopyAction,
@@ -1231,23 +1246,24 @@ private data class MessageMenuSections(
                     hasViewersSection = values[0],
                     hasPackAction = values[1],
                     hasReplyAction = values[2],
-                    hasPinAction = values[3],
-                    hasEditAction = values[4],
-                    hasCopyAction = values[5],
-                    hasForwardAction = values[6],
-                    hasCocoonSection = values[7],
-                    hasMoreSection = values[8],
-                    hasDeleteAction = values[9],
-                    hasCommentsAction = values[10],
-                    hasCopyLinkAction = values[11],
-                    hasDownloadAction = values[12],
-                    hasReportAction = values[13],
-                    hasBlockAction = values[14],
-                    hasRestrictAction = values[15],
-                    hasTelegramSummaryAction = values[16],
-                    hasTelegramTranslatorAction = values[17],
-                    hasRestoreOriginalTextAction = values[18],
-                    hasRepeatAction = values[19],
+                    hasQuoteAction = values[3],
+                    hasPinAction = values[4],
+                    hasEditAction = values[5],
+                    hasCopyAction = values[6],
+                    hasForwardAction = values[7],
+                    hasCocoonSection = values[8],
+                    hasMoreSection = values[9],
+                    hasDeleteAction = values[10],
+                    hasCommentsAction = values[11],
+                    hasCopyLinkAction = values[12],
+                    hasDownloadAction = values[13],
+                    hasReportAction = values[14],
+                    hasBlockAction = values[15],
+                    hasRestrictAction = values[16],
+                    hasTelegramSummaryAction = values[17],
+                    hasTelegramTranslatorAction = values[18],
+                    hasRestoreOriginalTextAction = values[19],
+                    hasRepeatAction = values[20],
                 )
             }
         )
@@ -1278,6 +1294,7 @@ private fun buildMenuSections(
         hasViewersSection = showViewersList,
         hasPackAction = hasPackAction,
         hasReplyAction = canWrite,
+        hasQuoteAction = canWrite && (message.content is MessageContent.Text),
         hasPinAction = canPinMessages,
         hasEditAction = message.canBeEdited,
         hasCopyAction = shouldShowCopy(message),
