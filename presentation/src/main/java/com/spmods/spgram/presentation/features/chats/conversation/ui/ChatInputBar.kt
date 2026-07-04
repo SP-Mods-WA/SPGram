@@ -701,6 +701,7 @@ fun ChatInputBar(
                     InputBarMode.Composer -> ChatInputBarComposerSection(
                         editingMessage = state.editingMessage,
                         replyMessage = state.replyMessage,
+                        replyQuoteText = state.replyQuoteText,
                         attachments = ComposerAttachmentState(
                             pendingMediaPaths = state.pendingMediaPaths,
                             pendingDocumentPaths = state.pendingDocumentPaths,
