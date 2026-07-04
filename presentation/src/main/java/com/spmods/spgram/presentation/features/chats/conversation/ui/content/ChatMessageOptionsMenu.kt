@@ -298,6 +298,10 @@ fun ChatMessageOptionsMenu(
             component.onReplyMessage(selectedMessage)
             onDismiss()
         },
+        onQuote = { selectedText ->
+            component.onReplyMessage(selectedMessage, quoteText = selectedText, quotePosition = 0)
+            onDismiss()
+        },
         onPin = {
             if (selectedMessage.id == state.pinnedMessage?.id) component.onUnpinMessage(selectedMessage) else component.onPinMessage(
                 selectedMessage
