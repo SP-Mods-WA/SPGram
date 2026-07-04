@@ -104,7 +104,9 @@ interface MessageRepository :
         replyToMsgId: Long? = null,
         entities: List<MessageEntity> = emptyList(),
         threadId: Long? = null,
-        sendOptions: MessageSendOptions = MessageSendOptions()
+        sendOptions: MessageSendOptions = MessageSendOptions(),
+        quoteText: String? = null,
+        quotePosition: Int = 0
     )
 
     /** Sends a text message as a reply to a story (shows the "Replied to story" preview, like official Telegram). */
