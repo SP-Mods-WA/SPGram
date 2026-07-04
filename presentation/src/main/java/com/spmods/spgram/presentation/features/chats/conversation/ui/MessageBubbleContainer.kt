@@ -730,7 +730,7 @@ private fun MessageContentSelector(
                     isSameSenderBelow = senderGrouping.isSameSenderBelow,
                     bubbleRadius     = appearance.bubbleRadius,
                     isGroup          = isGroup,
-                    onClick          = { onGoToReply(msg) },
+                    onClick          = { /* Call bubbles: tap does nothing */ },
                     onLongClick      = onBubbleCenterLongClick,
                     onReplyClick     = onGoToReply,
                     onReactionClick  = { onReactionClick(msg.id, it) },
