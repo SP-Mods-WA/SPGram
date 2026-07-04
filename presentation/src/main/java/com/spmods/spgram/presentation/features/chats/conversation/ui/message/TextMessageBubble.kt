@@ -128,6 +128,7 @@ fun TextMessageBubble(
                     ReplyContent(
                         replyToMsg = reply,
                         isOutgoing = isOutgoing,
+                        quoteText  = msg.replyQuoteText,
                         onClick    = { onReplyClick(reply) }
                     )
                 }
