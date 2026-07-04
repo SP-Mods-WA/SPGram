@@ -76,6 +76,8 @@ class MessageMapper internal constructor(
                 replyToMsg = replyInfo.message,
                 replyToStoryPosterChatId = replyInfo.storyPosterChatId,
                 replyToStoryId = replyInfo.storyId,
+                replyQuoteText = replyInfo.quoteText,
+                replyQuotePosition = replyInfo.quotePosition,
                 forwardInfo = forwardInfo,
                 views = views,
                 viewCount = views,
@@ -144,6 +146,8 @@ class MessageMapper internal constructor(
         replyToMsg: MessageModel? = null,
         replyToStoryPosterChatId: Long? = null,
         replyToStoryId: Int? = null,
+        replyQuoteText: String? = null,
+        replyQuotePosition: Int = 0,
         forwardInfo: ForwardInfo? = null,
         views: Int? = null,
         viewCount: Int? = null,
@@ -201,6 +205,8 @@ class MessageMapper internal constructor(
             replyToMsg = replyToMsg,
             replyToStoryPosterChatId = replyToStoryPosterChatId,
             replyToStoryId = replyToStoryId,
+            replyQuoteText = replyQuoteText,
+            replyQuotePosition = replyQuotePosition,
             forwardInfo = forwardInfo,
             views = views,
             viewCount = viewCount,
@@ -249,7 +255,9 @@ class MessageMapper internal constructor(
         val messageId: Long? = null,
         val message: MessageModel? = null,
         val storyPosterChatId: Long? = null,
-        val storyId: Int? = null
+        val storyId: Int? = null,
+        val quoteText: String? = null,
+        val quotePosition: Int = 0
     )
 
     private suspend fun resolveReplyInfo(
@@ -287,7 +295,10 @@ class MessageMapper internal constructor(
             ).copy(replyToMsg = null, replyToMsgId = null)
         }
 
-        return ReplyInfoResult(messageId = replyToMsgId, message = replyToMsg)
+        val quoteText = replyTo.quote?.text?.text?.takeIf { it.isNotEmpty() }
+        val quotePosition = replyTo.quote?.position ?: 0
+
+        return ReplyInfoResult(messageId = replyToMsgId, message = replyToMsg, quoteText = quoteText, quotePosition = quotePosition)
     }
 
     private suspend fun resolveForwardInfo(msg: TdApi.Message): ForwardInfo? {
