@@ -433,6 +433,8 @@ fun ChannelGifMessageBubble(
                                     lineHeight = (fontSize * 1.375f).sp
                                 ),
                                 modifier = Modifier.padding(bottom = 2.dp),
+                                entities = content.entities,
+                                isOutgoing = false,
                                 onSpoilerClick = { index ->
                                     if (revealedSpoilers.contains(index)) {
                                         revealedSpoilers.remove(index)
