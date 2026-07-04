@@ -35,9 +35,11 @@ internal fun DefaultChatComponent.handleSendMessage(
     scope.launch {
         val currentState = _state.value
         val replyId = currentState.replyMessage?.id
+        val quoteText = currentState.replyQuoteText
+        val quotePosition = currentState.replyQuotePosition
         val threadId = currentState.effectiveThreadId()
         val targetChatId = currentState.effectiveThreadChatId(chatId)
-        repositoryMessage.sendMessage(targetChatId, text, replyId, entities, threadId, sendOptions)
+        repositoryMessage.sendMessage(targetChatId, text, replyId, entities, threadId, sendOptions, quoteText, quotePosition)
         onCancelReply()
         if (shouldAutoScrollAfterSend(currentState.isAtBottom)) {
             onScrollToBottom()
