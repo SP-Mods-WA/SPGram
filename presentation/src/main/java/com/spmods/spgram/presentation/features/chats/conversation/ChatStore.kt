@@ -75,7 +75,7 @@ interface ChatStore : Store<ChatStore.Intent, ChatComponent.State, ChatStore.Lab
         object ProfileClicked : Intent()
         data class MessageClicked(val id: Long) : Intent()
         data class MessageVisible(val messageId: Long) : Intent()
-        data class ReplyMessage(val message: MessageModel) : Intent()
+        data class ReplyMessage(val message: MessageModel, val quoteText: String? = null, val quotePosition: Int = 0) : Intent()
         object CancelReply : Intent()
         data class ViewStoryReply(val storyPosterChatId: Long, val storyId: Int) : Intent()
         object DismissStoryReply : Intent()
