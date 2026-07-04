@@ -159,11 +159,13 @@ class ChatStoreFactory(
                 is Intent.ReplyMessage -> component._state.update {
                     it.copy(
                         replyMessage = intent.message,
+                        replyQuoteText = intent.quoteText,
+                        replyQuotePosition = intent.quotePosition,
                         editingMessage = null
                     )
                 }
 
-                is Intent.CancelReply -> component._state.update { it.copy(replyMessage = null) }
+                is Intent.CancelReply -> component._state.update { it.copy(replyMessage = null, replyQuoteText = null, replyQuotePosition = 0) }
                 is Intent.ViewStoryReply -> component.handleViewStoryReply(intent.storyPosterChatId, intent.storyId)
                 is Intent.DismissStoryReply -> component._state.update {
                     it.copy(viewingStoryReply = null, isLoadingStoryReply = false)
