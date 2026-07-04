@@ -160,6 +160,8 @@ fun ChannelTextMessageBubble(
                             lineHeight    = (finalFontSize * 1.1f).sp
                         ),
                         modifier      = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                        entities      = content.entities,
+                        isOutgoing    = false,
                         onSpoilerClick = { index ->
                             if (revealedSpoilers.contains(index)) revealedSpoilers.remove(index)
                             else revealedSpoilers.add(index)
