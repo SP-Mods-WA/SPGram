@@ -85,6 +85,7 @@ private const val ENTITY_SPOILER = "spoiler"
 private const val ENTITY_CODE = "code"
 private const val ENTITY_PRE = "pre"
 private const val ENTITY_TEXT_URL = "text_url"
+private const val ENTITY_BLOCK_QUOTE = "block_quote"
 
 private object RichMenuActionBold
 private object RichMenuActionItalic
@@ -96,6 +97,7 @@ private object RichMenuActionPre
 private object RichMenuActionLink
 private object RichMenuActionClear
 private object RichMenuActionPasteImage
+private object RichMenuActionQuote
 
 private data class Interval(val start: Int, val end: Int)
 
@@ -289,6 +291,7 @@ fun InputTextField(
     val richTextPre = stringResource(R.string.rich_text_pre)
     val richTextLink = stringResource(R.string.rich_text_link)
     val richTextClear = stringResource(R.string.rich_text_clear)
+    val richTextQuote = stringResource(R.string.menu_quote)
     val actionPasteImage = stringResource(R.string.action_paste_image)
     val clipboardImageUris = remember(context, canPasteMediaFromClipboard) {
         if (canPasteMediaFromClipboard) extractImageUrisFromClipboard(context) else emptyList()
@@ -342,7 +345,8 @@ fun InputTextField(
                                             RichMenuActionPre,
                                             RichMenuActionLink,
                                             RichMenuActionClear,
-                                            RichMenuActionPasteImage -> true
+                                            RichMenuActionPasteImage,
+                                            RichMenuActionQuote -> true
 
                                             else -> false
                                         }
@@ -446,6 +450,15 @@ fun InputTextField(
                                                 currentOnRichTextValueChange(
                                                     clearRichFormatting(
                                                         textValue
+                                                    )
+                                                )
+                                                close()
+                                            }
+                                            item(RichMenuActionQuote, richTextQuote) {
+                                                currentOnRichTextValueChange(
+                                                    toggleRichEntity(
+                                                        textValue,
+                                                        MessageEntityType.BlockQuote
                                                     )
                                                 )
                                                 close()
@@ -830,6 +843,7 @@ internal fun richEntityToAnnotation(type: MessageEntityType): String? {
         is MessageEntityType.Code -> ENTITY_CODE
         is MessageEntityType.Pre -> if (type.language.isBlank()) ENTITY_PRE else "$ENTITY_PRE:${type.language}"
         is MessageEntityType.TextUrl -> "$ENTITY_TEXT_URL:${type.url}"
+        is MessageEntityType.BlockQuote -> ENTITY_BLOCK_QUOTE
         else -> null
     }
 }
@@ -845,6 +859,7 @@ internal fun decodeRichEntity(value: String): MessageEntityType? {
         value == ENTITY_PRE -> MessageEntityType.Pre()
         value.startsWith("$ENTITY_PRE:") -> MessageEntityType.Pre(value.substringAfter(':'))
         value.startsWith("$ENTITY_TEXT_URL:") -> MessageEntityType.TextUrl(value.substringAfter(':'))
+        value == ENTITY_BLOCK_QUOTE -> MessageEntityType.BlockQuote
         else -> null
     }
 }
@@ -861,6 +876,7 @@ private fun MessageEntityType.toEditorStyle(primaryColor: Color): SpanStyle? {
         is MessageEntityType.Code -> SpanStyle(fontFamily = FontFamily.Monospace, background = codeBackground)
         is MessageEntityType.Pre -> SpanStyle(fontFamily = FontFamily.Monospace, background = codeBackground)
         is MessageEntityType.TextUrl -> SpanStyle(color = primaryColor, textDecoration = TextDecoration.Underline)
+        is MessageEntityType.BlockQuote -> SpanStyle(color = primaryColor.copy(alpha = 0.75f))
         else -> null
     }
 }
