@@ -73,6 +73,7 @@ fun StoryReplyContent(
 fun ReplyContent(
     replyToMsg: MessageModel,
     isOutgoing: Boolean,
+    quoteText: String? = null,
     onClick: () -> Unit = {}
 ) {
     Row(
@@ -90,7 +91,7 @@ fun ReplyContent(
         Box(
             modifier = Modifier
                 .width(2.dp)
-                .height(32.dp)
+                .height(if (quoteText != null) 48.dp else 32.dp)
                 .background(
                     if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer
                     else MaterialTheme.colorScheme.primary,
@@ -110,6 +111,18 @@ fun ReplyContent(
                 overflow = TextOverflow.Ellipsis
             )
 
+            // Show quote text if available, otherwise show message preview
+            if (!quoteText.isNullOrEmpty()) {
+                Text(
+                    text = "\"$quoteText\"",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
+                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
             val (rawText, entities) = when (val content = replyToMsg.content) {
                 is MessageContent.Text -> content.text to content.entities
                 is MessageContent.Photo -> content.caption.ifEmpty { stringResource(R.string.reply_content_photo) } to content.entities
@@ -122,25 +135,25 @@ fun ReplyContent(
                 else -> stringResource(R.string.reply_content_message) to emptyList()
             }
 
-            val annotatedText = buildAnnotatedMessageTextWithEmoji(
-                text = rawText,
-                entities = entities
-            )
-
-            val inlineContent = rememberMessageInlineContent(
-                entities = entities,
-                fontSize = MaterialTheme.typography.bodySmall.fontSize.value
-            )
-
-            Text(
-                text = annotatedText,
-                inlineContent = inlineContent,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            if (quoteText.isNullOrEmpty()) {
+                val annotatedText = buildAnnotatedMessageTextWithEmoji(
+                    text = rawText,
+                    entities = entities
+                )
+                val inlineContent = rememberMessageInlineContent(
+                    entities = entities,
+                    fontSize = MaterialTheme.typography.bodySmall.fontSize.value
+                )
+                Text(
+                    text = annotatedText,
+                    inlineContent = inlineContent,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
