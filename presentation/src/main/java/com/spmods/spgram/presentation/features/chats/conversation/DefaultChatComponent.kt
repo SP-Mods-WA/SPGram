@@ -405,7 +405,7 @@ class DefaultChatComponent(
     override fun onMessageClicked(id: Long) = store.accept(ChatStore.Intent.MessageClicked(id))
     override fun onMessageVisible(messageId: Long) = store.accept(ChatStore.Intent.MessageVisible(messageId))
 
-    override fun onReplyMessage(message: MessageModel) = store.accept(ChatStore.Intent.ReplyMessage(message))
+    override fun onReplyMessage(message: MessageModel, quoteText: String?, quotePosition: Int) = store.accept(ChatStore.Intent.ReplyMessage(message, quoteText, quotePosition))
 
     override fun onCancelReply() = store.accept(ChatStore.Intent.CancelReply)
 
