@@ -255,6 +255,8 @@ fun ChatAlbumMessageBubble(
                                 lineHeight = (fontSize * 1.375f).sp
                             ),
                             color = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                            entities = entities,
+                            isOutgoing = isOutgoing,
                             onSpoilerClick = { index ->
                                 if (revealedSpoilers.contains(index)) {
                                     revealedSpoilers.remove(index)
