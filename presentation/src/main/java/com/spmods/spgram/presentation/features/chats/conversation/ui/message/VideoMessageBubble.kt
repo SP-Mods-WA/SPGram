@@ -495,6 +495,8 @@ fun VideoMessageBubble(
                                     lineHeight = (fontSize * 1.375f).sp
                                 ),
                                 modifier = Modifier.padding(bottom = 4.dp),
+                                entities = content.entities,
+                                isOutgoing = isOutgoing,
                                 onSpoilerClick = { index ->
                                     if (revealedSpoilers.contains(index)) {
                                         revealedSpoilers.remove(index)
