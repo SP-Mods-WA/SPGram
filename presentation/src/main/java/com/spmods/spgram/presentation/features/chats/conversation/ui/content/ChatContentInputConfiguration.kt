@@ -18,6 +18,7 @@ internal fun rememberChatInputBarState(
     return remember(state, pendingMediaPaths, pendingDocumentPaths) {
         ChatInputBarState(
             replyMessage = state.replyMessage,
+            replyQuoteText = state.replyQuoteText,
             editingMessage = state.editingMessage,
             draftText = state.draftText,
             pendingMediaPaths = pendingMediaPaths,
