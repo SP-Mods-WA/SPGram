@@ -95,7 +95,7 @@ interface ChatComponent {
     fun onProfileClicked()
     fun onMessageClicked(id: Long)
     fun onMessageVisible(messageId: Long)
-    fun onReplyMessage(message: MessageModel)
+    fun onReplyMessage(message: MessageModel, quoteText: String? = null, quotePosition: Int = 0)
     fun onCancelReply()
     fun onViewStoryReply(storyPosterChatId: Long, storyId: Int)
     fun onDismissStoryReply()
@@ -258,6 +258,8 @@ interface ChatComponent {
         val isLoadingOlder: Boolean = false,
         val isLoadingNewer: Boolean = false,
         val replyMessage: MessageModel? = null,
+        val replyQuoteText: String? = null,
+        val replyQuotePosition: Int = 0,
         val editingMessage: MessageModel? = null,
         val editRequestTime: Long = 0L,
         val draftText: String = "",
