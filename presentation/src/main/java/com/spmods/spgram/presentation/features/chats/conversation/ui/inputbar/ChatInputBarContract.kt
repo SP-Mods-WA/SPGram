@@ -20,6 +20,7 @@ import com.spmods.spgram.domain.repository.InlineBotResultsModel
 @Immutable
 data class ChatInputBarState(
     val replyMessage: MessageModel? = null,
+    val replyQuoteText: String? = null,
     val editingMessage: MessageModel? = null,
     val draftText: String = "",
     val pendingMediaPaths: List<String> = emptyList(),
