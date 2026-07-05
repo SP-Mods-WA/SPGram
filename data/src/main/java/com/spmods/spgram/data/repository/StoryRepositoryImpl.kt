@@ -225,9 +225,16 @@ class StoryRepositoryImpl(
             this.areas = null
             this.caption = TdApi.FormattedText(caption, emptyArray())
             this.privacySettings = when (privacy) {
-                StoryPrivacy.EVERYONE -> TdApi.StoryPrivacySettingsEveryone()
-                StoryPrivacy.CONTACTS -> TdApi.StoryPrivacySettingsContacts()
-                StoryPrivacy.CLOSE_FRIENDS -> TdApi.StoryPrivacySettingsCloseFriends()
+                is StoryPrivacy.Everyone      -> TdApi.StoryPrivacySettingsEveryone(
+                    privacy.exceptUserIds.toLongArray()
+                )
+                is StoryPrivacy.Contacts      -> TdApi.StoryPrivacySettingsContacts(
+                    privacy.exceptUserIds.toLongArray()
+                )
+                is StoryPrivacy.CloseFriends  -> TdApi.StoryPrivacySettingsCloseFriends()
+                is StoryPrivacy.SelectedUsers -> TdApi.StoryPrivacySettingsSelectedUsers(
+                    privacy.userIds.toLongArray()
+                )
             }
             this.albumIds = intArrayOf()
             this.activePeriod = activePeriodSeconds
