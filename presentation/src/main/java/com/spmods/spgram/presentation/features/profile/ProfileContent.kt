@@ -81,7 +81,7 @@ import com.spmods.spgram.presentation.features.profile.components.ProfileInfoSec
 import com.spmods.spgram.presentation.features.profile.components.ProfileInfoSectionSkeleton
 import com.spmods.spgram.presentation.features.profile.components.ProfilePermissionsDialog
 import com.spmods.spgram.presentation.features.profile.components.ProfileStoriesSection
-import com.spmods.spgram.presentation.features.profile.components.StoryPosterSheet
+import com.spmods.spgram.presentation.features.profile.components.StoryCreatorScreen
 import com.spmods.spgram.presentation.features.profile.components.StoryViewerScreen
 import com.spmods.spgram.presentation.features.profile.components.StoryViewersSheet
 import com.spmods.spgram.presentation.features.profile.components.ProfileQRDialog
@@ -476,13 +476,11 @@ fun ProfileContent(component: ProfileComponent) {
             )
         }
 
-        // Story poster sheet
+        // Story creator (full-screen)
         if (state.showStoryPoster) {
-            StoryPosterSheet(
-                chatId = state.chat?.id ?: return@Box,
-                onPosted = { newStory ->
-                    component.onDismissStoryPoster()
-                },
+            StoryCreatorScreen(
+                chatId    = state.chat?.id ?: return@Box,
+                onPosted  = { component.onDismissStoryPoster() },
                 onDismiss = component::onDismissStoryPoster
             )
         }
