@@ -23,10 +23,18 @@ data class StoryViewerModel(
     val reactionEmoji: String? = null
 )
 
-enum class StoryPrivacy {
-    EVERYONE,
-    CONTACTS,
-    CLOSE_FRIENDS
+sealed class StoryPrivacy {
+    /** Visible to everyone. Optionally exclude specific user IDs. */
+    data class Everyone(val exceptUserIds: List<Long> = emptyList()) : StoryPrivacy()
+
+    /** Visible to contacts only. Optionally exclude specific contact IDs. */
+    data class Contacts(val exceptUserIds: List<Long> = emptyList()) : StoryPrivacy()
+
+    /** Visible to close friends only. */
+    object CloseFriends : StoryPrivacy()
+
+    /** Visible to selected users only. */
+    data class SelectedUsers(val userIds: List<Long> = emptyList()) : StoryPrivacy()
 }
 
 data class FoundStoryViewersModel(
