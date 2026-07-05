@@ -35,7 +35,7 @@ interface StoryRepository {
         photoPath: String,
         caption: String = "",
         activePeriodSeconds: Int = 86400,
-        privacy: StoryPrivacy = StoryPrivacy.EVERYONE
+        privacy: StoryPrivacy = StoryPrivacy.Everyone()
     ): StoryModel?
 
     /** Post a video story */
@@ -45,7 +45,7 @@ interface StoryRepository {
         thumbnailPath: String = "",
         caption: String = "",
         activePeriodSeconds: Int = 86400,
-        privacy: StoryPrivacy = StoryPrivacy.EVERYONE
+        privacy: StoryPrivacy = StoryPrivacy.Everyone()
     ): StoryModel?
 
     /** Delete a story */
