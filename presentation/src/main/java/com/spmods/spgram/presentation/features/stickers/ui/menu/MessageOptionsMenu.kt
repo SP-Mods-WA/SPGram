@@ -744,17 +744,6 @@ fun MessageOptionsMenu(
                             )
                         }
 
-                        if (sections.hasQuoteAction) {
-                            val msgText = (message.content as? MessageContent.Text)?.text ?: ""
-                            InternalMenuOptionItem(
-                                icon = Icons.AutoMirrored.Rounded.Reply,
-                                text = stringResource(R.string.menu_quote),
-                                onClick = {
-                                    animateOutAndDismiss { onQuote(msgText) }
-                                }
-                            )
-                        }
-
                         if (sections.hasPinAction) {
                             InternalMenuOptionItem(
                                 icon = Icons.Rounded.PushPin,
@@ -858,13 +847,6 @@ fun MessageOptionsMenu(
                                 icon = Icons.Rounded.Link,
                                 text = stringResource(R.string.menu_copy_link),
                                 onClick = { animateOutAndDismiss(onCopyLink) }
-                            )
-                        }
-                        if (sections.hasRepeatAction) {
-                            InternalMenuOptionItem(
-                                icon = Icons.Rounded.PlusOne,
-                                text = stringResource(R.string.menu_repeat),
-                                onClick = { animateOutAndDismiss(onRepeat) }
                             )
                         }
                         if (sections.hasDownloadAction) {
