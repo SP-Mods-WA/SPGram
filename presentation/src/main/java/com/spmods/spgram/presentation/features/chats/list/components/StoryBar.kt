@@ -241,6 +241,7 @@ private fun StoryItem(
     ) {
         Box(contentAlignment = Alignment.BottomEnd) {
             when (ringState) {
+                StoryRingState.MY_STORY,
                 StoryRingState.UNREAD -> {
                     // Vibrant gradient ring (unread story)
                     Box(
