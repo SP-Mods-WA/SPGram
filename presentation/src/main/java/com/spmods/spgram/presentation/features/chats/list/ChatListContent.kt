@@ -169,6 +169,21 @@ fun ChatListContent(component: ChatListComponent) {
     var showStatusMenu by remember { mutableStateOf(false) }
     var showAlphaSheet by remember { mutableStateOf(false) }
     var showDeleteChatsSheet by remember { mutableStateOf(false) }
+
+    // ── Story bar state ───────────────────────────────────────────────────
+    val storyRepository: com.spmods.spgram.domain.repository.StoryRepository = koinInject()
+    var myStories by remember { mutableStateOf<List<com.spmods.spgram.domain.models.StoryModel>>(emptyList()) }
+    var showMyStorySheet by remember { mutableStateOf(false) }
+    var showStoryCreator by remember { mutableStateOf(false) }
+    var storyViewerChatId by remember { mutableStateOf<Long?>(null) }
+    var storyViewerStories by remember { mutableStateOf<List<com.spmods.spgram.domain.models.StoryModel>>(emptyList()) }
+    var storyViewerName by remember { mutableStateOf("") }
+    var storyViewerAvatar by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(currentUser?.id) {
+        val uid = currentUser?.id ?: return@LaunchedEffect
+        runCatching { myStories = storyRepository.getChatPageStories(uid) }
+    }
     var showMoreMenu by remember { mutableStateOf(false) }
 
     // ── Update sheet ──────────────────────────────────────────────────────
@@ -620,12 +635,33 @@ fun ChatListContent(component: ChatListComponent) {
                 // ── Story Bar ─────────────────────────────────────────────
                 if (isMainView && isMainFolder) {
                     val allChats = foldersState.chatsByFolder[-1].orEmpty()
-                    StoryBar(
+                    val scope2 = rememberCoroutineScope()
+                    com.spmods.spgram.presentation.features.chats.list.components.StoryBar(
                         currentUser = currentUser,
+                        currentUserId = currentUser?.id,
                         chatListChats = allChats,
-                        onMyStoryClick = { /* TODO: open my story creator */ },
-                        onStoryClick = { chatId -> component.onChatClicked(chatId) },
-                        onContactClick = { chatId -> component.onChatClicked(chatId) }
+                        myStories = myStories,
+                        onAction = { action ->
+                            when (action) {
+                                is com.spmods.spgram.presentation.features.chats.list.components.StoryBarAction.MyStoryTap -> {
+                                    showMyStorySheet = true
+                                }
+                                is com.spmods.spgram.presentation.features.chats.list.components.StoryBarAction.OpenStory -> {
+                                    val chat = allChats.firstOrNull { it.id == action.chatId }
+                                    storyViewerName = chat?.title ?: ""
+                                    storyViewerAvatar = chat?.avatarPath
+                                    scope2.launch {
+                                        runCatching {
+                                            storyViewerStories = storyRepository.getActiveStories(action.chatId)
+                                            storyViewerChatId = action.chatId
+                                        }
+                                    }
+                                }
+                                is com.spmods.spgram.presentation.features.chats.list.components.StoryBarAction.OpenChat -> {
+                                    component.onChatClicked(action.chatId)
+                                }
+                            }
+                        }
                     )
                 }
 
@@ -1685,6 +1721,67 @@ fun ChatListContent(component: ChatListComponent) {
         }
     }
 
+    // ── Story Viewer ──────────────────────────────────────────────────────
+    AnimatedVisibility(
+        visible = storyViewerChatId != null && storyViewerStories.isNotEmpty(),
+        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+    ) {
+        val storyScope = rememberCoroutineScope()
+        com.spmods.spgram.presentation.features.profile.components.StoryViewerScreen(
+            stories = storyViewerStories,
+            initialIndex = 0,
+            posterName = storyViewerName,
+            posterAvatarPath = storyViewerAvatar,
+            canDeleteStory = false,
+            onStoryViewed = { story ->
+                storyScope.launch { runCatching { storyRepository.openStory(story.posterChatId, story.id) } }
+            },
+            onStoryClosed = { story ->
+                storyScope.launch { runCatching { storyRepository.closeStory(story.posterChatId, story.id) } }
+            },
+            onDismiss = {
+                storyViewerChatId = null
+                storyViewerStories = emptyList()
+            }
+        )
+    }
+
+    // ── My Story sheet ────────────────────────────────────────────────────
+    if (showMyStorySheet) {
+        com.spmods.spgram.presentation.features.chats.list.components.MyStoryOptionsSheet(
+            hasStory = myStories.isNotEmpty(),
+            onViewStory = {
+                val uid = currentUser?.id
+                if (uid != null && myStories.isNotEmpty()) {
+                    storyViewerName = listOfNotNull(currentUser?.firstName, currentUser?.lastName).joinToString(" ")
+                    storyViewerAvatar = currentUser?.avatarPath
+                    storyViewerStories = myStories
+                    storyViewerChatId = uid
+                }
+            },
+            onUploadStory = {
+                showStoryCreator = true
+            },
+            onDismiss = { showMyStorySheet = false }
+        )
+    }
+
+    // ── Story Creator ─────────────────────────────────────────────────────
+    if (showStoryCreator) {
+        val uid = currentUser?.id
+        if (uid != null) {
+            com.spmods.spgram.presentation.features.profile.components.StoryCreatorScreen(
+                chatId = uid,
+                onPosted = { newStory ->
+                    myStories = myStories + newStory
+                    showStoryCreator = false
+                },
+                onDismiss = { showStoryCreator = false }
+            )
+        }
+    }
+
     if (showDeleteChatsSheet) {
         com.spmods.spgram.presentation.features.chats.conversation.ui.content.DeleteMessagesSheet(
             count = selectionState.selectedChatIds.size,
@@ -1915,15 +2012,4 @@ private fun AlphaMenuItem(
                     style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-                )
-                subtitle?.let {
-                    Text(
-                        it,
-                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
+               
