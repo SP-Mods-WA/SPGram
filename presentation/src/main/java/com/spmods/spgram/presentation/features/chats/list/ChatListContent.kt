@@ -137,6 +137,7 @@ import com.spmods.spgram.presentation.core.ui.Avatar
 import com.spmods.spgram.presentation.core.util.LocalTabletInterfaceEnabled
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.getEmojiFontFamily
 import com.spmods.spgram.presentation.features.chats.list.components.ArchiveHeaderCard
+import com.spmods.spgram.presentation.features.chats.list.components.StoryBar
 import com.spmods.spgram.presentation.features.chats.list.components.ChatListItem
 import com.spmods.spgram.presentation.features.chats.list.components.ChatListShimmer
 import com.spmods.spgram.presentation.features.chats.list.components.ChatListTopBar
@@ -615,6 +616,18 @@ fun ChatListContent(component: ChatListComponent) {
                 Spacer(modifier = Modifier.height(6.dp))
 
                 val isMainView = !searchState.isSearchActive && foldersState.selectedFolderId != -2
+
+                // ── Story Bar ─────────────────────────────────────────────
+                if (isMainView && isMainFolder) {
+                    val allChats = foldersState.chatsByFolder[-1].orEmpty()
+                    StoryBar(
+                        currentUser = currentUser,
+                        chatListChats = allChats,
+                        onMyStoryClick = { /* TODO: open my story creator */ },
+                        onStoryClick = { chatId -> component.onChatClicked(chatId) },
+                        onContactClick = { chatId -> component.onChatClicked(chatId) }
+                    )
+                }
 
                 if (isMainView) {
                     Box(
