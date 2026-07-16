@@ -56,9 +56,9 @@ fun StoryBar(
     onAction: (StoryBarAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Exclude self
+    // Exclude self, Telegram service chat (777000), and bots
     val filteredChats = remember(chatListChats, currentUserId) {
-        chatListChats.filter { it.id != currentUserId }
+        chatListChats.filter { it.id != currentUserId && it.id != 777000L && !it.isBot }
     }
 
     // Unread = LIVE (live now) or UNREAD (new story)
