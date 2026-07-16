@@ -1,4 +1,4 @@
-package com.spmods.spgram.presentation.features.chats.list
+ package com.spmods.spgram.presentation.features.chats.list
 
 import android.content.Intent
 import android.net.Uri
@@ -172,7 +172,9 @@ fun ChatListContent(component: ChatListComponent) {
 
     // ── Story bar state ───────────────────────────────────────────────────
     val storyRepository: com.spmods.spgram.domain.repository.StoryRepository = koinInject()
+    val userRepository: com.spmods.spgram.domain.repository.UserRepository = koinInject()
     var myStories by remember { mutableStateOf<List<com.spmods.spgram.domain.models.StoryModel>>(emptyList()) }
+    var contacts by remember { mutableStateOf<List<com.spmods.spgram.domain.models.UserModel>>(emptyList()) }
     var showMyStorySheet by remember { mutableStateOf(false) }
     var showStoryCreator by remember { mutableStateOf(false) }
     var storyViewerChatId by remember { mutableStateOf<Long?>(null) }
@@ -490,6 +492,7 @@ fun ChatListContent(component: ChatListComponent) {
     LaunchedEffect(currentUser?.id) {
         val uid = currentUser?.id ?: return@LaunchedEffect
         runCatching { myStories = storyRepository.getChatPageStories(uid) }
+        runCatching { contacts = userRepository.getContacts() }
     }
 
     if (showPermissionRequest) {
@@ -642,6 +645,7 @@ fun ChatListContent(component: ChatListComponent) {
                         currentUserId = currentUser?.id,
                         chatListChats = allChats,
                         myStories = myStories,
+                        contacts = contacts,
                         onAction = { action ->
                             when (action) {
                                 is com.spmods.spgram.presentation.features.chats.list.components.StoryBarAction.MyStoryTap -> {
@@ -2009,14 +2013,14 @@ private fun AlphaMenuItem(
             }
             Column {
                 Text(
-                    text = title,
+                    title,
                     style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
                 )
                 subtitle?.let {
                     Text(
-                        text = it,
+                        it,
                         style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                         color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -2025,3 +2029,4 @@ private fun AlphaMenuItem(
         }
     }
 }
+        
