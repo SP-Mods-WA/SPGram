@@ -2012,5 +2012,5 @@ private fun AlphaMenuItem(
                     title,
                     style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-              
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+             
