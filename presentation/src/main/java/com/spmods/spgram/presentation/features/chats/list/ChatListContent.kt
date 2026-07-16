@@ -1,4 +1,4 @@
- package com.spmods.spgram.presentation.features.chats.list
+package com.spmods.spgram.presentation.features.chats.list
 
 import android.content.Intent
 import android.net.Uri
@@ -638,7 +638,10 @@ fun ChatListContent(component: ChatListComponent) {
 
                 // ── Story Bar ─────────────────────────────────────────────
                 if (isMainView && isMainFolder) {
-                    val allChats = foldersState.chatsByFolder[-1].orEmpty()
+                    // All folders combine කරලා story ඇති අය miss නොවෙන්න
+                    val allChats = foldersState.chatsByFolder
+                        .values.flatten()
+                        .distinctBy { it.id }
                     val scope2 = rememberCoroutineScope()
                     com.spmods.spgram.presentation.features.chats.list.components.StoryBar(
                         currentUser = currentUser,
@@ -2029,4 +2032,3 @@ private fun AlphaMenuItem(
         }
     }
 }
-        
