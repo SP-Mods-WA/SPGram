@@ -216,7 +216,7 @@ private fun StoryBubble(
     val infiniteTransition = rememberInfiniteTransition(label = "ring_anim")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(animation = tween(600, easing = LinearEasing)),
+        animationSpec = infiniteRepeatable(tween(600, easing = LinearEasing)),
         label = "RingRotation"
     )
 
