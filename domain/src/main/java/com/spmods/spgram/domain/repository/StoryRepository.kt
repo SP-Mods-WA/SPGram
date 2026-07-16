@@ -60,6 +60,12 @@ interface StoryRepository {
     /** Sets (or clears, when [emoji] is null) the current user's reaction on a story. */
     suspend fun setStoryReaction(posterChatId: Long, storyId: Int, emoji: String?)
 
+    /**
+     * Returns a Flow of chat IDs that currently have active stories.
+     * Emits whenever TDLib fires UpdateChatActiveStories.
+     */
+    fun observeAllActiveStoryChats(): Flow<Map<Long, String>>
+
     /** Gets the list of users who viewed one of the current user's own stories. */
     suspend fun getStoryViewers(
         storyId: Int,
