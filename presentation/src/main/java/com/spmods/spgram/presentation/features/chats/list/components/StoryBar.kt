@@ -33,7 +33,7 @@ import com.spmods.spgram.domain.models.ChatModel
 import com.spmods.spgram.domain.models.ChatType
 import com.spmods.spgram.domain.models.StoryModel
 import com.spmods.spgram.domain.models.UserModel
-import com.spmods.spgram.presentation.core.ui.Avatar
+import com.spmods.spgram.presentation.core.ui.AvatarForChat
 
 // ── Ring visual states ────────────────────────────────────────────────────────
 private enum class StoryRingState { UNREAD, VIEWED, ONLINE_ONLY }
@@ -80,13 +80,36 @@ fun StoryBar(
         (unread + viewed).map { it.id }.toSet()
     }
 
+    // Contacts that have an active story but are NOT in the chat list story sections
+    val contactsWithUnreadStory = remember(contacts, storyShownIds) {
+        contacts.filter { user ->
+            user.id !in storyShownIds &&
+            (user.activeStoryState?.type == com.spmods.spgram.domain.models.ActiveStoryStateType.UNREAD ||
+             user.activeStoryState?.type == com.spmods.spgram.domain.models.ActiveStoryStateType.LIVE)
+        }.sortedByDescending { it.id }
+    }
+
+    val contactsWithReadStory = remember(contacts, storyShownIds, contactsWithUnreadStory) {
+        val alreadyShown = storyShownIds + contactsWithUnreadStory.map { it.id }.toSet()
+        contacts.filter { user ->
+            user.id !in alreadyShown &&
+            user.activeStoryState?.type == com.spmods.spgram.domain.models.ActiveStoryStateType.READ
+        }.sortedByDescending { it.id }
+    }
+
+    // IDs of contacts shown in story rings above
+    val contactStoryIds = remember(contactsWithUnreadStory, contactsWithReadStory) {
+        (contactsWithUnreadStory + contactsWithReadStory).map { it.id }.toSet()
+    }
+
     // Online people in chat list with NO story — private only
-    val onlineInChatList = remember(filteredChats, storyShownIds) {
+    val onlineInChatList = remember(filteredChats, storyShownIds, contactStoryIds) {
         filteredChats.filter {
             it.isOnline &&
             it.activeStoryStateType == null &&
             it.type == ChatType.PRIVATE &&
-            it.id !in storyShownIds
+            it.id !in storyShownIds &&
+            it.id !in contactStoryIds
         }.sortedByDescending { it.order }
     }
 
@@ -94,9 +117,9 @@ fun StoryBar(
     val chatListOnlineIds = remember(onlineInChatList) { onlineInChatList.map { it.id }.toSet() }
 
     // Saved contacts: online first, then offline — exclude self & already shown
-    val contactsFiltered = remember(contacts, currentUserId, storyShownIds, chatListOnlineIds) {
+    val contactsFiltered = remember(contacts, currentUserId, storyShownIds, chatListOnlineIds, contactStoryIds) {
         val selfId = currentUserId ?: -1L
-        val excluded = storyShownIds + chatListOnlineIds + selfId
+        val excluded = storyShownIds + chatListOnlineIds + selfId + contactStoryIds
         val filtered = contacts.filter { it.id !in excluded }
         val online = filtered.filter { it.userStatus == com.spmods.spgram.domain.models.UserStatusType.ONLINE }
         val offline = filtered.filter { it.userStatus != com.spmods.spgram.domain.models.UserStatusType.ONLINE }
@@ -143,7 +166,34 @@ fun StoryBar(
             )
         }
 
-        // 4. Online people from chat list (no story)
+        // 4. Contacts with unread stories (not in chat list)
+        items(items = contactsWithUnreadStory, key = { "contact_unread_story_${it.id}" }) { user ->
+            val name = listOfNotNull(user.firstName.takeIf { it.isNotBlank() }, user.lastName).joinToString(" ")
+            ContactStoryBubble(
+                user = user,
+                name = name,
+                ringState = StoryRingState.UNREAD,
+                isLoading = loadingChatId == user.id,
+                onClick = {
+                    loadingChatId = user.id
+                    onAction(StoryBarAction.OpenStory(user.id))
+                }
+            )
+        }
+
+        // 5. Contacts with read stories (not in chat list)
+        items(items = contactsWithReadStory, key = { "contact_read_story_${it.id}" }) { user ->
+            val name = listOfNotNull(user.firstName.takeIf { it.isNotBlank() }, user.lastName).joinToString(" ")
+            ContactStoryBubble(
+                user = user,
+                name = name,
+                ringState = StoryRingState.VIEWED,
+                isLoading = false,
+                onClick = { onAction(StoryBarAction.OpenStory(user.id)) }
+            )
+        }
+
+        // 6. Online people from chat list (no story)
         items(items = onlineInChatList, key = { "online_cl_${it.id}" }) { chat ->
             StoryBubble(
                 chat = chat,
@@ -153,7 +203,7 @@ fun StoryBar(
             )
         }
 
-        // 5. All contacts (online first, then offline) — shown as plain avatars
+        // 7. All contacts (online first, then offline) — shown as plain avatars
         items(items = contactsFiltered, key = { "contact_${it.id}" }) { user ->
             ContactBubble(
                 user = user,
@@ -207,7 +257,7 @@ private fun MyStoryBubble(
                 modifier = Modifier.size(62.dp).clip(CircleShape).background(ringBrush),
                 contentAlignment = Alignment.Center
             ) {
-                Avatar(
+                AvatarForChat(
                     path = user?.avatarPath,
                     name = listOfNotNull(user?.firstName, user?.lastName).joinToString(" ").ifBlank { "Me" },
                     size = 56.dp,
@@ -279,7 +329,7 @@ private fun StoryBubble(
                             .background(brush),
                         contentAlignment = Alignment.Center
                     ) {
-                        Avatar(
+                        AvatarForChat(
                             path = chat.avatarPath, fallbackPath = chat.personalAvatarPath,
                             name = chat.title, size = 56.dp, isOnline = false
                         )
@@ -294,7 +344,7 @@ private fun StoryBubble(
                             .border(2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Avatar(
+                        AvatarForChat(
                             path = chat.avatarPath, fallbackPath = chat.personalAvatarPath,
                             name = chat.title, size = 56.dp, isOnline = false
                         )
@@ -308,7 +358,7 @@ private fun StoryBubble(
                             .background(Brush.linearGradient(listOf(Color(0xFF00C6FF), Color(0xFF0072FF)))),
                         contentAlignment = Alignment.Center
                     ) {
-                        Avatar(
+                        AvatarForChat(
                             path = chat.avatarPath, fallbackPath = chat.personalAvatarPath,
                             name = chat.title, size = 56.dp, isOnline = false
                         )
@@ -323,7 +373,7 @@ private fun StoryBubble(
                 }
 
                 null -> {
-                    Avatar(
+                    AvatarForChat(
                         path = chat.avatarPath, fallbackPath = chat.personalAvatarPath,
                         name = chat.title, size = 62.dp, isOnline = chat.isOnline
                     )
@@ -412,6 +462,86 @@ fun MyStoryOptionsSheet(
     }
 }
 
+// ── Contact bubble WITH story ring ───────────────────────────────────────────
+@Composable
+private fun ContactStoryBubble(
+    user: com.spmods.spgram.domain.models.UserModel,
+    name: String,
+    ringState: StoryRingState,
+    isLoading: Boolean,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.88f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "ContactStoryScale"
+    )
+    val infiniteTransition = rememberInfiniteTransition(label = "ring_spin")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing)),
+        label = "ring_rotation"
+    )
+
+    Column(
+        modifier = Modifier
+            .width(70.dp)
+            .scale(scale)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        when (ringState) {
+            StoryRingState.UNREAD -> {
+                val brush = Brush.sweepGradient(
+                    listOf(Color(0xFF833AB4), Color(0xFFE1306C), Color(0xFFFCAF45), Color(0xFF833AB4))
+                )
+                Box(
+                    modifier = Modifier
+                        .size(62.dp)
+                        .graphicsLayer { if (isLoading) rotationZ = rotation }
+                        .clip(CircleShape)
+                        .background(brush),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AvatarForChat(
+                        path = user.avatarPath, fallbackPath = user.personalAvatarPath,
+                        name = name, size = 56.dp, isOnline = false
+                    )
+                }
+            }
+            StoryRingState.VIEWED -> {
+                Box(
+                    modifier = Modifier
+                        .size(62.dp).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AvatarForChat(
+                        path = user.avatarPath, fallbackPath = user.personalAvatarPath,
+                        name = name, size = 56.dp, isOnline = false
+                    )
+                }
+            }
+            else -> {
+                AvatarForChat(path = user.avatarPath, fallbackPath = user.personalAvatarPath, name = name, size = 62.dp, isOnline = false)
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelSmall, fontSize = 10.sp,
+            fontWeight = if (ringState == StoryRingState.UNREAD) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+            color = if (ringState == StoryRingState.VIEWED)
+                MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
 // ── Contact bubble (no story, from contacts list) ────────────────────────────
 @Composable
 private fun ContactBubble(
@@ -435,7 +565,7 @@ private fun ContactBubble(
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Avatar(
+        AvatarForChat(
             path = user.avatarPath,
             fallbackPath = user.personalAvatarPath,
             name = name,
