@@ -73,7 +73,7 @@ dependencies {
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.androidx.compose)
-    implementation("androidx.compose.material:material-icons-extended:1.7.5")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.bundles.androidx.camera)
     implementation(libs.bundles.androidx.media3)
 
