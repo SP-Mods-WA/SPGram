@@ -2013,4 +2013,15 @@ private fun AlphaMenuItem(
                     style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-       
+                )
+                subtitle?.let {
+                    Text(
+                        text = it,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
