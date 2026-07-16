@@ -55,9 +55,9 @@ fun StoryBar(
     onAction: (StoryBarAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val filteredChats = remember(chatListChats, currentUserId) {
-        chatListChats.filter { it.id != currentUserId && !it.isGroup && !it.isChannel }
-    }
+    val filteredChats = remember(chatListChats) {
+    chatListChats.filter { !it.isGroup && !it.isChannel }
+}
     val unread = remember(filteredChats) {
         filteredChats.filter { it.activeStoryStateType == "unread" }.sortedByDescending { it.order }
     }
