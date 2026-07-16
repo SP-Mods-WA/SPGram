@@ -2009,8 +2009,8 @@ private fun AlphaMenuItem(
             }
             Column {
                 Text(
-                    title,
+                    text = title,
                     style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
-             
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+       
