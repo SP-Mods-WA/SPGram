@@ -175,6 +175,9 @@ fun ChatListContent(component: ChatListComponent) {
     val userRepository: com.spmods.spgram.domain.repository.UserRepository = koinInject()
     var myStories by remember { mutableStateOf<List<com.spmods.spgram.domain.models.StoryModel>>(emptyList()) }
     var contacts by remember { mutableStateOf<List<com.spmods.spgram.domain.models.UserModel>>(emptyList()) }
+    // Real-time story state from TDLib — chatId -> "UNREAD"/"READ"/"LIVE"
+    val activeStoryChatIds by storyRepository.observeAllActiveStoryChats()
+        .collectAsState(initial = emptyMap())
     var showMyStorySheet by remember { mutableStateOf(false) }
     var showStoryCreator by remember { mutableStateOf(false) }
     var storyViewerChatId by remember { mutableStateOf<Long?>(null) }
@@ -639,9 +642,16 @@ fun ChatListContent(component: ChatListComponent) {
                 // ── Story Bar ─────────────────────────────────────────────
                 if (isMainView && isMainFolder) {
                     // All folders combine කරලා story ඇති අය miss නොවෙන්න
-                    val allChats = foldersState.chatsByFolder
+                    // All folders + story state overlay from TDLib live updates
+                    val allChatsRaw = foldersState.chatsByFolder
                         .values.flatten()
                         .distinctBy { it.id }
+                    // Override activeStoryStateType with real-time TDLib data
+                    val allChats = allChatsRaw.map { chat ->
+                        val liveStoryState = activeStoryChatIds[chat.id]
+                        if (liveStoryState != null) chat.copy(activeStoryStateType = liveStoryState)
+                        else chat
+                    }
                     val scope2 = rememberCoroutineScope()
                     com.spmods.spgram.presentation.features.chats.list.components.StoryBar(
                         currentUser = currentUser,
