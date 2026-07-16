@@ -666,8 +666,17 @@ fun ChatListContent(component: ChatListComponent) {
                                 }
                                 is com.spmods.spgram.presentation.features.chats.list.components.StoryBarAction.OpenStory -> {
                                     val chat = allChats.firstOrNull { it.id == action.chatId }
-                                    storyViewerName = chat?.title ?: ""
-                                    storyViewerAvatar = chat?.avatarPath
+                                    if (chat != null) {
+                                        storyViewerName = chat.title
+                                        storyViewerAvatar = chat.avatarPath
+                                    } else {
+                                        // Fallback: contact not in chat list (contact-only story)
+                                        val contact = contacts.firstOrNull { it.id == action.chatId }
+                                        val firstName = contact?.firstName?.takeIf { it.isNotBlank() } ?: ""
+                                        val lastName = contact?.lastName?.takeIf { it.isNotBlank() } ?: ""
+                                        storyViewerName = listOfNotNull(firstName.ifBlank { null }, lastName.ifBlank { null }).joinToString(" ")
+                                        storyViewerAvatar = contact?.avatarPath
+                                    }
                                     scope2.launch {
                                         runCatching {
                                             storyViewerStories = storyRepository.getActiveStories(action.chatId)
