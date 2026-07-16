@@ -172,6 +172,7 @@ fun ChatListContent(component: ChatListComponent) {
 
     // ── Story bar state ───────────────────────────────────────────────────
     val storyRepository: com.spmods.spgram.domain.repository.StoryRepository = koinInject()
+    val messageRepository: com.spmods.spgram.domain.repository.MessageRepository = koinInject()
     val userRepository: com.spmods.spgram.domain.repository.UserRepository = koinInject()
     var myStories by remember { mutableStateOf<List<com.spmods.spgram.domain.models.StoryModel>>(emptyList()) }
     var contacts by remember { mutableStateOf<List<com.spmods.spgram.domain.models.UserModel>>(emptyList()) }
@@ -1765,12 +1766,44 @@ fun ChatListContent(component: ChatListComponent) {
             initialIndex = 0,
             posterName = storyViewerName,
             posterAvatarPath = storyViewerAvatar,
-            canDeleteStory = false,
+            canDeleteStory = storyViewerChatId == currentUser?.id,
+            onDelete = { storyId ->
+                storyScope.launch {
+                    runCatching { storyRepository.deleteStory(storyViewerChatId ?: return@launch, storyId) }
+                    storyViewerStories = storyViewerStories.filter { it.id != storyId }
+                    if (storyViewerStories.isEmpty()) { storyViewerChatId = null }
+                }
+            },
+            onSendReply = { story, text ->
+                storyScope.launch {
+                    runCatching {
+                        messageRepository.sendStoryReply(
+                            chatId = story.posterChatId,
+                            text = text,
+                            storyPosterChatId = story.posterChatId,
+                            storyId = story.id
+                        )
+                    }
+                }
+            },
+            onSetReaction = { story, emoji ->
+                storyScope.launch { runCatching { storyRepository.setStoryReaction(story.posterChatId, story.id, emoji) } }
+            },
+            onOpenViewers = { _ -> },
             onStoryViewed = { story ->
                 storyScope.launch { runCatching { storyRepository.openStory(story.posterChatId, story.id) } }
             },
             onStoryClosed = { story ->
                 storyScope.launch { runCatching { storyRepository.closeStory(story.posterChatId, story.id) } }
+            },
+            onGetStoryLink = { story ->
+                storyRepository.getStoryLink(story.posterChatId, story.id)
+            },
+            onReportStory = { story ->
+                storyRepository.reportStory(story.posterChatId, story.id)
+            },
+            onToggleStoryNotifications = { chatId, mute ->
+                storyRepository.toggleStoryNotifications(chatId, mute)
             },
             onDismiss = {
                 storyViewerChatId = null
