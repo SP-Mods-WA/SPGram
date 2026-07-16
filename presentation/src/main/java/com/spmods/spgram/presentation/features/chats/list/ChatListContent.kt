@@ -180,10 +180,6 @@ fun ChatListContent(component: ChatListComponent) {
     var storyViewerName by remember { mutableStateOf("") }
     var storyViewerAvatar by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(currentUser?.id) {
-        val uid = currentUser?.id ?: return@LaunchedEffect
-        runCatching { myStories = storyRepository.getChatPageStories(uid) }
-    }
     var showMoreMenu by remember { mutableStateOf(false) }
 
     // ── Update sheet ──────────────────────────────────────────────────────
@@ -489,6 +485,11 @@ fun ChatListContent(component: ChatListComponent) {
                 user
             }
         }
+    }
+
+    LaunchedEffect(currentUser?.id) {
+        val uid = currentUser?.id ?: return@LaunchedEffect
+        runCatching { myStories = storyRepository.getChatPageStories(uid) }
     }
 
     if (showPermissionRequest) {
@@ -2012,4 +2013,4 @@ private fun AlphaMenuItem(
                     style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
-               
+              
