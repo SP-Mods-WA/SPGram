@@ -1749,8 +1749,13 @@ fun ChatListContent(component: ChatListComponent) {
     }
 
     // ── Story Viewer ──────────────────────────────────────────────────────
+    val isStoryViewerOpen = storyViewerChatId != null && storyViewerStories.isNotEmpty()
+    BackHandler(enabled = isStoryViewerOpen) {
+        storyViewerChatId = null
+        storyViewerStories = emptyList()
+    }
     AnimatedVisibility(
-        visible = storyViewerChatId != null && storyViewerStories.isNotEmpty(),
+        visible = isStoryViewerOpen,
         enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
         exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
     ) {
