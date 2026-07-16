@@ -52,25 +52,55 @@ fun StoryBar(
     currentUserId: Long?,
     chatListChats: List<ChatModel>,
     myStories: List<StoryModel>,
+    contacts: List<com.spmods.spgram.domain.models.UserModel>,
     onAction: (StoryBarAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val filteredChats = remember(chatListChats) {
-    chatListChats.filter { !it.isGroup && !it.isChannel }
-}
+    // Exclude self
+    val filteredChats = remember(chatListChats, currentUserId) {
+        chatListChats.filter { it.id != currentUserId }
+    }
+
+    // Unread = LIVE (live now) or UNREAD (new story)
     val unread = remember(filteredChats) {
-        filteredChats.filter { it.activeStoryStateType == "unread" }.sortedByDescending { it.order }
+        filteredChats
+            .filter { it.activeStoryStateType == "LIVE" || it.activeStoryStateType == "UNREAD" }
+            .sortedByDescending { it.order }
     }
+
+    // Viewed = READ
     val viewed = remember(filteredChats) {
+        filteredChats
+            .filter { it.activeStoryStateType == "READ" }
+            .sortedByDescending { it.order }
+    }
+
+    // Chat-list IDs that already have stories (already shown above)
+    val storyShownIds = remember(unread, viewed) {
+        (unread + viewed).map { it.id }.toSet()
+    }
+
+    // Online people in chat list with NO story — private only
+    val onlineInChatList = remember(filteredChats, storyShownIds) {
         filteredChats.filter {
-            it.activeStoryStateType == "watched" || it.activeStoryStateType == "viewed"
+            it.isOnline &&
+            it.activeStoryStateType == null &&
+            it.type == ChatType.PRIVATE &&
+            it.id !in storyShownIds
         }.sortedByDescending { it.order }
     }
-    // Non-contacts online (chat list only, no story)
-    val onlineNonContacts = remember(filteredChats) {
-        filteredChats.filter {
-            it.isOnline && it.activeStoryStateType == null && it.type == ChatType.PRIVATE
-        }.sortedByDescending { it.order }
+
+    // Contact list IDs already shown in chat list (online section)
+    val chatListOnlineIds = remember(onlineInChatList) { onlineInChatList.map { it.id }.toSet() }
+
+    // Saved contacts: online first, then offline — exclude self & already shown
+    val contactsFiltered = remember(contacts, currentUserId, storyShownIds, chatListOnlineIds) {
+        val selfId = currentUserId ?: -1L
+        val excluded = storyShownIds + chatListOnlineIds + selfId
+        val filtered = contacts.filter { it.id !in excluded }
+        val online = filtered.filter { it.userStatus == com.spmods.spgram.domain.models.UserStatusType.ONLINE }
+        val offline = filtered.filter { it.userStatus != com.spmods.spgram.domain.models.UserStatusType.ONLINE }
+        online + offline
     }
 
     // Track which chatId is currently loading (spinning ring)
@@ -113,13 +143,21 @@ fun StoryBar(
             )
         }
 
-        // 4. Online non-contacts (no story)
-        items(items = onlineNonContacts, key = { "online_nc_${it.id}" }) { chat ->
+        // 4. Online people from chat list (no story)
+        items(items = onlineInChatList, key = { "online_cl_${it.id}" }) { chat ->
             StoryBubble(
                 chat = chat,
                 ringState = StoryRingState.ONLINE_ONLY,
                 isLoading = false,
                 onClick = { onAction(StoryBarAction.OpenChat(chat.id)) }
+            )
+        }
+
+        // 5. All contacts (online first, then offline) — shown as plain avatars
+        items(items = contactsFiltered, key = { "contact_${it.id}" }) { user ->
+            ContactBubble(
+                user = user,
+                onClick = { onAction(StoryBarAction.OpenChat(user.id)) }
             )
         }
     }
@@ -371,5 +409,50 @@ fun MyStoryOptionsSheet(
                 }
             }
         }
+    }
+}
+
+// ── Contact bubble (no story, from contacts list) ────────────────────────────
+@Composable
+private fun ContactBubble(
+    user: com.spmods.spgram.domain.models.UserModel,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.88f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "ContactScale"
+    )
+    val isOnline = user.userStatus == com.spmods.spgram.domain.models.UserStatusType.ONLINE
+    val name = listOfNotNull(user.firstName.takeIf { it.isNotBlank() }, user.lastName).joinToString(" ")
+
+    Column(
+        modifier = Modifier
+            .width(70.dp)
+            .scale(scale)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Avatar(
+            path = user.avatarPath,
+            fallbackPath = user.personalAvatarPath,
+            name = name,
+            size = 62.dp,
+            isOnline = isOnline
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
