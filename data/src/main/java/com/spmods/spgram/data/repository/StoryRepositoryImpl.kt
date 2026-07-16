@@ -12,12 +12,12 @@ import com.spmods.spgram.domain.models.StoryModel
 import com.spmods.spgram.domain.models.StoryPrivacy
 import com.spmods.spgram.domain.models.StoryViewerModel
 import com.spmods.spgram.domain.repository.StoryRepository
-import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -28,7 +28,6 @@ class StoryRepositoryImpl(
 ) : StoryRepository {
 
     override suspend fun getActiveStories(chatId: Long): List<StoryModel> {
-        // Step 1: get active (unexpired) stories via GetChatActiveStories
         val activeResult = coRunCatching {
             gateway.execute(TdApi.GetChatActiveStories(chatId)) as? TdApi.ChatActiveStories
         }.getOrNull()
@@ -36,19 +35,11 @@ class StoryRepositoryImpl(
         val posterChatId = activeResult?.chatId?.takeIf { it != 0L } ?: chatId
         val maxReadStoryId = activeResult?.maxReadStoryId ?: 0
 
-        val activeStories = activeResult?.stories?.mapNotNull { storyInfo ->
+        return activeResult?.stories?.mapNotNull { storyInfo ->
             coRunCatching {
                 gateway.execute(TdApi.GetStory(posterChatId, storyInfo.storyId, false)) as? TdApi.Story
             }.getOrNull()?.toModel(maxReadStoryId = maxReadStoryId)
         } ?: emptyList()
-
-        // Step 2: also fetch stories pinned to profile page (posted to chat page)
-        // Official Telegram shows both active + pinned profile stories on profile page
-        val pageStories = getChatPageStories(posterChatId)
-
-        // Merge both lists, deduplicate by story id
-        val seen = mutableSetOf<Int>()
-        return (activeStories + pageStories).filter { seen.add(it.id) }
     }
 
     override fun observeActiveStories(chatId: Long): Flow<List<StoryModel>> = channelFlow {
