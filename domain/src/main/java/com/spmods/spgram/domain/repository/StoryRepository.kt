@@ -72,4 +72,13 @@ interface StoryRepository {
         offset: String = "",
         limit: Int = 50
     ): FoundStoryViewersModel
+
+    /** Returns a t.me link for a story. Returns null on failure. */
+    suspend fun getStoryLink(posterChatId: Long, storyId: Int): String?
+
+    /** Reports a story to Telegram moderators. */
+    suspend fun reportStory(posterChatId: Long, storyId: Int)
+
+    /** Toggles story notifications for a chat (Do Not Notify About Stories). */
+    suspend fun toggleStoryNotifications(chatId: Long, mute: Boolean)
 }
