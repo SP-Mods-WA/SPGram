@@ -88,6 +88,21 @@ class StoryRepositoryImpl(
         awaitClose()
     }
 
+    override fun observeAllActiveStoryChats(): kotlinx.coroutines.flow.Flow<Map<Long, String>> =
+        gateway.updates
+            .filterIsInstance<TdApi.UpdateChatActiveStories>()
+            .runningFold(mutableMapOf<Long, String>()) { acc, update ->
+                val chatId = update.activeStories.chatId
+                val newAcc = acc.toMutableMap()
+                when {
+                    update.activeStories.stories.isEmpty() -> newAcc.remove(chatId)
+                    update.activeStories.maxReadStoryId >= (update.activeStories.stories.maxOfOrNull { it.storyId } ?: 0) ->
+                        newAcc[chatId] = "READ"
+                    else -> newAcc[chatId] = "UNREAD"
+                }
+                newAcc
+            }
+
     override suspend fun getChatPageStories(
         chatId: Long,
         fromStoryId: Int,
