@@ -338,6 +338,37 @@ class StoryRepositoryImpl(
         } else null
     }
 
+    override suspend fun getStoryLink(posterChatId: Long, storyId: Int): String? {
+        // Get username for the poster so we can build InternalLinkTypeStory
+        val user = coRunCatching {
+            gateway.execute(TdApi.GetUser(posterChatId)) as? TdApi.User
+        }.getOrNull()
+        val username = user?.usernames?.activeUsernames?.firstOrNull() ?: return null
+        val linkType = TdApi.InternalLinkTypeStory(username, storyId)
+        val result = coRunCatching {
+            gateway.execute(TdApi.GetInternalLink(linkType, true)) as? TdApi.HttpUrl
+        }.getOrNull()
+        return result?.url
+    }
+
+    override suspend fun reportStory(posterChatId: Long, storyId: Int) {
+        coRunCatching {
+            gateway.execute(TdApi.ReportStory(posterChatId, storyId, byteArrayOf(), ""))
+        }
+    }
+
+    override suspend fun toggleStoryNotifications(chatId: Long, mute: Boolean) {
+        coRunCatching {
+            val settings = TdApi.ChatNotificationSettings(
+                false, 0, false, 0L,
+                false, true, false, mute,
+                false, 0L, false, true,
+                false, false, false, false
+            )
+            gateway.execute(TdApi.SetChatNotificationSettings(chatId, settings))
+        }
+    }
+
     companion object {
         private const val STORY_DOWNLOAD_PRIORITY = 32
         private const val FILE_DOWNLOAD_TIMEOUT_MS = 20_000L
