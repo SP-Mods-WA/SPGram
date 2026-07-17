@@ -89,7 +89,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -136,6 +136,8 @@ fun StoryViewerScreen(
     onReportStory: suspend (StoryModel) -> Unit = {},
     onToggleStoryNotifications: suspend (Long, Boolean) -> Unit = { _, _ -> },
     onGetViewers: suspend (StoryModel) -> FoundStoryViewersModel? = { null },
+    onForwardStory: suspend (StoryModel, Long) -> Unit = { _, _ -> },
+    forwardChatList: List<com.spmods.spgram.domain.models.ChatModel> = emptyList(),
     onDismiss: () -> Unit
 ) {
     var currentIndex by remember { mutableIntStateOf(initialIndex.coerceIn(0, stories.lastIndex)) }
@@ -149,6 +151,7 @@ fun StoryViewerScreen(
     var viewersData by remember { mutableStateOf<FoundStoryViewersModel?>(null) }
     var isLoadingViewers by remember { mutableStateOf(false) }
     var showReactionBar by remember { mutableStateOf(false) }
+    var showForwardSheet by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
@@ -696,39 +699,147 @@ fun StoryViewerScreen(
                 }
 
                 AnimatedVisibility(visible = !canSend, enter = scaleIn(tween(150)) + fadeIn(), exit = scaleOut(tween(150)) + fadeOut()) {
-                    IconButton(onClick = {
-                        coroutineScope.launch {
-                            val link = runCatching { onGetStoryLink(story) }.getOrNull()
-                            val shareText = link?.takeIf { it.isNotBlank() } ?: getStoryFilePath(story)
-                            withContext(Dispatchers.Main) {
-                                if (!shareText.isNullOrBlank()) {
-                                    val intent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_TEXT, shareText)
-                                    }
-                                    context.startActivity(Intent.createChooser(intent, "Forward Story"))
-                                }
-                            }
-                        }
-                    }) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable { showForwardSheet = true },
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.Reply, null, tint = Color.White, modifier = Modifier.size(26.dp))
                     }
                 }
 
-                // Heart / like button — long press opens reaction bar
-                IconButton(
-                    onClick = {
-                        val nowLiked = !isLiked
-                        onSetReaction(story, if (nowLiked) "\u2764" else null)
-                    },
-                    modifier = Modifier.pointerInput(Unit) {
-                        detectTapGestures(onLongPress = { showReactionBar = !showReactionBar })
-                    }
+                // Heart / like — tap to like, long press → reaction bar
+                val heartScale by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (isLiked) 1.2f else 1f,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy
+                    ),
+                    label = "heartScale"
+                )
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .pointerInput(isLiked) {
+                            detectTapGestures(
+                                onTap = {
+                                    onSetReaction(story, if (isLiked) null else "\u2764")
+                                },
+                                onLongPress = {
+                                    showReactionBar = true
+                                }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
-                    if (isLiked) {
-                        Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF3B5C), modifier = Modifier.size(26.dp))
-                    } else {
-                        Icon(Icons.Default.FavoriteBorder, null, tint = Color.White, modifier = Modifier.size(26.dp))
+                    Icon(
+                        imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (isLiked) Color(0xFFFF3B5C) else Color.White,
+                        modifier = Modifier.size(26.dp).graphicsLayer { scaleX = heartScale; scaleY = heartScale }
+                    )
+                }
+            }
+        }
+    }
+
+    // ── Forward sheet ──────────────────────────────────────────────────────
+    if (showForwardSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        var forwardContacts by remember { mutableStateOf<List<com.spmods.spgram.domain.models.ChatModel>>(emptyList()) }
+        var forwardSearch by remember { mutableStateOf("") }
+        val filteredForward = remember(forwardContacts, forwardSearch) {
+            if (forwardSearch.isBlank()) forwardContacts
+            else forwardContacts.filter { it.title.contains(forwardSearch, ignoreCase = true) }
+        }
+
+        LaunchedEffect(Unit) {
+            forwardContacts = forwardChatList
+                .filter { it.type == com.spmods.spgram.domain.models.ChatType.PRIVATE || it.type == com.spmods.spgram.domain.models.ChatType.BASIC_GROUP || it.type == com.spmods.spgram.domain.models.ChatType.SUPERGROUP }
+                .sortedByDescending { it.order }
+        }
+
+        ModalBottomSheet(
+            onDismissRequest = { showForwardSheet = false },
+            sheetState = sheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+                Text(
+                    text = "Forward Story",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                )
+                OutlinedTextField(
+                    value = forwardSearch,
+                    onValueChange = { forwardSearch = it },
+                    placeholder = { Text("Search") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+                if (filteredForward.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No chats found.\nForward via link instead:",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            showForwardSheet = false
+                            coroutineScope.launch {
+                                val link = runCatching { onGetStoryLink(story) }.getOrNull()
+                                val shareText = link?.takeIf { it.isNotBlank() } ?: getStoryFilePath(story)
+                                withContext(Dispatchers.Main) {
+                                    if (!shareText.isNullOrBlank()) {
+                                        val intent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, shareText)
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, "Forward Story"))
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) { Text("Share Link") }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        items(filteredForward, key = { it.id }) { chat ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showForwardSheet = false
+                                        coroutineScope.launch {
+                                            runCatching { onForwardStory(story, chat.id) }
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(context, "Forwarded to ${chat.title}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AvatarForChat(path = chat.avatarPath, name = chat.title, size = 42.dp)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(text = chat.title, style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
                     }
                 }
             }
