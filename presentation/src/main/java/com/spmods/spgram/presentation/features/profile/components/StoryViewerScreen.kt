@@ -43,7 +43,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.BellOff
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -399,7 +399,7 @@ fun StoryViewerScreen(
                                     )
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.Default.BellOff, null, tint = Color.White)
+                                    Icon(Icons.Default.NotificationsOff, null, tint = Color.White)
                                 },
                                 onClick = {
                                     showMenu = false
