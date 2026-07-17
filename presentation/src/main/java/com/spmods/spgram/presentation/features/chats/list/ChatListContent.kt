@@ -1808,6 +1808,13 @@ fun ChatListContent(component: ChatListComponent) {
             onGetViewers = { story ->
                 runCatching { storyRepository.getStoryViewers(story.id) }.getOrNull()
             },
+            onForwardStory = { story, chatId ->
+                val link = runCatching { storyRepository.getStoryLink(story.posterChatId, story.id) }.getOrNull()
+                if (!link.isNullOrBlank()) {
+                    runCatching { messageRepository.sendMessage(chatId = chatId, text = link) }
+                }
+            },
+            forwardChatList = allChats,
             onDismiss = {
                 storyViewerChatId = null
                 storyViewerStories = emptyList()
