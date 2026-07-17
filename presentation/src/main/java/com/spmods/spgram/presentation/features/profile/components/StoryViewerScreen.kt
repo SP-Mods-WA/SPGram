@@ -18,7 +18,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -146,6 +148,7 @@ fun StoryViewerScreen(
     var showViewersSheet by remember { mutableStateOf(false) }
     var viewersData by remember { mutableStateOf<FoundStoryViewersModel?>(null) }
     var isLoadingViewers by remember { mutableStateOf(false) }
+    var showReactionBar by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
@@ -170,16 +173,19 @@ fun StoryViewerScreen(
         while (elapsedMs < totalMs) {
             delay(50)
             val now = System.currentTimeMillis()
-            val isBlocked = isPaused || isReplyFieldFocused || showMenu || showViewersSheet
-            val isLoading = when (val c = story.content) {
-                is StoryContentModel.Photo -> c.filePath.isBlank()
-                is StoryContentModel.Video -> c.filePath.isBlank()
-                else -> false
+            val isBlocked = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar
+            if (!isBlocked) {
+                val isLoading = when (val c = story.content) {
+                    is StoryContentModel.Photo -> c.filePath.isBlank()
+                    is StoryContentModel.Video -> c.filePath.isBlank()
+                    else -> false
+                }
+                if (!isLoading) {
+                    elapsedMs += (now - lastTickAt)
+                    progress = (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
+                }
             }
-            if (!isBlocked && !isLoading) {
-                elapsedMs += (now - lastTickAt)
-                progress = (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
-            }
+            // Always update lastTickAt so paused time is not counted on resume
             lastTickAt = now
         }
         if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
@@ -221,7 +227,7 @@ fun StoryViewerScreen(
                         path = content.filePath,
                         type = com.spmods.spgram.presentation.core.media.VideoType.Gif,
                         modifier = Modifier.fillMaxSize(),
-                        animate = !isPaused && !isReplyFieldFocused && !showMenu,
+                        animate = !isPaused && !isReplyFieldFocused && !showMenu && !showReactionBar,
                         shouldLoop = false,
                         volume = if (isMuted) 0f else 1f,
                         contentScale = ContentScale.Fit,
@@ -537,7 +543,7 @@ fun StoryViewerScreen(
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, bottom = 80.dp)
+                    .padding(start = 16.dp, bottom = 130.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .clickable {
                         showViewersSheet = true
@@ -558,83 +564,172 @@ fun StoryViewerScreen(
             }
         }
 
-        // ── Bottom bar — reply + share + like ──────────────────────────────
-        Row(
+        // ── Bottom overlay — caption + emoji row + reply bar ───────────────
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))
+                    )
+                )
                 .imePadding()
                 .systemBarsPadding()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(bottom = 8.dp)
         ) {
-            OutlinedTextField(
-                value = replyText,
-                onValueChange = { replyText = it },
-                modifier = Modifier
-                    .weight(1f)
-                    .onFocusChanged { state -> isReplyFieldFocused = state.isFocused },
-                placeholder = { Text("Reply privately...", color = Color.White.copy(alpha = 0.6f)) },
-                singleLine = true,
-                shape = RoundedCornerShape(24.dp),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color.White.copy(alpha = 0.6f),
-                    unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
-                    cursorColor = Color.White,
-                    focusedContainerColor = Color.White.copy(alpha = 0.08f),
-                    unfocusedContainerColor = Color.White.copy(alpha = 0.08f)
-                )
-            )
-
-            val canSend = replyText.isNotBlank()
-
-            AnimatedVisibility(visible = canSend, enter = scaleIn(tween(150)) + fadeIn(), exit = scaleOut(tween(150)) + fadeOut()) {
-                IconButton(onClick = {
-                    val text = replyText.trim()
-                    if (text.isNotEmpty()) {
-                        onSendReply(story, text)
-                        replyText = ""
-                        focusManager.clearFocus()
-                        Toast.makeText(context, "Reply sent", Toast.LENGTH_SHORT).show()
-                    }
-                }) {
-                    Icon(Icons.AutoMirrored.Filled.Send, null, tint = Color.White, modifier = Modifier.size(24.dp))
-                }
-            }
-
-            AnimatedVisibility(visible = !canSend, enter = scaleIn(tween(150)) + fadeIn(), exit = scaleOut(tween(150)) + fadeOut()) {
-                IconButton(onClick = {
-                    coroutineScope.launch {
-                        val link = runCatching { onGetStoryLink(story) }.getOrNull()
-                        val shareText = link?.takeIf { it.isNotBlank() } ?: getStoryFilePath(story)
-                        withContext(Dispatchers.Main) {
-                            if (!shareText.isNullOrBlank()) {
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, shareText)
-                                }
-                                context.startActivity(Intent.createChooser(intent, "Share Story"))
-                            }
+            // ── Reaction bar (long-press reaction popup) ───────────────────
+            if (showReactionBar) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .clip(RoundedCornerShape(32.dp))
+                            .background(Color(0xFF1C1C1E))
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val quickReactions = listOf("👍","❤️","🍓","👏","👎","🔥","🥰")
+                        quickReactions.forEach { emoji ->
+                            val isSelected = story.chosenReactionEmoji == emoji
+                            Text(
+                                text = emoji,
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent)
+                                    .padding(6.dp)
+                                    .clickable {
+                                        onSetReaction(story, if (isSelected) null else emoji)
+                                        showReactionBar = false
+                                    }
+                            )
+                        }
+                        // Expand button (▼)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF3A3A3C))
+                                .clickable { showReactionBar = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("▾", color = Color.White, style = MaterialTheme.typography.titleMedium)
                         }
                     }
-                }) {
-                    Icon(Icons.Default.Share, null, tint = Color.White, modifier = Modifier.size(24.dp))
                 }
             }
 
-            IconButton(onClick = {
-                val nowLiked = !isLiked
-                onSetReaction(story, if (nowLiked) "\u2764" else null)
-            }) {
-                AnimatedVisibility(visible = isLiked, enter = scaleIn(tween(180)) + fadeIn(), exit = scaleOut(tween(180)) + fadeOut()) {
-                    Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF3B5C), modifier = Modifier.size(24.dp))
+            // ── Caption + emoji pill row ───────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (story.caption.isNotBlank()) {
+                    Text(
+                        text = story.caption,
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                    )
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
-                AnimatedVisibility(visible = !isLiked, enter = scaleIn(tween(180)) + fadeIn(), exit = scaleOut(tween(180)) + fadeOut()) {
-                    Icon(Icons.Default.FavoriteBorder, null, tint = Color.White, modifier = Modifier.size(24.dp))
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // ── Reply field + forward + like ──────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = replyText,
+                    onValueChange = { replyText = it },
+                    modifier = Modifier
+                        .weight(1f)
+                        .onFocusChanged { state -> isReplyFieldFocused = state.isFocused },
+                    placeholder = { Text("Reply privately...", color = Color.White.copy(alpha = 0.55f)) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color.White.copy(alpha = 0.5f),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        cursorColor = Color.White,
+                        focusedContainerColor = Color(0xFF2C2C2E),
+                        unfocusedContainerColor = Color(0xFF2C2C2E)
+                    )
+                )
+
+                val canSend = replyText.isNotBlank()
+
+                // Send button (typing) / Forward button (idle)
+                AnimatedVisibility(visible = canSend, enter = scaleIn(tween(150)) + fadeIn(), exit = scaleOut(tween(150)) + fadeOut()) {
+                    IconButton(onClick = {
+                        val text = replyText.trim()
+                        if (text.isNotEmpty()) {
+                            onSendReply(story, text)
+                            replyText = ""
+                            focusManager.clearFocus()
+                            Toast.makeText(context, "Reply sent", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.Send, null, tint = Color.White, modifier = Modifier.size(26.dp))
+                    }
+                }
+
+                AnimatedVisibility(visible = !canSend, enter = scaleIn(tween(150)) + fadeIn(), exit = scaleOut(tween(150)) + fadeOut()) {
+                    IconButton(onClick = {
+                        coroutineScope.launch {
+                            val link = runCatching { onGetStoryLink(story) }.getOrNull()
+                            val shareText = link?.takeIf { it.isNotBlank() } ?: getStoryFilePath(story)
+                            withContext(Dispatchers.Main) {
+                                if (!shareText.isNullOrBlank()) {
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, shareText)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Forward Story"))
+                                }
+                            }
+                        }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.Reply, null, tint = Color.White, modifier = Modifier.size(26.dp))
+                    }
+                }
+
+                // Heart / like button — long press opens reaction bar
+                IconButton(
+                    onClick = {
+                        val nowLiked = !isLiked
+                        onSetReaction(story, if (nowLiked) "\u2764" else null)
+                    },
+                    modifier = Modifier.pointerInput(Unit) {
+                        detectTapGestures(onLongPress = { showReactionBar = !showReactionBar })
+                    }
+                ) {
+                    if (isLiked) {
+                        Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF3B5C), modifier = Modifier.size(26.dp))
+                    } else {
+                        Icon(Icons.Default.FavoriteBorder, null, tint = Color.White, modifier = Modifier.size(26.dp))
+                    }
                 }
             }
         }
