@@ -1805,6 +1805,9 @@ fun ChatListContent(component: ChatListComponent) {
             onToggleStoryNotifications = { chatId, mute ->
                 storyRepository.toggleStoryNotifications(chatId, mute)
             },
+            onGetViewers = { story ->
+                runCatching { storyRepository.getStoryViewers(story.id) }.getOrNull()
+            },
             onDismiss = {
                 storyViewerChatId = null
                 storyViewerStories = emptyList()
