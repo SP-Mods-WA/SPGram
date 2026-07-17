@@ -3,18 +3,12 @@ package com.spmods.spgram.presentation.features.profile.components
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -24,27 +18,30 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.NotificationsOff
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
@@ -54,9 +51,14 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -64,9 +66,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -88,22 +92,31 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
+import com.spmods.spgram.domain.models.FoundStoryViewersModel
 import com.spmods.spgram.domain.models.StoryContentModel
 import com.spmods.spgram.domain.models.StoryModel
+import com.spmods.spgram.domain.models.StoryViewerModel
+import com.spmods.spgram.presentation.core.ui.AvatarForChat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private const val STORY_DURATION_MS = 5_000L
+private const val SWIPE_DOWN_THRESHOLD = 120f
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun StoryViewerScreen(
     stories: List<StoryModel>,
@@ -120,16 +133,20 @@ fun StoryViewerScreen(
     onGetStoryLink: suspend (StoryModel) -> String? = { null },
     onReportStory: suspend (StoryModel) -> Unit = {},
     onToggleStoryNotifications: suspend (Long, Boolean) -> Unit = { _, _ -> },
+    onGetViewers: suspend (StoryModel) -> FoundStoryViewersModel? = { null },
     onDismiss: () -> Unit
 ) {
     var currentIndex by remember { mutableIntStateOf(initialIndex.coerceIn(0, stories.lastIndex)) }
     var progress by remember { mutableFloatStateOf(0f) }
     var isPaused by remember { mutableStateOf(false) }
-    var videoDurationMs by remember { mutableStateOf<Long?>(null) }
+    var isMuted by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
     var replyText by remember { mutableStateOf("") }
     var isReplyFieldFocused by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
-    var isMuted by remember { mutableStateOf(false) }
+    var showViewersSheet by remember { mutableStateOf(false) }
+    var viewersData by remember { mutableStateOf<FoundStoryViewersModel?>(null) }
+    var isLoadingViewers by remember { mutableStateOf(false) }
+
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
@@ -137,73 +154,56 @@ fun StoryViewerScreen(
 
     val story = stories.getOrNull(currentIndex) ?: run { onDismiss(); return }
     val isLiked = story.chosenReactionEmoji != null
-
-    // Pause when menu is open
-    val effectivelyPaused = isPaused || isReplyFieldFocused || showMenu
+    val isVideo = story.content is StoryContentModel.Video
 
     DisposableEffect(story.id) {
         onStoryViewed(story)
         onDispose { onStoryClosed(story) }
     }
 
-    // Video progress driver
-    LaunchedEffect(currentIndex, videoDurationMs) {
-        if (story.content !is StoryContentModel.Video) return@LaunchedEffect
-        progress = 0f
-        val duration = videoDurationMs ?: return@LaunchedEffect
-        val startedAt = System.currentTimeMillis()
-        var elapsedWhilePaused = 0L
-        var pauseStartedAt: Long? = null
-        while (progress < 1f) {
-            if (effectivelyPaused) {
-                if (pauseStartedAt == null) pauseStartedAt = System.currentTimeMillis()
-                delay(50)
-            } else {
-                pauseStartedAt?.let {
-                    elapsedWhilePaused += System.currentTimeMillis() - it
-                    pauseStartedAt = null
-                }
-                val elapsed = System.currentTimeMillis() - startedAt - elapsedWhilePaused
-                progress = (elapsed.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-                delay(50)
-            }
-        }
-    }
-
-    // Photo auto-advance timer
+    // ── Progress timer (photo + video) ────────────────────────────────────
     LaunchedEffect(currentIndex, story.content) {
-        if (story.content is StoryContentModel.Video) return@LaunchedEffect
-        val isLoadingContent = (story.content as? StoryContentModel.Photo)?.filePath.isNullOrBlank()
         progress = 0f
-        val steps = 100
-        val stepDelay = STORY_DURATION_MS / steps
-        var step = 0
-        while (step < steps) {
-            if (effectivelyPaused || isLoadingContent) {
-                delay(50)
-            } else {
-                delay(stepDelay)
-                step++
-                progress = step / steps.toFloat()
+        val totalMs = STORY_DURATION_MS
+        var elapsedMs = 0L
+        var lastTickAt = System.currentTimeMillis()
+        while (elapsedMs < totalMs) {
+            delay(50)
+            val now = System.currentTimeMillis()
+            val isBlocked = isPaused || isReplyFieldFocused || showMenu || showViewersSheet
+            val isLoading = when (val c = story.content) {
+                is StoryContentModel.Photo -> c.filePath.isBlank()
+                is StoryContentModel.Video -> c.filePath.isBlank()
+                else -> false
             }
+            if (!isBlocked && !isLoading) {
+                elapsedMs += (now - lastTickAt)
+                progress = (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
+            }
+            lastTickAt = now
         }
-        if (currentIndex < stories.lastIndex) {
-            currentIndex++
-        } else {
-            onDismiss()
-        }
+        if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            // ── Swipe down to close ───────────────────────────────────────
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragEnd = {},
+                    onDragCancel = {}
+                ) { _, dragAmount ->
+                    if (dragAmount > SWIPE_DOWN_THRESHOLD) onDismiss()
+                }
+            }
     ) {
         // ── Story content ──────────────────────────────────────────────────
         when (val content = story.content) {
             is StoryContentModel.Photo -> {
                 if (content.filePath.isBlank()) {
-                    StoryContentLoadingIndicator()
+                    StoryLoadingIndicator()
                 } else {
                     SubcomposeAsyncImage(
                         model = content.filePath,
@@ -215,20 +215,17 @@ fun StoryViewerScreen(
             }
             is StoryContentModel.Video -> {
                 if (content.filePath.isBlank()) {
-                    StoryContentLoadingIndicator()
+                    StoryLoadingIndicator()
                 } else {
                     com.spmods.spgram.presentation.core.media.VideoStickerPlayer(
                         path = content.filePath,
                         type = com.spmods.spgram.presentation.core.media.VideoType.Gif,
                         modifier = Modifier.fillMaxSize(),
-                        animate = !effectivelyPaused,
+                        animate = !isPaused && !isReplyFieldFocused && !showMenu,
                         shouldLoop = false,
-                        volume = 1f,
+                        volume = if (isMuted) 0f else 1f,
                         contentScale = ContentScale.Fit,
                         thumbnailData = content.thumbnailPath.ifEmpty { null },
-                        onDurationKnown = { durationMs ->
-                            if (durationMs > 0L) videoDurationMs = durationMs
-                        },
                         onPlaybackEnded = {
                             if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
                         }
@@ -242,7 +239,7 @@ fun StoryViewerScreen(
             }
         }
 
-        // ── Tap left/right to navigate, hold to pause ──────────────────────
+        // ── Tap left/right, hold to pause ─────────────────────────────────
         val tapMaxDurationMs = 250L
         Row(modifier = Modifier.fillMaxSize()) {
             Box(
@@ -283,7 +280,7 @@ fun StoryViewerScreen(
             )
         }
 
-        // ── Top overlay — progress + header ───────────────────────────────
+        // ── Top overlay — progress bars + header ──────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -346,14 +343,16 @@ fun StoryViewerScreen(
                     Spacer(modifier = Modifier.width(10.dp))
 
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             Text(
                                 text = posterName.ifBlank { "Story" },
                                 color = Color.White,
                                 style = MaterialTheme.typography.labelLarge,
                                 maxLines = 1
                             )
-                            // "1/3" story count — only show if more than 1 story
                             if (stories.size > 1) {
                                 Text(
                                     text = "${currentIndex + 1}/${stories.size}",
@@ -372,15 +371,19 @@ fun StoryViewerScreen(
                     }
                 }
 
-                // Right side buttons
+                // Right side: mute (video only) + 3-dot menu
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (canDeleteStory) {
-                        IconButton(onClick = { onDelete(story.id) }) {
-                            Icon(Icons.Default.Delete, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                    if (isVideo) {
+                        IconButton(onClick = { isMuted = !isMuted }) {
+                            Icon(
+                                imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                contentDescription = if (isMuted) "Unmute" else "Mute",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
                         }
                     }
 
-                    // 3-dot menu
                     Box {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, null, tint = Color.White, modifier = Modifier.size(22.dp))
@@ -392,21 +395,21 @@ fun StoryViewerScreen(
                         ) {
                             // Do Not Notify About Stories
                             DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        if (isMuted) "Notify About Stories" else "Do Not Notify About Stories",
-                                        color = Color.White
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.NotificationsOff, null, tint = Color.White)
-                                },
+                                text = { Text("Do Not Notify About Stories", color = Color.White) },
+                                leadingIcon = { Icon(Icons.Default.NotificationsOff, null, tint = Color.White) },
                                 onClick = {
                                     showMenu = false
-                                    val newMuted = !isMuted
-                                    isMuted = newMuted
                                     coroutineScope.launch {
-                                        runCatching { onToggleStoryNotifications(story.posterChatId, newMuted) }
+                                        runCatching {
+                                            onToggleStoryNotifications(story.posterChatId, true)
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(context, "Story notifications muted", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }.onFailure {
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(context, "Failed to mute notifications", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
                                     }
                                 }
                             )
@@ -420,7 +423,14 @@ fun StoryViewerScreen(
                                 onClick = {
                                     showMenu = false
                                     coroutineScope.launch {
-                                        saveStoryToGallery(context, story)
+                                        val ok = runCatching { saveStoryToGallery(context, story) }.isSuccess
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                context,
+                                                if (ok) "Saved to gallery" else "Save failed",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }
                                 }
                             )
@@ -435,8 +445,13 @@ fun StoryViewerScreen(
                                     showMenu = false
                                     coroutineScope.launch {
                                         val link = runCatching { onGetStoryLink(story) }.getOrNull()
-                                        if (!link.isNullOrBlank()) {
-                                            clipboardManager.setText(AnnotatedString(link))
+                                        withContext(Dispatchers.Main) {
+                                            if (!link.isNullOrBlank()) {
+                                                clipboardManager.setText(AnnotatedString(link))
+                                                Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                Toast.makeText(context, "Could not get link", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
                                     }
                                 }
@@ -452,19 +467,36 @@ fun StoryViewerScreen(
                                     showMenu = false
                                     coroutineScope.launch {
                                         val link = runCatching { onGetStoryLink(story) }.getOrNull()
-                                        val shareText = if (!link.isNullOrBlank()) link else getStoryFilePath(story) ?: ""
-                                        if (shareText.isNotBlank()) {
-                                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                                type = "text/plain"
-                                                putExtra(Intent.EXTRA_TEXT, shareText)
+                                        val shareText = link?.takeIf { it.isNotBlank() } ?: getStoryFilePath(story)
+                                        withContext(Dispatchers.Main) {
+                                            if (!shareText.isNullOrBlank()) {
+                                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "text/plain"
+                                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                                }
+                                                context.startActivity(Intent.createChooser(intent, "Share Story"))
+                                            } else {
+                                                Toast.makeText(context, "Nothing to share", Toast.LENGTH_SHORT).show()
                                             }
-                                            context.startActivity(Intent.createChooser(intent, "Share Story"))
                                         }
                                     }
                                 }
                             )
 
                             HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                            // Delete (own stories only)
+                            if (canDeleteStory) {
+                                DropdownMenuItem(
+                                    text = { Text("Delete Story", color = Color(0xFFFF453A)) },
+                                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = Color(0xFFFF453A)) },
+                                    onClick = {
+                                        showMenu = false
+                                        onDelete(story.id)
+                                    }
+                                )
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                            }
 
                             // Report
                             DropdownMenuItem(
@@ -474,42 +506,49 @@ fun StoryViewerScreen(
                                     showMenu = false
                                     coroutineScope.launch {
                                         runCatching { onReportStory(story) }
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "Story reported", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                                 }
                             )
                         }
                     }
-
-                    // Close button
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(22.dp))
-                    }
                 }
             }
         }
 
-        // ── Caption overlay ────────────────────────────────────────────────
+        // ── Caption ────────────────────────────────────────────────────────
         if (story.caption.isNotBlank()) {
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(bottom = 76.dp)
+                    .padding(bottom = 80.dp)
                     .background(Color.Black.copy(alpha = 0.5f))
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Text(text = story.caption, color = Color.White, style = MaterialTheme.typography.bodyMedium)
             }
         }
 
-        // ── View count (own stories) ────────────────────────────────────────
+        // ── View count (own stories) → tap opens viewers sheet ─────────────
         if (canDeleteStory) {
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, bottom = 76.dp)
+                    .padding(start = 16.dp, bottom = 80.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .clickable { onOpenViewers(story) }
+                    .clickable {
+                        showViewersSheet = true
+                        if (viewersData == null) {
+                            isLoadingViewers = true
+                            coroutineScope.launch {
+                                viewersData = runCatching { onGetViewers(story) }.getOrNull()
+                                isLoadingViewers = false
+                            }
+                        }
+                    }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -553,32 +592,33 @@ fun StoryViewerScreen(
 
             val canSend = replyText.isNotBlank()
 
-            // Send button (when typing)
-            AnimatedVisibility(visible = canSend) {
+            AnimatedVisibility(visible = canSend, enter = scaleIn(tween(150)) + fadeIn(), exit = scaleOut(tween(150)) + fadeOut()) {
                 IconButton(onClick = {
-                    val textToSend = replyText.trim()
-                    if (textToSend.isNotEmpty()) {
-                        onSendReply(story, textToSend)
+                    val text = replyText.trim()
+                    if (text.isNotEmpty()) {
+                        onSendReply(story, text)
                         replyText = ""
                         focusManager.clearFocus()
+                        Toast.makeText(context, "Reply sent", Toast.LENGTH_SHORT).show()
                     }
                 }) {
                     Icon(Icons.AutoMirrored.Filled.Send, null, tint = Color.White, modifier = Modifier.size(24.dp))
                 }
             }
 
-            // Share button (when not typing)
-            AnimatedVisibility(visible = !canSend) {
+            AnimatedVisibility(visible = !canSend, enter = scaleIn(tween(150)) + fadeIn(), exit = scaleOut(tween(150)) + fadeOut()) {
                 IconButton(onClick = {
                     coroutineScope.launch {
                         val link = runCatching { onGetStoryLink(story) }.getOrNull()
-                        val shareText = if (!link.isNullOrBlank()) link else getStoryFilePath(story) ?: ""
-                        if (shareText.isNotBlank()) {
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, shareText)
+                        val shareText = link?.takeIf { it.isNotBlank() } ?: getStoryFilePath(story)
+                        withContext(Dispatchers.Main) {
+                            if (!shareText.isNullOrBlank()) {
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Share Story"))
                             }
-                            context.startActivity(Intent.createChooser(intent, "Share Story"))
                         }
                     }
                 }) {
@@ -586,23 +626,99 @@ fun StoryViewerScreen(
                 }
             }
 
-            // Like button
             IconButton(onClick = {
                 val nowLiked = !isLiked
                 onSetReaction(story, if (nowLiked) "\u2764" else null)
             }) {
-                AnimatedLikeIcon(isLiked = isLiked)
+                AnimatedVisibility(visible = isLiked, enter = scaleIn(tween(180)) + fadeIn(), exit = scaleOut(tween(180)) + fadeOut()) {
+                    Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF3B5C), modifier = Modifier.size(24.dp))
+                }
+                AnimatedVisibility(visible = !isLiked, enter = scaleIn(tween(180)) + fadeIn(), exit = scaleOut(tween(180)) + fadeOut()) {
+                    Icon(Icons.Default.FavoriteBorder, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                }
+            }
+        }
+    }
+
+    // ── Viewers bottom sheet ───────────────────────────────────────────────
+    if (showViewersSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showViewersSheet = false },
+            sheetState = sheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = if ((viewersData?.totalCount ?: 0) > 0)
+                        "Viewed by ${viewersData?.totalCount}"
+                    else "Viewers",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                )
+                when {
+                    isLoadingViewers -> {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(160.dp),
+                            contentAlignment = Alignment.Center
+                        ) { LoadingIndicator() }
+                    }
+                    viewersData?.viewers.isNullOrEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(160.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No views yet", style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                            contentPadding = PaddingValues(bottom = 32.dp)
+                        ) {
+                            items(viewersData!!.viewers, key = { it.userId }) { viewer ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AvatarForChat(
+                                        path = viewer.avatarPath,
+                                        name = viewer.name,
+                                        size = 42.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(text = viewer.name, style = MaterialTheme.typography.bodyLarge,
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(
+                                            text = formatViewedTime(viewer.viewedAtSeconds),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    val emoji = viewer.reactionEmoji
+                                    if (emoji != null) {
+                                        Text(text = emoji, style = MaterialTheme.typography.titleLarge)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-// ── Save to gallery ────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
 private suspend fun saveStoryToGallery(context: Context, story: StoryModel) {
     val filePath = getStoryFilePath(story) ?: return
     val file = File(filePath)
     if (!file.exists()) return
-
     withContext(Dispatchers.IO) {
         val isVideo = filePath.endsWith(".mp4", ignoreCase = true)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -612,7 +728,8 @@ private suspend fun saveStoryToGallery(context: Context, story: StoryModel) {
                 MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
             val values = ContentValues().apply {
                 put(if (isVideo) MediaStore.Video.Media.DISPLAY_NAME else MediaStore.Images.Media.DISPLAY_NAME, file.name)
-                put(if (isVideo) MediaStore.Video.Media.MIME_TYPE else MediaStore.Images.Media.MIME_TYPE, if (isVideo) "video/mp4" else "image/jpeg")
+                put(if (isVideo) MediaStore.Video.Media.MIME_TYPE else MediaStore.Images.Media.MIME_TYPE,
+                    if (isVideo) "video/mp4" else "image/jpeg")
                 put(if (isVideo) MediaStore.Video.Media.RELATIVE_PATH else MediaStore.Images.Media.RELATIVE_PATH,
                     if (isVideo) Environment.DIRECTORY_MOVIES + "/SPGram" else Environment.DIRECTORY_PICTURES + "/SPGram")
                 put(if (isVideo) MediaStore.Video.Media.IS_PENDING else MediaStore.Images.Media.IS_PENDING, 1)
@@ -636,38 +753,22 @@ private suspend fun saveStoryToGallery(context: Context, story: StoryModel) {
     }
 }
 
-private fun getStoryFilePath(story: StoryModel): String? {
-    return when (val c = story.content) {
-        is StoryContentModel.Photo -> c.filePath.ifBlank { null }
-        is StoryContentModel.Video -> c.filePath.ifBlank { null }
-        else -> null
-    }
+private fun getStoryFilePath(story: StoryModel): String? = when (val c = story.content) {
+    is StoryContentModel.Photo -> c.filePath.ifBlank { null }
+    is StoryContentModel.Video -> c.filePath.ifBlank { null }
+    else -> null
 }
 
-// ── Supporting composables ─────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun StoryContentLoadingIndicator() {
+private fun StoryLoadingIndicator() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         LoadingIndicator(color = Color.White)
     }
 }
 
-@Composable
-private fun AnimatedLikeIcon(isLiked: Boolean) {
-    Box(contentAlignment = Alignment.Center) {
-        AnimatedVisibility(visible = isLiked, enter = scaleIn(tween(180)) + fadeIn(), exit = scaleOut(tween(180)) + fadeOut()) {
-            Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF3B5C), modifier = Modifier.size(24.dp))
-        }
-        AnimatedVisibility(visible = !isLiked, enter = scaleIn(tween(180)) + fadeIn(), exit = scaleOut(tween(180)) + fadeOut()) {
-            Icon(Icons.Default.FavoriteBorder, null, tint = Color.White, modifier = Modifier.size(24.dp))
-        }
-    }
-}
-
 private fun formatStoryRelativeTime(unixSeconds: Int): String {
-    val nowSeconds = System.currentTimeMillis() / 1000
-    val diff = (nowSeconds - unixSeconds).coerceAtLeast(0)
+    val diff = (System.currentTimeMillis() / 1000 - unixSeconds).coerceAtLeast(0)
     return when {
         diff < 60 -> "now"
         diff < 3600 -> "${diff / 60}m"
@@ -675,3 +776,6 @@ private fun formatStoryRelativeTime(unixSeconds: Int): String {
         else -> "${diff / 86_400}d"
     }
 }
+
+private fun formatViewedTime(unixSeconds: Int): String =
+    SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(unixSeconds.toLong() * 1000))
