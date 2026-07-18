@@ -50,6 +50,18 @@ interface ProfileStore : Store<ProfileStore.Intent, ProfileComponent.State, Prof
         data class LocationClick(val lat: Double, val lon: Double, val address: String) : Intent()
         object DismissLocation : Intent()
         data class UpdateState(val state: ProfileComponent.State) : Intent()
+
+        // ── Story intents ──────────────────────────────────────────────────
+        data class ViewStory(val index: Int) : Intent()
+        object DismissStory : Intent()
+        object OpenStoryPoster : Intent()
+        object DismissStoryPoster : Intent()
+        data class DeleteStory(val storyId: Int) : Intent()
+        data class SetStoryReaction(val storyId: Int, val emoji: String?) : Intent()
+        data class OpenStoryViewers(val storyId: Int) : Intent()
+        object DismissStoryViewers : Intent()
+        data class StoryViewed(val story: com.spmods.spgram.domain.models.StoryModel) : Intent()
+        data class StoryClosed(val story: com.spmods.spgram.domain.models.StoryModel) : Intent()
     }
 
     sealed class Label {
