@@ -275,7 +275,7 @@ class StoryRepositoryImpl(
             isViewed = id <= maxReadStoryId,
             chosenReactionEmoji = (chosenReactionType as? TdApi.ReactionTypeEmoji)?.emoji,
             viewCount = interactionInfo?.viewCount ?: 0,
-            activePeriodSeconds = activePeriod.takeIf { it > 0 } ?: 86400
+            activePeriodSeconds = runCatching { activePeriod }.getOrDefault(86400).takeIf { it > 0 } ?: 86400
         )
     }
 
@@ -394,7 +394,7 @@ class StoryRepositoryImpl(
         }.getOrNull() ?: return null
 
         coRunCatching {
-            gateway.execute(TdApi.SetStoryPrivacySettings(chatId, storyId, privacySettings))
+            gateway.execute(TdApi.SetStoryPrivacySettings(storyId, privacySettings))
         }
         return result.toModel()
     }
