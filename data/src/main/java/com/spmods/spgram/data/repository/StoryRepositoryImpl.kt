@@ -275,7 +275,7 @@ class StoryRepositoryImpl(
             isViewed = id <= maxReadStoryId,
             chosenReactionEmoji = (chosenReactionType as? TdApi.ReactionTypeEmoji)?.emoji,
             viewCount = interactionInfo?.viewCount ?: 0,
-            activePeriodSeconds = runCatching { activePeriod }.getOrDefault(86400).takeIf { it > 0 } ?: 86400
+            activePeriodSeconds = runCatching<Int> { activePeriod }.getOrDefault(86400).takeIf { it > 0 } ?: 86400
         )
     }
 
