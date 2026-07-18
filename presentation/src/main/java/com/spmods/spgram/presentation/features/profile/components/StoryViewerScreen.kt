@@ -152,6 +152,7 @@ fun StoryViewerScreen(
     initialIndex: Int,
     posterName: String = "",
     posterAvatarPath: String? = null,
+    isOwnStory: Boolean = false,
     canDeleteStory: Boolean = false,
     onDelete: (Int) -> Unit = {},
     onSendReply: (StoryModel, String) -> Unit = { _, _ -> },
@@ -246,6 +247,8 @@ fun StoryViewerScreen(
     // ── Progress timer — photos only; videos drive progress via videoProgressMs ─────────────────
     var videoProgressMs by remember(currentIndex) { androidx.compose.runtime.mutableStateOf(0L) }
     var videoDurationMs by remember(currentIndex) { androidx.compose.runtime.mutableStateOf(0L) }
+    // Track when video was paused so VideoStickerPlayer can seek back on resume
+    // (VideoStickerPlayer handles seek internally via animate flag — no extra seek needed)
 
     LaunchedEffect(currentIndex, story.content) {
         if (story.content is StoryContentModel.Video) return@LaunchedEffect  // video drives itself
@@ -256,7 +259,7 @@ fun StoryViewerScreen(
         while (elapsedMs < totalMs) {
             delay(50)
             val now = System.currentTimeMillis()
-            val isBlocked = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar
+            val isBlocked = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar || showFullReactionPicker
             if (!isBlocked) {
                 val isLoading = (story.content as? StoryContentModel.Photo)?.filePath?.isBlank() == true
                 if (!isLoading) {
@@ -271,11 +274,20 @@ fun StoryViewerScreen(
     }
 
     // Video: sync progress bar from actual playback position
+    // For video: use activePeriodSeconds as duration seed until we get real posMs
+    LaunchedEffect(currentIndex, story.content) {
+        if (story.content !is StoryContentModel.Video) return@LaunchedEffect
+        // Seed with activePeriodSeconds (capped at 60s for story videos) so bar starts moving
+        if (videoDurationMs <= 0L && story.activePeriodSeconds > 0) {
+            videoDurationMs = (story.activePeriodSeconds.toLong() * 1000L).coerceAtMost(60_000L)
+        }
+    }
     LaunchedEffect(currentIndex, story.content, videoDurationMs) {
         if (story.content !is StoryContentModel.Video || videoDurationMs <= 0L) return@LaunchedEffect
         while (true) {
             delay(50)
-            if (!isPaused && !isReplyFieldFocused && !showMenu && !showViewersSheet && !showReactionBar) {
+            val isBlocked2 = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar || showFullReactionPicker
+            if (!isBlocked2 && videoProgressMs > 0L) {
                 progress = (videoProgressMs.toFloat() / videoDurationMs.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
             }
         }
@@ -313,23 +325,29 @@ fun StoryViewerScreen(
                 if (content.filePath.isBlank()) {
                     StoryLoadingIndicator()
                 } else {
-                    com.spmods.spgram.presentation.core.media.VideoStickerPlayer(
-                        path = content.filePath,
-                        type = com.spmods.spgram.presentation.core.media.VideoType.Gif,
-                        modifier = Modifier.fillMaxSize(),
-                        animate = !isPaused && !isReplyFieldFocused && !showMenu && !showReactionBar,
-                        shouldLoop = false,
-                        volume = if (isMuted) 0f else 1f,
-                        contentScale = ContentScale.Fit,
-                        thumbnailData = content.thumbnailPath.ifEmpty { null },
-                        onProgressUpdate = { posMs ->
-                            videoProgressMs = posMs
-                        },
-                        onPlaybackEnded = {
-                            if (videoProgressMs > 0L && videoDurationMs <= 0L) videoDurationMs = videoProgressMs
-                            if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
-                        }
-                    )
+                    // key() forces VideoStickerPlayer to fully recompose when path changes,
+                    // preventing stale ExoPlayer state / lag / stuck frames
+                    key(content.filePath) {
+                        com.spmods.spgram.presentation.core.media.VideoStickerPlayer(
+                            path = content.filePath,
+                            type = com.spmods.spgram.presentation.core.media.VideoType.Gif,
+                            modifier = Modifier.fillMaxSize(),
+                            animate = !isPaused && !isReplyFieldFocused && !showMenu && !showReactionBar && !showFullReactionPicker,
+                            shouldLoop = false,
+                            volume = if (isMuted) 0f else 1f,
+                            contentScale = ContentScale.Fit,
+                            thumbnailData = content.thumbnailPath.ifEmpty { null },
+                            onProgressUpdate = { posMs ->
+                                videoProgressMs = posMs
+                                // Update duration once we have a real position reading
+                                if (posMs > videoDurationMs) videoDurationMs = posMs
+                            },
+                            onPlaybackEnded = {
+                                if (videoProgressMs > 0L && videoDurationMs <= 0L) videoDurationMs = videoProgressMs
+                                if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
+                            }
+                        )
+                    }
                 }
             }
             is StoryContentModel.Unsupported -> {
@@ -488,131 +506,6 @@ fun StoryViewerScreen(
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, null, tint = Color.White, modifier = Modifier.size(22.dp))
                         }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            modifier = Modifier.background(Color(0xFF2C2C2E))
-                        ) {
-                            // Do Not Notify About Stories
-                            DropdownMenuItem(
-                                text = { Text("Do Not Notify About Stories", color = Color.White) },
-                                leadingIcon = { Icon(Icons.Default.NotificationsOff, null, tint = Color.White) },
-                                onClick = {
-                                    showMenu = false
-                                    coroutineScope.launch {
-                                        runCatching {
-                                            onToggleStoryNotifications(story.posterChatId, true)
-                                            withContext(Dispatchers.Main) {
-                                                Toast.makeText(context, "Story notifications muted", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }.onFailure {
-                                            withContext(Dispatchers.Main) {
-                                                Toast.makeText(context, "Failed to mute notifications", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    }
-                                }
-                            )
-
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-
-                            // Save to Gallery
-                            DropdownMenuItem(
-                                text = { Text("Save to Gallery", color = Color.White) },
-                                leadingIcon = { Icon(Icons.Default.Save, null, tint = Color.White) },
-                                onClick = {
-                                    showMenu = false
-                                    coroutineScope.launch {
-                                        val ok = runCatching { saveStoryToGallery(context, story) }.isSuccess
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(
-                                                context,
-                                                if (ok) "Saved to gallery" else "Save failed",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
-                                }
-                            )
-
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-
-                            // Copy Link
-                            DropdownMenuItem(
-                                text = { Text("Copy Link", color = Color.White) },
-                                leadingIcon = { Icon(Icons.Default.ContentCopy, null, tint = Color.White) },
-                                onClick = {
-                                    showMenu = false
-                                    coroutineScope.launch {
-                                        val link = runCatching { onGetStoryLink(story) }.getOrNull()
-                                        withContext(Dispatchers.Main) {
-                                            if (!link.isNullOrBlank()) {
-                                                clipboardManager.setText(AnnotatedString(link))
-                                                Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                Toast.makeText(context, "Could not get link", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    }
-                                }
-                            )
-
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-
-                            // Share
-                            DropdownMenuItem(
-                                text = { Text("Share", color = Color.White) },
-                                leadingIcon = { Icon(Icons.Default.Share, null, tint = Color.White) },
-                                onClick = {
-                                    showMenu = false
-                                    coroutineScope.launch {
-                                        val link = runCatching { onGetStoryLink(story) }.getOrNull()
-                                        val shareText = link?.takeIf { it.isNotBlank() } ?: getStoryFilePath(story)
-                                        withContext(Dispatchers.Main) {
-                                            if (!shareText.isNullOrBlank()) {
-                                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                                    type = "text/plain"
-                                                    putExtra(Intent.EXTRA_TEXT, shareText)
-                                                }
-                                                context.startActivity(Intent.createChooser(intent, "Share Story"))
-                                            } else {
-                                                Toast.makeText(context, "Nothing to share", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    }
-                                }
-                            )
-
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-
-                            // Delete (own stories only)
-                            if (canDeleteStory) {
-                                DropdownMenuItem(
-                                    text = { Text("Delete Story", color = Color(0xFFFF453A)) },
-                                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = Color(0xFFFF453A)) },
-                                    onClick = {
-                                        showMenu = false
-                                        onDelete(story.id)
-                                    }
-                                )
-                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                            }
-
-                            // Report
-                            DropdownMenuItem(
-                                text = { Text("Report", color = Color(0xFFFF453A)) },
-                                leadingIcon = { Icon(Icons.Default.Flag, null, tint = Color(0xFFFF453A)) },
-                                onClick = {
-                                    showMenu = false
-                                    coroutineScope.launch {
-                                        runCatching { onReportStory(story) }
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(context, "Story reported", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            )
-                        }
                     }
                 }
             }
@@ -745,6 +638,7 @@ fun StoryViewerScreen(
                                 .clickable {
                                     showReactionBar = false
                                     showFullReactionPicker = true
+                                    // story pauses via isBlocked check above — no isPaused needed
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -778,8 +672,8 @@ fun StoryViewerScreen(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // ── Reply field + forward + like ──────────────────────────────
-            Row(
+            // ── Reply field + forward + like (hidden for own stories) ──────
+            if (!isOwnStory) Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
@@ -983,6 +877,111 @@ fun StoryViewerScreen(
     }
 
     // ── Viewers bottom sheet ───────────────────────────────────────────────
+    // ── Story action bottom sheet (replaces ugly DropdownMenu) ─────────────
+    if (showMenu) {
+        ModalBottomSheet(
+            onDismissRequest = { showMenu = false },
+            containerColor = Color(0xFF1C1C1E),
+            contentColor = Color.White,
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 12.dp, bottom = 8.dp)
+                        .size(36.dp, 4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color.White.copy(alpha = 0.25f))
+                )
+            }
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+                @Composable
+                fun MenuItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, tint: Color = Color.White, onClick: () -> Unit) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showMenu = false; onClick() }
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp))
+                        Text(label, color = tint, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+
+                if (!isOwnStory) {
+                    MenuItem(Icons.Default.NotificationsOff, "Mute story notifications") {
+                        coroutineScope.launch {
+                            runCatching { onToggleStoryNotifications(story.posterChatId, true) }
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "Story notifications muted", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color.White.copy(alpha = 0.08f))
+                }
+
+                MenuItem(Icons.Default.Save, "Save to gallery") {
+                    coroutineScope.launch {
+                        val ok = runCatching { saveStoryToGallery(context, story) }.isSuccess
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, if (ok) "Saved" else "Save failed", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color.White.copy(alpha = 0.08f))
+
+                MenuItem(Icons.Default.ContentCopy, "Copy link") {
+                    coroutineScope.launch {
+                        val link = runCatching { onGetStoryLink(story) }.getOrNull()
+                        withContext(Dispatchers.Main) {
+                            if (!link.isNullOrBlank()) {
+                                clipboardManager.setText(AnnotatedString(link))
+                                Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show()
+                            } else Toast.makeText(context, "Link unavailable", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color.White.copy(alpha = 0.08f))
+
+                MenuItem(Icons.Default.Share, "Share") {
+                    coroutineScope.launch {
+                        val link = runCatching { onGetStoryLink(story) }.getOrNull()
+                        val shareText = link?.takeIf { it.isNotBlank() } ?: getStoryFilePath(story)
+                        withContext(Dispatchers.Main) {
+                            if (!shareText.isNullOrBlank()) {
+                                context.startActivity(Intent.createChooser(
+                                    Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, shareText) },
+                                    "Share Story"
+                                ))
+                            } else Toast.makeText(context, "Nothing to share", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+
+                if (canDeleteStory) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color.White.copy(alpha = 0.08f))
+                    MenuItem(Icons.Default.Delete, "Delete story", tint = Color(0xFFFF453A)) {
+                        onDelete(story.id)
+                    }
+                }
+
+                if (!isOwnStory) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color.White.copy(alpha = 0.08f))
+                    MenuItem(Icons.Default.Flag, "Report", tint = Color(0xFFFF453A)) {
+                        coroutineScope.launch {
+                            runCatching { onReportStory(story) }
+                            withContext(Dispatchers.Main) { Toast.makeText(context, "Reported", Toast.LENGTH_SHORT).show() }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // ── Floating emoji overlay (rises from center bottom) ──────────────────
     floatingEmojis.toList().forEach { fe ->
         key(fe.id) {
