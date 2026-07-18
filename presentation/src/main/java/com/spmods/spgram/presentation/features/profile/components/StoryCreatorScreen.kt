@@ -118,6 +118,7 @@ import kotlin.math.roundToInt
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 private const val MAX_STORY_VIDEO_SECONDS = 60
+private const val MAX_STORY_CAPTION_CHARS = 2048
 
 private enum class StoryType { PHOTO, VIDEO, TEXT }
 
@@ -203,6 +204,7 @@ fun StoryCreatorScreen(
 
     // ── caption (photo/video)
     var caption          by remember { mutableStateOf("") }
+    val captionRemaining = MAX_STORY_CAPTION_CHARS - caption.length
 
     // ── privacy & duration
     var selectedPrivacyType  by remember { mutableStateOf(PrivacyType.EVERYONE) }
@@ -334,13 +336,27 @@ fun StoryCreatorScreen(
                         activePeriodSeconds = selectedDuration.seconds,
                         privacy             = buildPrivacy()
                     )
-                    StoryType.TEXT -> storyRepo.postPhotoStory(
-                        chatId              = chatId,
-                        photoPath           = "",
-                        caption             = textContent.trim(),
-                        activePeriodSeconds = selectedDuration.seconds,
-                        privacy             = buildPrivacy()
-                    )
+                    StoryType.TEXT -> {
+                        // Render the text canvas to a temp JPEG and post as photo
+                        val textBitmap = renderTextStoryBitmap(
+                            context      = context,
+                            text         = textContent,
+                            textColor    = textColors[selectedTextColor],
+                            textBgColor  = textBgColors[selectedTextBg],
+                            gradColors   = gradientBgs[selectedGradient]
+                        )
+                        val tmpFile = File(context.cacheDir, "story_text_${System.currentTimeMillis()}.jpg")
+                        withContext(Dispatchers.IO) {
+                            FileOutputStream(tmpFile).use { textBitmap.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+                        }
+                        storyRepo.postPhotoStory(
+                            chatId              = chatId,
+                            photoPath           = tmpFile.absolutePath,
+                            caption             = "",   // text is baked into the image
+                            activePeriodSeconds = selectedDuration.seconds,
+                            privacy             = buildPrivacy()
+                        )
+                    }
                 }
                 if (result != null) onPosted(result) else errorMsg = "Failed to post. Try again."
             }.onFailure { errorMsg = it.message ?: "Unknown error" }
@@ -1061,4 +1077,60 @@ private fun ColorDot(
             .then(if (selected) Modifier.border(2.dp, Color.White, CircleShape) else Modifier)
             .clickable(onClick = onClick)
     )
+}
+
+/**
+ * Renders a text story canvas to a Bitmap (1080x1920) matching what the user sees on screen.
+ * Used to convert TEXT-type stories to an image before posting via TDLib.
+ */
+private fun renderTextStoryBitmap(
+    context    : android.content.Context,
+    text       : String,
+    textColor  : Color,
+    textBgColor: Color,
+    gradColors : List<Color>
+): android.graphics.Bitmap {
+    val width  = 1080
+    val height = 1920
+    val bmp    = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bmp)
+
+    // Draw gradient background
+    val shader = android.graphics.LinearGradient(
+        0f, 0f, 0f, height.toFloat(),
+        intArrayOf(gradColors.first().toArgb(), gradColors.last().toArgb()),
+        null,
+        android.graphics.Shader.TileMode.CLAMP
+    )
+    val bgPaint = android.graphics.Paint().apply { this.shader = shader }
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+
+    // Draw text
+    val textSizePx = width * 0.07f
+    val textPaint  = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        color    = textColor.toArgb()
+        this.textSize = textSizePx
+        textAlign = android.graphics.Paint.Align.CENTER
+        typeface  = android.graphics.Typeface.DEFAULT_BOLD
+    }
+    val bgPad = textSizePx * 0.3f
+    val lineH = textPaint.fontMetrics.let { it.descent - it.ascent } + bgPad
+    val lines = text.split("\n")
+    val totalH = lines.size * lineH
+    var y = (height - totalH) / 2f - textPaint.fontMetrics.ascent
+
+    val bgPaintText = android.graphics.Paint().apply { color = textBgColor.toArgb() }
+    for (line in lines) {
+        val tw = textPaint.measureText(line)
+        if (textBgColor != Color.Transparent) {
+            canvas.drawRoundRect(
+                width / 2f - tw / 2f - bgPad, y + textPaint.fontMetrics.ascent - bgPad,
+                width / 2f + tw / 2f + bgPad, y + textPaint.fontMetrics.descent + bgPad,
+                bgPad, bgPad, bgPaintText
+            )
+        }
+        canvas.drawText(line, width / 2f, y, textPaint)
+        y += lineH
+    }
+    return bmp
 }
