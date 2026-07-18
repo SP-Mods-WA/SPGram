@@ -107,6 +107,9 @@ fun ProfileContent(component: ProfileComponent) {
 
     val dateFormatManager: DateFormatManager = koinInject()
     val timeFormat = dateFormatManager.getHourMinuteFormat()
+    val storyRepository: com.spmods.spgram.domain.repository.StoryRepository = koinInject()
+    // Flat chat list for story forward sheet (same pattern as ChatListContent)
+    val allChats: List<com.spmods.spgram.domain.models.ChatModel> = emptyList()
 
     val chat = state.chat
     val user = state.user
@@ -463,6 +466,37 @@ fun ProfileContent(component: ProfileComponent) {
                 onOpenViewers = { story ->
                     component.onOpenStoryViewers(story.id)
                 },
+                onGetViewers = { story ->
+                    // delegate to ProfileComponent which already loads viewers
+                    component.onOpenStoryViewers(story.id)
+                    // return current loaded state (non-null viewers means loaded)
+                    val s = component.state.value
+                    if (s.storyViewersForStoryId == story.id && !s.isLoadingStoryViewers)
+                        com.spmods.spgram.domain.models.FoundStoryViewersModel(
+                            totalCount = s.storyViewersTotalCount,
+                            viewers    = s.storyViewers,
+                            nextOffset = ""
+                        )
+                    else null
+                },
+                onReportStory = { story ->
+                    // No report category UI yet — report with empty options
+                    storyActionScope.launch {
+                        storyRepository.reportStory(story.posterChatId, story.id)
+                    }
+                },
+                onToggleStoryNotifications = { chatId, mute ->
+                    storyActionScope.launch {
+                        storyRepository.toggleStoryNotifications(chatId, mute)
+                    }
+                },
+                onForwardStory = { story, targetChatId ->
+                    storyActionScope.launch {
+                        // TODO: storyRepository.forwardStory when added to StoryRepository interface
+                        android.util.Log.d("ProfileContent", "Forward story ${story.id} to chat $targetChatId")
+                    }
+                },
+                forwardChatList = allChats,
                 onStoryViewed = component::onStoryViewed,
                 onStoryClosed = component::onStoryClosed,
                 onDismiss = component::onDismissStory
