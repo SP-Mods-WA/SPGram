@@ -179,6 +179,13 @@ fun ChatListContent(component: ChatListComponent) {
     // Real-time story state from TDLib — chatId -> "UNREAD"/"READ"/"LIVE"
     val activeStoryChatIds by storyRepository.observeAllActiveStoryChats()
         .collectAsState(initial = emptyMap())
+    // Outer-scope allChats for use outside the StoryBar if-block (e.g. StoryViewerScreen forwardChatList)
+    val allChats = remember(foldersState.chatsByFolder, activeStoryChatIds) {
+        foldersState.chatsByFolder.values.flatten().distinctBy { it.id }.map { chat ->
+            val liveStoryState = activeStoryChatIds[chat.id]
+            if (liveStoryState != null) chat.copy(activeStoryStateType = liveStoryState) else chat
+        }
+    }
     var showMyStorySheet by remember { mutableStateOf(false) }
     var showStoryCreator by remember { mutableStateOf(false) }
     var storyViewerChatId by remember { mutableStateOf<Long?>(null) }
