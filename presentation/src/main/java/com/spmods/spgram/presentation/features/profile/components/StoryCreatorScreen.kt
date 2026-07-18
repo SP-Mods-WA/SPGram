@@ -1,5 +1,7 @@
 package com.spmods.spgram.presentation.features.profile.components
 
+import androidx.compose.ui.graphics.toArgb
+
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
