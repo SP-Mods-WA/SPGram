@@ -667,6 +667,7 @@ fun ChatListContent(component: ChatListComponent) {
                         chatListChats = allChats,
                         myStories = myStories,
                         contacts = contacts,
+                        storyViewerOpen = storyViewerChatId != null && storyViewerStories.isNotEmpty(),
                         onAction = { action ->
                             when (action) {
                                 is com.spmods.spgram.presentation.features.chats.list.components.StoryBarAction.MyStoryTap -> {
@@ -689,6 +690,9 @@ fun ChatListContent(component: ChatListComponent) {
                                         runCatching {
                                             storyViewerStories = storyRepository.getActiveStories(action.chatId)
                                             storyViewerChatId = action.chatId
+                                        }.onFailure {
+                                            // Story load failed — StoryBar will show error after timeout
+                                            android.util.Log.e("ChatListContent", "Failed to load stories for chat ${action.chatId}", it)
                                         }
                                     }
                                 }
@@ -1794,7 +1798,20 @@ fun ChatListContent(component: ChatListComponent) {
                 }
             },
             onSetReaction = { story, emoji ->
-                storyScope.launch { runCatching { storyRepository.setStoryReaction(story.posterChatId, story.id, emoji) } }
+                // Optimistic update: reflect reaction in local list immediately
+                storyViewerStories = storyViewerStories.map { s ->
+                    if (s.id == story.id) s.copy(chosenReactionEmoji = emoji) else s
+                }
+                storyScope.launch {
+                    runCatching {
+                        storyRepository.setStoryReaction(story.posterChatId, story.id, emoji)
+                    }.onFailure {
+                        // Rollback on failure
+                        storyViewerStories = storyViewerStories.map { s ->
+                            if (s.id == story.id) s.copy(chosenReactionEmoji = story.chosenReactionEmoji) else s
+                        }
+                    }
+                }
             },
             onOpenViewers = { _ -> },
             onStoryViewed = { story ->
