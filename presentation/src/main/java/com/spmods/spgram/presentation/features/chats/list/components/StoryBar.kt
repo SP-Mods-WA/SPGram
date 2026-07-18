@@ -54,7 +54,9 @@ fun StoryBar(
     myStories: List<StoryModel>,
     contacts: List<com.spmods.spgram.domain.models.UserModel>,
     onAction: (StoryBarAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** True when the story viewer has successfully opened (resets loading spinner immediately). */
+    storyViewerOpen: Boolean = false,
 ) {
     // Exclude self, Telegram service chat (777000), and bots
     val filteredChats = remember(chatListChats, currentUserId) {
@@ -212,11 +214,22 @@ fun StoryBar(
         }
     }
 
-    // When story viewer opens, stop the loading spinner
+    // Reset spinner immediately when viewer opens; fallback after 3s with error indication
+    var loadError by remember { mutableStateOf(false) }
     LaunchedEffect(loadingChatId) {
+        loadError = false
         if (loadingChatId != null) {
-            kotlinx.coroutines.delay(3000) // fallback: stop after 3s if viewer didn't open
+            kotlinx.coroutines.delay(3000)
+            if (loadingChatId != null) {
+                loadError = true  // timed out without opening — likely a load failure
+                loadingChatId = null
+            }
+        }
+    }
+    LaunchedEffect(storyViewerOpen) {
+        if (storyViewerOpen) {
             loadingChatId = null
+            loadError = false
         }
     }
 }
