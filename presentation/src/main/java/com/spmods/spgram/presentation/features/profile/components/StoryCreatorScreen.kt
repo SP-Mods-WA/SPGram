@@ -21,6 +21,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.ui.input.pointer.awaitPointerEventScope
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -371,6 +373,8 @@ fun StoryCreatorScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0A0A0F))
+            // Consume ALL pointer events — prevents clicks passing through to chat list behind
+            .pointerInput(Unit) { awaitPointerEventScope { while (true) { awaitPointerEvent() } } }
     ) {
 
         // ── 1. Preview canvas ─────────────────────────────────────────────
@@ -612,84 +616,130 @@ fun StoryCreatorScreen(
             // Privacy row
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Audience", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall)
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.fillMaxWidth()
+                // ── Privacy — vertical radio-style list ──────────────────────
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White.copy(alpha = 0.06f)),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
-                    privacyOptions.forEach { opt ->
+                    privacyOptions.forEachIndexed { idx, opt ->
                         val selected = opt.type == selectedPrivacyType
-                        Box(
+                        val isLast   = idx == privacyOptions.lastIndex
+
+                        Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (selected) Color(0xFF4C6EF5) else Color.White.copy(alpha = 0.08f))
+                                .fillMaxWidth()
+                                .clip(
+                                    when (idx) {
+                                        0               -> RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                                        privacyOptions.lastIndex -> RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+                                        else            -> RoundedCornerShape(0.dp)
+                                    }
+                                )
                                 .clickable {
                                     selectedPrivacyType = opt.type
-                                    // open user picker if needed
                                     if (opt.type == PrivacyType.SELECTED_USERS) {
                                         userPickerMode = "selected"; showUserPickerPanel = true
                                     } else {
                                         showUserPickerPanel = false
                                     }
                                 }
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(
-                                "${opt.icon} ${opt.label}",
-                                color      = Color.White,
-                                style      = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                            Text(opt.icon, style = MaterialTheme.typography.titleMedium)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    opt.label,
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                                val subtitle = when (opt.type) {
+                                    PrivacyType.EVERYONE       -> if (exceptUserIds.isNotEmpty()) "Except ${exceptUserIds.size} users" else "All Telegram users"
+                                    PrivacyType.CONTACTS       -> if (exceptUserIds.isNotEmpty()) "Except ${exceptUserIds.size} contacts" else "Your contacts only"
+                                    PrivacyType.CLOSE_FRIENDS  -> "Your close friends list"
+                                    PrivacyType.SELECTED_USERS -> if (selectedUserIds.isEmpty()) "Tap to choose users" else "${selectedUserIds.size} users selected"
+                                }
+                                Text(
+                                    subtitle,
+                                    color = Color.White.copy(alpha = 0.45f),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                            // Radio indicator
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(if (selected) Color(0xFF4C6EF5) else Color.Transparent)
+                                    .then(
+                                        if (!selected) Modifier.then(
+                                            Modifier.background(Color.White.copy(alpha = 0.15f))
+                                        ) else Modifier
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (selected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.White)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (!isLast) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 52.dp),
+                                color = Color.White.copy(alpha = 0.06f)
                             )
                         }
                     }
                 }
 
-                // Sub-option: Except users (for Everyone / Contacts)
+                // ── "Except…" / "Choose users…" action row ───────────────────
                 AnimatedVisibility(
                     visible = selectedPrivacyType == PrivacyType.EVERYONE || selectedPrivacyType == PrivacyType.CONTACTS
                 ) {
                     Row(
-                        verticalAlignment      = Alignment.CenterVertically,
-                        horizontalArrangement  = Arrangement.spacedBy(8.dp),
-                        modifier               = Modifier.clickable {
-                            userPickerMode = "except"; showUserPickerPanel = true
-                        }
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF4C6EF5).copy(alpha = 0.12f))
+                            .clickable { userPickerMode = "except"; showUserPickerPanel = true }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            "Except…",
-                            color = Color(0xFF4C6EF5),
-                            style = MaterialTheme.typography.labelSmall
-                        )
+                        Text("Except…", color = Color(0xFF4C6EF5), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                         if (exceptUserIds.isNotEmpty()) {
                             Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF4C6EF5))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    "${exceptUserIds.size}",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF4C6EF5)).padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) { Text("${exceptUserIds.size}", color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) }
                         }
                     }
                 }
 
-                // Badge: selected users count
                 AnimatedVisibility(visible = selectedPrivacyType == PrivacyType.SELECTED_USERS) {
                     Row(
-                        verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier              = Modifier.clickable {
-                            userPickerMode = "selected"; showUserPickerPanel = true
-                        }
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF4C6EF5).copy(alpha = 0.12f))
+                            .clickable { userPickerMode = "selected"; showUserPickerPanel = true }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            if (selectedUserIds.isEmpty()) "Choose users…" else "${selectedUserIds.size} user(s) selected",
-                            color = Color(0xFF4C6EF5),
-                            style = MaterialTheme.typography.labelSmall
+                            if (selectedUserIds.isEmpty()) "Tap to choose users…" else "${selectedUserIds.size} users selected",
+                            color = Color(0xFF4C6EF5), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium
                         )
                     }
                 }
