@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,6 +44,8 @@ fun ProfileStoriesSection(
     stories: List<StoryModel>,
     isOwnProfile: Boolean,
     isLoadingStories: Boolean = false,
+    isLoadingError: Boolean = false,
+    onRetry: (() -> Unit)? = null,
     posterName: String = "Story",
     onStoryClick: (Int) -> Unit,
     onAddStory: () -> Unit,
@@ -75,6 +78,64 @@ fun ProfileStoriesSection(
                         .clickable { onAddStory() }
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
+            }
+        }
+
+        // Error state with retry button
+        if (isLoadingError && stories.isEmpty()) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+                androidx.compose.foundation.layout.Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Couldn't load stories",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (onRetry != null) {
+                        Text(
+                            text = "Retry",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onRetry() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Loading skeletons while fetching
+        if (isLoadingStories && stories.isEmpty() && !isLoadingError) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(4) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(68.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .size(36.dp, 8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        )
+                    }
+                }
             }
         }
 
@@ -170,6 +231,24 @@ private fun StoryThumbnailItem(
                 .fillMaxWidth()
                 .padding(top = 4.dp)
         )
+        // Expiry label (e.g. "6h left") using activePeriodSeconds field
+        val nowSec = (System.currentTimeMillis() / 1000).toInt()
+        val secsLeft = story.expiresAtSeconds - nowSec
+        if (secsLeft > 0) {
+            val label = when {
+                secsLeft < 3600  -> "${secsLeft / 60}m"
+                secsLeft < 86400 -> "${secsLeft / 3600}h"
+                else             -> "${secsLeft / 86400}d"
+            }
+            Text(
+                text = "$label left",
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 9.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 
