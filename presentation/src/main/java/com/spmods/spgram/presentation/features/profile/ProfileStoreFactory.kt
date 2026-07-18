@@ -65,6 +65,18 @@ class ProfileStoreFactory(
                 is Intent.LocationClick -> component.onLocationClick(intent.lat, intent.lon, intent.address)
                 Intent.DismissLocation -> component.onDismissLocation()
                 is Intent.UpdateState -> dispatch(Message.UpdateState(intent.state))
+
+                // ── Story intents ────────────────────────────────────────
+                is Intent.ViewStory           -> component.onViewStory(intent.index)
+                Intent.DismissStory           -> component.onDismissStory()
+                Intent.OpenStoryPoster        -> component.onOpenStoryPoster()
+                Intent.DismissStoryPoster     -> component.onDismissStoryPoster()
+                is Intent.DeleteStory         -> component.onDeleteStory(intent.storyId)
+                is Intent.SetStoryReaction    -> component.onSetStoryReaction(intent.storyId, intent.emoji)
+                is Intent.OpenStoryViewers    -> component.onOpenStoryViewers(intent.storyId)
+                Intent.DismissStoryViewers    -> component.onDismissStoryViewers()
+                is Intent.StoryViewed         -> component.onStoryViewed(intent.story)
+                is Intent.StoryClosed         -> component.onStoryClosed(intent.story)
             }
         }
     }
