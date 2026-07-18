@@ -36,7 +36,9 @@ fun StoryViewersSheet(
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = if (state.storyViewersTotalCount > 0) {
-                    "Viewed by ${state.storyViewersTotalCount}"
+                    val shown = state.storyViewers.size
+                    val total = state.storyViewersTotalCount
+                    if (shown < total) "Viewed by $total (showing $shown)" else "Viewed by $total"
                 } else {
                     "Viewers"
                 },
