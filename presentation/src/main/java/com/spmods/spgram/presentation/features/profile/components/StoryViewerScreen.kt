@@ -115,6 +115,9 @@ import java.io.FileInputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.runtime.key
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.sp
 import android.media.AudioManager
 import android.media.SoundPool
 import android.media.AudioAttributes
@@ -169,30 +172,17 @@ fun StoryViewerScreen(
     var progress by remember { mutableFloatStateOf(0f) }
     var isPaused by remember { mutableStateOf(false) }
     var isMuted by remember { mutableStateOf(false) }
-    val showMuteButton = story.content is StoryContentModel.Video
 
     // ── Reaction system state ──────────────────────────────────────────────
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     var showFullReactionPicker by remember { mutableStateOf(false) }
     var availableReactions by remember { mutableStateOf<List<String>>(emptyList()) }
-    // Burst particles: each entry = (emoji, x, y, triggerKey)
     data class ReactionBurst(val emoji: String, val x: Float, val y: Float, val id: Long)
     val reactionBursts = remember { mutableStateListOf<ReactionBurst>() }
-    // Floating emoji: rises from tap point
     data class FloatingEmoji(val emoji: String, val x: Float, val y: Float, val id: Long)
     val floatingEmojis = remember { mutableStateListOf<FloatingEmoji>() }
-
-    // Load available reactions once per story
     val reactionScope = rememberCoroutineScope()
-    LaunchedEffect(story.posterChatId, story.id) {
-        val reactions = runCatching {
-            emojiRepository.getDefaultEmojis().take(42)
-        }.getOrElse {
-            listOf("❤️","👍","🔥","🥰","👏","😁","🤔","🤯","😱","🤬","😢","🎉","🍓","👎","💩","🙏")
-        }
-        availableReactions = reactions
-    }
 
     // SoundPool for reaction sound (UI_EFFECTS stream)
     val soundPool = remember {
@@ -239,6 +229,15 @@ fun StoryViewerScreen(
     val story = stories.getOrNull(currentIndex) ?: run { onDismiss(); return }
     val isLiked = story.chosenReactionEmoji != null
     val isVideo = story.content is StoryContentModel.Video
+    val showMuteButton = isVideo
+
+    LaunchedEffect(story.posterChatId, story.id) {
+        availableReactions = runCatching {
+            emojiRepository.getDefaultEmojis().take(42)
+        }.getOrElse {
+            listOf("❤️","👍","🔥","🥰","👏","😁","🤔","🤯","😱","🤬","😢","🎉","🍓","👎","💩","🙏")
+        }
+    }
 
     DisposableEffect(story.id) {
         onStoryViewed(story)
@@ -1181,13 +1180,11 @@ private fun FloatingEmojiOverlay(
     Box(modifier = Modifier.fillMaxSize()) {
         Text(
             text = emoji,
-            fontSize = androidx.compose.ui.unit.TextUnit(42f, androidx.compose.ui.unit.TextUnitType.Sp),
+            fontSize = 42.sp,
             modifier = Modifier
-                .offset(
-                    x = with(density) { startX.toDp() - 21.dp },
-                    y = with(density) { (startY + offsetY.value).toDp() - 21.dp }
-                )
                 .graphicsLayer {
+                    translationX = startX - 42.dp.toPx() / 2
+                    translationY = startY + offsetY.value - 42.dp.toPx() / 2
                     this.alpha = alpha.value
                     scaleX = scale.value
                     scaleY = scale.value
