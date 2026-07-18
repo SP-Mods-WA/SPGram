@@ -115,6 +115,29 @@ import java.io.FileInputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.media.AudioManager
+import android.media.SoundPool
+import android.media.AudioAttributes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween as coreTween
+import androidx.compose.foundation.Canvas
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.spmods.spgram.domain.repository.EmojiRepository
+import com.spmods.spgram.presentation.features.stickers.ui.menu.ReactionPickerSheet
+import com.spmods.spgram.presentation.features.stickers.ui.view.StickerImage
+import org.koin.compose.koinInject
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.random.Random
 
 private const val STORY_DURATION_MS = 5_000L
 private const val SWIPE_DOWN_THRESHOLD = 120f
@@ -139,17 +162,71 @@ fun StoryViewerScreen(
     onGetViewers: suspend (StoryModel) -> FoundStoryViewersModel? = { null },
     onForwardStory: suspend (StoryModel, Long) -> Unit = { _, _ -> },
     forwardChatList: List<com.spmods.spgram.domain.models.ChatModel> = emptyList(),
+    emojiRepository: EmojiRepository = koinInject(),
     onDismiss: () -> Unit
 ) {
     var currentIndex by remember { mutableIntStateOf(initialIndex.coerceIn(0, stories.lastIndex)) }
     var progress by remember { mutableFloatStateOf(0f) }
     var isPaused by remember { mutableStateOf(false) }
     var isMuted by remember { mutableStateOf(false) }
+    val showMuteButton = story.content is StoryContentModel.Video
+
+    // ── Reaction system state ──────────────────────────────────────────────
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    var showFullReactionPicker by remember { mutableStateOf(false) }
+    var availableReactions by remember { mutableStateOf<List<String>>(emptyList()) }
+    // Burst particles: each entry = (emoji, x, y, triggerKey)
+    data class ReactionBurst(val emoji: String, val x: Float, val y: Float, val id: Long)
+    val reactionBursts = remember { mutableStateListOf<ReactionBurst>() }
+    // Floating emoji: rises from tap point
+    data class FloatingEmoji(val emoji: String, val x: Float, val y: Float, val id: Long)
+    val floatingEmojis = remember { mutableStateListOf<FloatingEmoji>() }
+
+    // Load available reactions once per story
+    val reactionScope = rememberCoroutineScope()
+    LaunchedEffect(story.posterChatId, story.id) {
+        val reactions = runCatching {
+            emojiRepository.getDefaultEmojis().take(42)
+        }.getOrElse {
+            listOf("❤️","👍","🔥","🥰","👏","😁","🤔","🤯","😱","🤬","😢","🎉","🍓","👎","💩","🙏")
+        }
+        availableReactions = reactions
+    }
+
+    // SoundPool for reaction sound (UI_EFFECTS stream)
+    val soundPool = remember {
+        val attrs = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        SoundPool.Builder().setMaxStreams(3).setAudioAttributes(attrs).build()
+    }
+    val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager }
+    DisposableEffect(Unit) { onDispose { soundPool.release() } }
+
+    fun playReactionSound() {
+        val vol = audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION).toFloat() /
+                  audioManager.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION).toFloat()
+        if (vol > 0f) {
+            // Use system UI click sound — no extra asset needed
+            audioManager.playSoundEffect(AudioManager.FX_KEY_CLICK, vol * 0.7f)
+        }
+    }
+
+    fun triggerReaction(emoji: String, screenX: Float = 0f, screenY: Float = 0f) {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        playReactionSound()
+        // Add floating emoji
+        val id = System.nanoTime()
+        floatingEmojis.add(FloatingEmoji(emoji, screenX, screenY, id))
+        reactionBursts.add(ReactionBurst(emoji, screenX, screenY, id))
+    }
     var showMenu by remember { mutableStateOf(false) }
     var replyText by remember { mutableStateOf("") }
     var isReplyFieldFocused by remember { mutableStateOf(false) }
     var showViewersSheet by remember { mutableStateOf(false) }
-    var viewersData by remember { mutableStateOf<FoundStoryViewersModel?>(null) }
+    var viewersData by remember(currentIndex) { mutableStateOf<FoundStoryViewersModel?>(null) }
     var isLoadingViewers by remember { mutableStateOf(false) }
     var showReactionBar by remember { mutableStateOf(false) }
     var showForwardSheet by remember { mutableStateOf(false) }
@@ -168,8 +245,12 @@ fun StoryViewerScreen(
         onDispose { onStoryClosed(story) }
     }
 
-    // ── Progress timer (photo + video) ────────────────────────────────────
+    // ── Progress timer — photos only; videos drive progress via videoProgressMs ─────────────────
+    var videoProgressMs by remember(currentIndex) { mutableLongStateOf(0L) }
+    var videoDurationMs by remember(currentIndex) { mutableLongStateOf(0L) }
+
     LaunchedEffect(currentIndex, story.content) {
+        if (story.content is StoryContentModel.Video) return@LaunchedEffect  // video drives itself
         progress = 0f
         val totalMs = STORY_DURATION_MS
         var elapsedMs = 0L
@@ -179,11 +260,7 @@ fun StoryViewerScreen(
             val now = System.currentTimeMillis()
             val isBlocked = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar
             if (!isBlocked) {
-                val isLoading = when (val c = story.content) {
-                    is StoryContentModel.Photo -> c.filePath.isBlank()
-                    is StoryContentModel.Video -> c.filePath.isBlank()
-                    else -> false
-                }
+                val isLoading = (story.content as? StoryContentModel.Photo)?.filePath?.isBlank() == true
                 if (!isLoading) {
                     elapsedMs += (now - lastTickAt)
                     progress = (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
@@ -193,6 +270,17 @@ fun StoryViewerScreen(
             lastTickAt = now
         }
         if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
+    }
+
+    // Video: sync progress bar from actual playback position
+    LaunchedEffect(currentIndex, story.content, videoDurationMs) {
+        if (story.content !is StoryContentModel.Video || videoDurationMs <= 0L) return@LaunchedEffect
+        while (true) {
+            delay(50)
+            if (!isPaused && !isReplyFieldFocused && !showMenu && !showViewersSheet && !showReactionBar) {
+                progress = (videoProgressMs.toFloat() / videoDurationMs.toFloat()).coerceIn(0f, 1f)
+            }
+        }
     }
 
     Box(
@@ -238,6 +326,10 @@ fun StoryViewerScreen(
                         thumbnailData = content.thumbnailPath.ifEmpty { null },
                         onPlaybackEnded = {
                             if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
+                        },
+                        onProgressUpdate = { posMs, durMs ->
+                            videoProgressMs = posMs
+                            if (durMs > 0L) videoDurationMs = durMs
                         }
                     )
                 }
@@ -582,8 +674,16 @@ fun StoryViewerScreen(
                 .systemBarsPadding()
                 .padding(bottom = 8.dp)
         ) {
-            // ── Reaction bar (long-press reaction popup) ───────────────────
-            if (showReactionBar) {
+            // ── Reaction bar (long-press popup) — animated bubble row ───────
+            AnimatedVisibility(
+                visible = showReactionBar,
+                enter = scaleIn(
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                    initialScale = 0.5f,
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(1f, 1f)
+                ) + fadeIn(tween(120)),
+                exit = scaleOut(tween(100)) + fadeOut(tween(100))
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -593,37 +693,64 @@ fun StoryViewerScreen(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
                             .clip(RoundedCornerShape(32.dp))
-                            .background(Color(0xFF1C1C1E))
+                            .background(Color(0xDD1C1C1E))
                             .padding(horizontal = 10.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val quickReactions = listOf("👍","❤️","🍓","👏","👎","🔥","🥰")
-                        quickReactions.forEach { emoji ->
+                        val quickReactions = listOf("❤️","👍","🔥","🥰","👏","😁","🎉")
+                        quickReactions.forEachIndexed { idx, emoji ->
                             val isSelected = story.chosenReactionEmoji == emoji
-                            Text(
-                                text = emoji,
-                                style = MaterialTheme.typography.titleLarge,
+                            // Staggered entrance scale
+                            val emojiScale = remember { Animatable(0f) }
+                            LaunchedEffect(showReactionBar) {
+                                if (showReactionBar) {
+                                    kotlinx.coroutines.delay(idx * 25L)
+                                    emojiScale.animateTo(
+                                        1f,
+                                        spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+                                    )
+                                } else {
+                                    emojiScale.snapTo(0f)
+                                }
+                            }
+                            Box(
                                 modifier = Modifier
+                                    .size(44.dp)
+                                    .graphicsLayer { scaleX = emojiScale.value; scaleY = emojiScale.value }
                                     .clip(CircleShape)
-                                    .background(if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent)
-                                    .padding(6.dp)
+                                    .background(if (isSelected) Color.White.copy(alpha = 0.18f) else Color.Transparent)
                                     .clickable {
-                                        onSetReaction(story, if (isSelected) null else emoji)
+                                        val newEmoji = if (isSelected) null else emoji
+                                        triggerReaction(emoji)
+                                        onSetReaction(story, newEmoji)
                                         showReactionBar = false
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = emoji,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.graphicsLayer {
+                                        scaleX = if (isSelected) 1.25f else 1f
+                                        scaleY = if (isSelected) 1.25f else 1f
                                     }
-                            )
+                                )
+                            }
                         }
-                        // Expand button (▼)
+                        // "+" expand button → opens full ReactionPickerSheet
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xFF3A3A3C))
-                                .clickable { showReactionBar = false },
+                                .clickable {
+                                    showReactionBar = false
+                                    showFullReactionPicker = true
+                                },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("▾", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                            Text("+", color = Color.White, style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
@@ -699,7 +826,7 @@ fun StoryViewerScreen(
                     }
                 }
 
-                AnimatedVisibility(visible = !canSend, enter = scaleIn(tween(150)) + fadeIn(), exit = scaleOut(tween(150)) + fadeOut()) {
+                AnimatedVisibility(visible = !canSend && story.canBeForwarded, enter = scaleIn(tween(150)) + fadeIn(), exit = scaleOut(tween(150)) + fadeOut()) {
                     Box(
                         modifier = Modifier
                             .size(48.dp)
@@ -712,13 +839,17 @@ fun StoryViewerScreen(
                 }
 
                 // Heart / like — tap to like, long press → reaction bar
-                val heartScale by androidx.compose.animation.core.animateFloatAsState(
-                    targetValue = if (isLiked) 1.2f else 1f,
-                    animationSpec = androidx.compose.animation.core.spring(
-                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy
-                    ),
-                    label = "heartScale"
-                )
+                val heartAnimatable = remember { Animatable(1f) }
+                LaunchedEffect(story.chosenReactionEmoji) {
+                    if (story.chosenReactionEmoji != null) {
+                        // Official Telegram: quick up then bouncy settle
+                        heartAnimatable.animateTo(1.45f, spring(dampingRatio = 0.3f, stiffness = 600f))
+                        heartAnimatable.animateTo(1.0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 300f))
+                    } else {
+                        heartAnimatable.animateTo(0.85f, coreTween(80))
+                        heartAnimatable.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -726,9 +857,12 @@ fun StoryViewerScreen(
                         .pointerInput(isLiked) {
                             detectTapGestures(
                                 onTap = {
-                                    onSetReaction(story, if (isLiked) null else "\u2764")
+                                    val newEmoji = if (isLiked) null else "❤️"
+                                    if (newEmoji != null) triggerReaction(newEmoji)
+                                    onSetReaction(story, newEmoji)
                                 },
                                 onLongPress = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     showReactionBar = true
                                 }
                             )
@@ -739,7 +873,10 @@ fun StoryViewerScreen(
                         imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = null,
                         tint = if (isLiked) Color(0xFFFF3B5C) else Color.White,
-                        modifier = Modifier.size(26.dp).graphicsLayer { scaleX = heartScale; scaleY = heartScale }
+                        modifier = Modifier.size(26.dp).graphicsLayer {
+                            scaleX = heartAnimatable.value
+                            scaleY = heartAnimatable.value
+                        }
                     )
                 }
             }
@@ -848,6 +985,45 @@ fun StoryViewerScreen(
     }
 
     // ── Viewers bottom sheet ───────────────────────────────────────────────
+    // ── Floating emoji overlay (rises from center bottom) ──────────────────
+    floatingEmojis.toList().forEach { fe ->
+        key(fe.id) {
+            FloatingEmojiOverlay(
+                emoji = fe.emoji,
+                startX = fe.x,
+                startY = fe.y,
+                onFinished = { floatingEmojis.removeAll { it.id == fe.id } }
+            )
+        }
+    }
+
+    // ── Particle burst canvas overlay ────────────────────────────────────────
+    reactionBursts.toList().forEach { burst ->
+        key(burst.id) {
+            ReactionParticleBurst(
+                emoji = burst.emoji,
+                x = burst.x,
+                y = burst.y,
+                onFinished = { reactionBursts.removeAll { it.id == burst.id } }
+            )
+        }
+    }
+
+    // ── Full reaction picker sheet ───────────────────────────────────────────
+    if (showFullReactionPicker && availableReactions.isNotEmpty()) {
+        ReactionPickerSheet(
+            availableReactions = availableReactions,
+            chosenReactions = story.chosenReactionEmoji?.let { setOf(it) } ?: emptySet(),
+            onReaction = { emoji ->
+                val newEmoji = if (story.chosenReactionEmoji == emoji) null else emoji
+                if (newEmoji != null) triggerReaction(newEmoji)
+                onSetReaction(story, newEmoji)
+                showFullReactionPicker = false
+            },
+            onDismiss = { showFullReactionPicker = false }
+        )
+    }
+
     if (showViewersSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
@@ -971,6 +1147,109 @@ private fun getStoryFilePath(story: StoryModel): String? = when (val c = story.c
 private fun StoryLoadingIndicator() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         LoadingIndicator(color = Color.White)
+    }
+}
+
+// ── Floating emoji that rises from tap point ─────────────────────────────────
+@Composable
+private fun FloatingEmojiOverlay(
+    emoji: String,
+    startX: Float,
+    startY: Float,
+    onFinished: () -> Unit
+) {
+    val offsetY = remember { Animatable(0f) }
+    val alpha   = remember { Animatable(1f) }
+    val scale   = remember { Animatable(0.4f) }
+
+    LaunchedEffect(Unit) {
+        launch {
+            scale.animateTo(1.3f, spring(dampingRatio = 0.4f, stiffness = 400f))
+            scale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+        }
+        launch {
+            offsetY.animateTo(-320f, androidx.compose.animation.core.tween(900, easing = FastOutSlowInEasing))
+        }
+        launch {
+            kotlinx.coroutines.delay(500)
+            alpha.animateTo(0f, androidx.compose.animation.core.tween(400))
+            onFinished()
+        }
+    }
+
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    Box(modifier = Modifier.fillMaxSize()) {
+        Text(
+            text = emoji,
+            fontSize = androidx.compose.ui.unit.TextUnit(42f, androidx.compose.ui.unit.TextUnitType.Sp),
+            modifier = Modifier
+                .offset(
+                    x = with(density) { startX.toDp() - 21.dp },
+                    y = with(density) { (startY + offsetY.value).toDp() - 21.dp }
+                )
+                .graphicsLayer {
+                    this.alpha = alpha.value
+                    scaleX = scale.value
+                    scaleY = scale.value
+                }
+        )
+    }
+}
+
+// ── Particle confetti burst at tap point ──────────────────────────────────────
+private data class Particle(
+    val angle: Float,
+    val speed: Float,
+    val color: androidx.compose.ui.graphics.Color,
+    val radius: Float
+)
+
+@Composable
+private fun ReactionParticleBurst(
+    emoji: String,
+    x: Float,
+    y: Float,
+    onFinished: () -> Unit
+) {
+    val progress = remember { Animatable(0f) }
+    val particles = remember {
+        val colors = listOf(
+            androidx.compose.ui.graphics.Color(0xFFFF3B5C),
+            androidx.compose.ui.graphics.Color(0xFFFF9500),
+            androidx.compose.ui.graphics.Color(0xFFFFCC00),
+            androidx.compose.ui.graphics.Color(0xFF34C759),
+            androidx.compose.ui.graphics.Color(0xFF5AC8FA),
+            androidx.compose.ui.graphics.Color(0xFFAF52DE),
+        )
+        (0 until 16).map {
+            Particle(
+                angle  = Random.nextFloat() * 360f,
+                speed  = 120f + Random.nextFloat() * 180f,
+                color  = colors[it % colors.size],
+                radius = 4f + Random.nextFloat() * 5f
+            )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        progress.animateTo(1f, androidx.compose.animation.core.tween(700, easing = FastOutSlowInEasing))
+        onFinished()
+    }
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val t = progress.value
+        particles.forEach { p ->
+            val rad = Math.toRadians(p.angle.toDouble()).toFloat()
+            val dist = p.speed * t
+            val px = x + cos(rad) * dist
+            val py = y + sin(rad) * dist
+            val particleAlpha = (1f - t * t).coerceIn(0f, 1f)
+            drawCircle(
+                color = p.color.copy(alpha = particleAlpha),
+                radius = p.radius * (1f - t * 0.5f),
+                center = Offset(px, py)
+            )
+        }
     }
 }
 
