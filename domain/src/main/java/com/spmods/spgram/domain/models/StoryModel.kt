@@ -11,8 +11,13 @@ data class StoryModel(
     val caption: String = "",
     val isViewed: Boolean = false,
     val chosenReactionEmoji: String? = null,
-    val viewCount: Int = 0
-)
+    val viewCount: Int = 0,
+    /** How long (seconds) this story is active. Default 86400 = 24 hours. */
+    val activePeriodSeconds: Int = 86400,
+) {
+    /** Unix timestamp (seconds) when this story expires. */
+    val expiresAtSeconds: Int get() = date + activePeriodSeconds
+}
 
 /** A single viewer of one of the current user's own stories, for the "viewed by" list. */
 data class StoryViewerModel(
