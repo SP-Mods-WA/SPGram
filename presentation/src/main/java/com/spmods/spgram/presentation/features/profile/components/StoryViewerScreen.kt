@@ -183,7 +183,22 @@ fun StoryViewerScreen(
     val floatingEmojis = remember { mutableStateListOf<FloatingEmoji>() }
     val reactionScope = rememberCoroutineScope()
 
-    // SoundPool for reaction sound (UI_EFFECTS stream)
+    // soundPool/audioManager/triggerReaction defined below after context is available
+    var showMenu by remember { mutableStateOf(false) }
+    var replyText by remember { mutableStateOf("") }
+    var isReplyFieldFocused by remember { mutableStateOf(false) }
+    var showViewersSheet by remember { mutableStateOf(false) }
+    var viewersData by remember(currentIndex) { mutableStateOf<FoundStoryViewersModel?>(null) }
+    var isLoadingViewers by remember { mutableStateOf(false) }
+    var showReactionBar by remember { mutableStateOf(false) }
+    var showForwardSheet by remember { mutableStateOf(false) }
+
+    val coroutineScope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+
+    // ── Sound / haptic helpers (need context) ─────────────────────────────
     val soundPool = remember {
         val attrs = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
@@ -198,7 +213,6 @@ fun StoryViewerScreen(
         val vol = audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION).toFloat() /
                   audioManager.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION).toFloat()
         if (vol > 0f) {
-            // Use system UI click sound — no extra asset needed
             audioManager.playSoundEffect(AudioManager.FX_KEY_CLICK, vol * 0.7f)
         }
     }
@@ -206,24 +220,10 @@ fun StoryViewerScreen(
     fun triggerReaction(emoji: String, screenX: Float = 0f, screenY: Float = 0f) {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         playReactionSound()
-        // Add floating emoji
         val id = System.nanoTime()
         floatingEmojis.add(FloatingEmoji(emoji, screenX, screenY, id))
         reactionBursts.add(ReactionBurst(emoji, screenX, screenY, id))
     }
-    var showMenu by remember { mutableStateOf(false) }
-    var replyText by remember { mutableStateOf("") }
-    var isReplyFieldFocused by remember { mutableStateOf(false) }
-    var showViewersSheet by remember { mutableStateOf(false) }
-    var viewersData by remember(currentIndex) { mutableStateOf<FoundStoryViewersModel?>(null) }
-    var isLoadingViewers by remember { mutableStateOf(false) }
-    var showReactionBar by remember { mutableStateOf(false) }
-    var showForwardSheet by remember { mutableStateOf(false) }
-
-    val coroutineScope = rememberCoroutineScope()
-    val focusManager = LocalFocusManager.current
-    val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
 
     val story = stories.getOrNull(currentIndex) ?: run { onDismiss(); return }
     val isLiked = story.chosenReactionEmoji != null
@@ -244,8 +244,8 @@ fun StoryViewerScreen(
     }
 
     // ── Progress timer — photos only; videos drive progress via videoProgressMs ─────────────────
-    var videoProgressMs by remember(currentIndex) { mutableLongStateOf(0L) }
-    var videoDurationMs by remember(currentIndex) { mutableLongStateOf(0L) }
+    var videoProgressMs by remember(currentIndex) { androidx.compose.runtime.mutableStateOf(0L) }
+    var videoDurationMs by remember(currentIndex) { androidx.compose.runtime.mutableStateOf(0L) }
 
     LaunchedEffect(currentIndex, story.content) {
         if (story.content is StoryContentModel.Video) return@LaunchedEffect  // video drives itself
@@ -276,7 +276,7 @@ fun StoryViewerScreen(
         while (true) {
             delay(50)
             if (!isPaused && !isReplyFieldFocused && !showMenu && !showViewersSheet && !showReactionBar) {
-                progress = (videoProgressMs.longValue.toFloat() / videoDurationMs.longValue.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
+                progress = (videoProgressMs.toFloat() / videoDurationMs.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
             }
         }
     }
@@ -323,10 +323,10 @@ fun StoryViewerScreen(
                         contentScale = ContentScale.Fit,
                         thumbnailData = content.thumbnailPath.ifEmpty { null },
                         onProgressUpdate = { posMs ->
-                            videoProgressMs.longValue = posMs
+                            videoProgressMs = posMs
                         },
                         onPlaybackEnded = {
-                            if (videoProgressMs.longValue > 0L && videoDurationMs.longValue <= 0L) videoDurationMs.longValue = videoProgressMs.longValue
+                            if (videoProgressMs > 0L && videoDurationMs <= 0L) videoDurationMs = videoProgressMs
                             if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
                         }
                     )
