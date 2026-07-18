@@ -175,7 +175,6 @@ fun StoryViewerScreen(
 
     // ── Reaction system state ──────────────────────────────────────────────
     val haptic = LocalHapticFeedback.current
-    val context = LocalContext.current
     var showFullReactionPicker by remember { mutableStateOf(false) }
     var availableReactions by remember { mutableStateOf<List<String>>(emptyList()) }
     data class ReactionBurst(val emoji: String, val x: Float, val y: Float, val id: Long)
@@ -277,7 +276,7 @@ fun StoryViewerScreen(
         while (true) {
             delay(50)
             if (!isPaused && !isReplyFieldFocused && !showMenu && !showViewersSheet && !showReactionBar) {
-                progress = (videoProgressMs.toFloat() / videoDurationMs.toFloat()).coerceIn(0f, 1f)
+                progress = (videoProgressMs.longValue.toFloat() / videoDurationMs.longValue.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
             }
         }
     }
@@ -323,12 +322,12 @@ fun StoryViewerScreen(
                         volume = if (isMuted) 0f else 1f,
                         contentScale = ContentScale.Fit,
                         thumbnailData = content.thumbnailPath.ifEmpty { null },
-                        onPlaybackEnded = {
-                            if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
+                        onProgressUpdate = { posMs ->
+                            videoProgressMs.longValue = posMs
                         },
-                        onProgressUpdate = { posMs, durMs ->
-                            videoProgressMs = posMs
-                            if (durMs > 0L) videoDurationMs = durMs
+                        onPlaybackEnded = {
+                            if (videoProgressMs.longValue > 0L && videoDurationMs.longValue <= 0L) videoDurationMs.longValue = videoProgressMs.longValue
+                            if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
                         }
                     )
                 }
