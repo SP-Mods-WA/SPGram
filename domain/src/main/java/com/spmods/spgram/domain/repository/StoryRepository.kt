@@ -76,9 +76,29 @@ interface StoryRepository {
     /** Returns a t.me link for a story. Returns null on failure. */
     suspend fun getStoryLink(posterChatId: Long, storyId: Int): String?
 
-    /** Reports a story to Telegram moderators. */
-    suspend fun reportStory(posterChatId: Long, storyId: Int)
+    /**
+     * Reports a story to Telegram moderators.
+     * @param optionIds TDLib report option byte arrays (empty = first-level report options).
+     * @param text Optional free-form text (only after TDLib prompts for it).
+     */
+    suspend fun reportStory(
+        posterChatId: Long,
+        storyId: Int,
+        optionIds: List<ByteArray> = emptyList(),
+        text: String = ""
+    )
 
     /** Toggles story notifications for a chat (Do Not Notify About Stories). */
     suspend fun toggleStoryNotifications(chatId: Long, mute: Boolean)
+
+    /**
+     * Edit a story's caption and/or privacy after posting.
+     * Only the current user's own stories can be edited.
+     */
+    suspend fun editStory(
+        chatId: Long,
+        storyId: Int,
+        caption: String,
+        privacy: StoryPrivacy
+    ): StoryModel?
 }
