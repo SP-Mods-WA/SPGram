@@ -80,20 +80,25 @@ class StoryRepositoryImpl(
         awaitClose()
     }
 
-    override fun observeAllActiveStoryChats(): kotlinx.coroutines.flow.Flow<Map<Long, String>> =
+    override fun observeAllActiveStoryChats(): kotlinx.coroutines.flow.Flow<Map<Long, String>> = channelFlow {
+        // Emit initial empty map immediately so StoryBar shows on cold start
+        val state = mutableMapOf<Long, String>()
+        send(state.toMap())
+
+        // Then drive updates from TDLib
         gateway.updates
             .filterIsInstance<TdApi.UpdateChatActiveStories>()
-            .runningFold(mutableMapOf<Long, String>()) { acc, update ->
+            .collect { update ->
                 val chatId = update.activeStories.chatId
-                val newAcc = acc.toMutableMap()
                 when {
-                    update.activeStories.stories.isEmpty() -> newAcc.remove(chatId)
+                    update.activeStories.stories.isEmpty() -> state.remove(chatId)
                     update.activeStories.maxReadStoryId >= (update.activeStories.stories.maxOfOrNull { it.storyId } ?: 0) ->
-                        newAcc[chatId] = "READ"
-                    else -> newAcc[chatId] = "UNREAD"
+                        state[chatId] = "READ"
+                    else -> state[chatId] = "UNREAD"
                 }
-                newAcc
+                send(state.toMap())
             }
+    }
 
     override suspend fun getChatPageStories(
         chatId: Long,
@@ -269,7 +274,8 @@ class StoryRepositoryImpl(
             caption = caption?.text.orEmpty(),
             isViewed = id <= maxReadStoryId,
             chosenReactionEmoji = (chosenReactionType as? TdApi.ReactionTypeEmoji)?.emoji,
-            viewCount = interactionInfo?.viewCount ?: 0
+            viewCount = interactionInfo?.viewCount ?: 0,
+            activePeriodSeconds = activePeriod.takeIf { it > 0 } ?: 86400
         )
     }
 
@@ -351,10 +357,46 @@ class StoryRepositoryImpl(
         return result?.url
     }
 
-    override suspend fun reportStory(posterChatId: Long, storyId: Int) {
+    override suspend fun reportStory(
+        posterChatId: Long,
+        storyId: Int,
+        optionIds: List<ByteArray>,
+        text: String
+    ) {
         coRunCatching {
-            gateway.execute(TdApi.ReportStory(posterChatId, storyId, byteArrayOf(), ""))
+            gateway.execute(
+                TdApi.ReportStory(posterChatId, storyId, optionIds.firstOrNull() ?: byteArrayOf(), text)
+            )
         }
+    }
+
+    override suspend fun editStory(
+        chatId: Long,
+        storyId: Int,
+        caption: String,
+        privacy: StoryPrivacy
+    ): StoryModel? {
+        val privacySettings = when (privacy) {
+            is StoryPrivacy.Everyone      -> TdApi.StoryPrivacySettingsEveryone(privacy.exceptUserIds.toLongArray())
+            is StoryPrivacy.Contacts      -> TdApi.StoryPrivacySettingsContacts(privacy.exceptUserIds.toLongArray())
+            is StoryPrivacy.CloseFriends  -> TdApi.StoryPrivacySettingsCloseFriends()
+            is StoryPrivacy.SelectedUsers -> TdApi.StoryPrivacySettingsSelectedUsers(privacy.userIds.toLongArray())
+        }
+        val req = TdApi.EditStory().apply {
+            this.storyPosterChatId = chatId
+            this.storyId = storyId
+            this.content = null  // null = keep existing content
+            this.areas = null
+            this.caption = TdApi.FormattedText(caption, emptyArray())
+        }
+        val result = coRunCatching {
+            gateway.execute(req) as? TdApi.Story
+        }.getOrNull() ?: return null
+
+        coRunCatching {
+            gateway.execute(TdApi.SetStoryPrivacySettings(chatId, storyId, privacySettings))
+        }
+        return result.toModel()
     }
 
     override suspend fun toggleStoryNotifications(chatId: Long, mute: Boolean) {
