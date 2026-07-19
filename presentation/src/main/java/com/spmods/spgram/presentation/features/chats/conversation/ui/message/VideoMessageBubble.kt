@@ -720,7 +720,8 @@ private fun VideoInteractionOverlay(
     onRevealSpoiler: () -> Unit,
     onCancelDownload: () -> Unit,
     onOpenVideo: () -> Unit,
-    onLongClick: (Offset) -> Unit
+    onLongClick: (Offset) -> Unit,
+    onSelectMessage: () -> Unit = {}
 ) {
     Box(
         modifier = modifier.pointerInput(
