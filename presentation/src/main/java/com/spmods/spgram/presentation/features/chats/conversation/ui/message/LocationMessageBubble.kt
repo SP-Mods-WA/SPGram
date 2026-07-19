@@ -66,6 +66,7 @@ fun LocationMessageBubble(
     isGroup: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit,
     onReactionClick: (String) -> Unit,
     toProfile: (Long) -> Unit = {},
@@ -130,7 +131,7 @@ fun LocationMessageBubble(
             tonalElevation = 0.dp,
             modifier = Modifier.combinedClickable(
                 onClick = onClick,
-                onLongClick = onLongClick
+                onLongClick = { onSelectMessage() }
             )
         ) {
             Column(modifier = Modifier.padding(8.dp)) {
@@ -323,7 +324,7 @@ fun VenueMessageBubble(
             tonalElevation = 0.dp,
             modifier = Modifier.combinedClickable(
                 onClick = onClick,
-                onLongClick = onLongClick
+                onLongClick = { onSelectMessage() }
             )
         ) {
             Column(modifier = Modifier.padding(8.dp)) {
