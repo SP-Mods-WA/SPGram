@@ -72,6 +72,7 @@ internal fun MessageBubbleContainer(
     onAudioClick: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onReplyClick: (Offset, IntSize, Offset) -> Unit,
+    onSelectMessage: (Long) -> Unit = {},
     onGoToReply: (MessageModel) -> Unit = {},
     onReactionClick: (Long, String) -> Unit = { _, _ -> },
     onStickerClick: (Long) -> Unit = {},
@@ -110,6 +111,9 @@ internal fun MessageBubbleContainer(
     val onPositionChangeState by rememberUpdatedState(onPositionChange)
     val onReplySwipeState by rememberUpdatedState(onReplySwipe)
 
+    val onSelectMessageState by rememberUpdatedState(onSelectMessage)
+
+    // Normal click → menu open
     val onBubbleClick: (Offset) -> Unit = remember(msg.id) {
         { offset ->
             onReplyClickState(
@@ -119,6 +123,10 @@ internal fun MessageBubbleContainer(
             )
         }
     }
+    // Long press → select message
+    val onBubbleLongClick: (Offset) -> Unit = remember(msg.id) {
+        { _ -> onSelectMessageState(msg.id) }
+    }
     val onBubbleCenterClick: () -> Unit = remember(msg.id) {
         {
             onReplyClickState(
@@ -127,6 +135,10 @@ internal fun MessageBubbleContainer(
                 layoutTracker.bubblePosition + (layoutTracker.bubbleSize.toSize() / 2f).toOffset()
             )
         }
+    }
+    // Long press center (sticker etc.) → select message
+    val onBubbleCenterLongClick: () -> Unit = remember(msg.id) {
+        { onSelectMessageState(msg.id) }
     }
 
     MessageBubbleGestureLayer(
@@ -192,8 +204,8 @@ internal fun MessageBubbleContainer(
                         onAudioClick = onAudioClick,
                         onCancelDownload = onCancelDownload,
                         onBubbleClick = onBubbleClick,
-                        onBubbleLongClick = onBubbleClick,
-                        onBubbleCenterLongClick = onBubbleCenterClick,
+                        onBubbleLongClick = onBubbleLongClick,
+                        onBubbleCenterLongClick = onBubbleCenterLongClick,
                         onGoToReply = onGoToReply,
                         onReactionClick = onReactionClick,
                         onStickerClick = onStickerClick,
@@ -490,6 +502,7 @@ private fun MessageContentSelector(
                     onDownloadPhoto = onDownloadPhoto,
                     onCancelDownload = onCancelDownload,
                     onLongClick = onBubbleLongClick,
+                    onSelectMessage = { onSelectMessageState(msg.id) },
                     onReplyClick = onGoToReply,
                     onReactionClick = { onReactionClick(msg.id, it) },
                     toProfile = toProfile,
@@ -516,6 +529,7 @@ private fun MessageContentSelector(
                     onOpenViewOnce = onOpenViewOnce,
                     onCancelDownload = onCancelDownload,
                     onLongClick = onBubbleLongClick,
+                    onSelectMessage = { onSelectMessageState(msg.id) },
                     onReplyClick = onGoToReply,
                     onReactionClick = { onReactionClick(msg.id, it) },
                     toProfile = toProfile,
@@ -535,6 +549,7 @@ private fun MessageContentSelector(
                     onOpenViewOnce = onOpenViewOnce,
                     onCancelDownload = onCancelDownload,
                     onLongClick = onBubbleLongClick,
+                    onSelectMessage = { onSelectMessageState(msg.id) },
                     onReplyClick = onGoToReply,
                     onReactionClick = { onReactionClick(msg.id, it) }
                 )
@@ -558,6 +573,7 @@ private fun MessageContentSelector(
                     onOpenViewOnce = onOpenViewOnce,
                     onCancelDownload = onCancelDownload,
                     onLongClick = onBubbleLongClick,
+                    onSelectMessage = { onSelectMessageState(msg.id) },
                     onReplyClick = onGoToReply,
                     onReactionClick = { onReactionClick(msg.id, it) },
                     toProfile = toProfile,
@@ -582,6 +598,7 @@ private fun MessageContentSelector(
                     onGifClick = onVideoClick,
                     onCancelDownload = onCancelDownload,
                     onLongClick = onBubbleLongClick,
+                    onSelectMessage = { onSelectMessageState(msg.id) },
                     onReplyClick = onGoToReply,
                     onReactionClick = { onReactionClick(msg.id, it) },
                     toProfile = toProfile,
@@ -608,6 +625,7 @@ private fun MessageContentSelector(
                     onDocumentClick = onDocumentClick,
                     onCancelDownload = onCancelDownload,
                     onLongClick = onBubbleLongClick,
+                    onSelectMessage = { onSelectMessageState(msg.id) },
                     onReplyClick = onGoToReply,
                     onReactionClick = { onReactionClick(msg.id, it) },
                     onForwardOriginClick = onForwardOriginClick,
@@ -632,6 +650,7 @@ private fun MessageContentSelector(
                     onAudioClick = onAudioClick,
                     onCancelDownload = onCancelDownload,
                     onLongClick = onBubbleLongClick,
+                    onSelectMessage = { onSelectMessageState(msg.id) },
                     onReplyClick = onGoToReply,
                     onReactionClick = { onReactionClick(msg.id, it) },
                     downloadUtils = downloadUtils
@@ -651,6 +670,7 @@ private fun MessageContentSelector(
                     isGroup = isGroup,
                     onClick = { onGoToReply(msg) },
                     onLongClick = onBubbleCenterLongClick,
+                    onSelectMessage = { onSelectMessageState(msg.id) },
                     onReplyClick = onGoToReply,
                     onReactionClick = { onReactionClick(msg.id, it) },
                     toProfile = toProfile,
@@ -672,6 +692,7 @@ private fun MessageContentSelector(
                     onOptionClick = { onPollOptionClick(msg.id, it) },
                     onRetractVote = { onRetractVote(msg.id) },
                     onLongClick = onBubbleLongClick,
+                    onSelectMessage = { onSelectMessageState(msg.id) },
                     onReplyClick = onGoToReply,
                     onReactionClick = { onReactionClick(msg.id, it) },
                     onShowVoters = { onShowVoters(msg.id, it) },
@@ -694,6 +715,7 @@ private fun MessageContentSelector(
                     bubbleRadius = appearance.bubbleRadius,
                     onClick = { onGoToReply(msg) },
                     onLongClick = onBubbleCenterLongClick,
+                    onSelectMessage = { onSelectMessageState(msg.id) },
                     onReplyClick = onGoToReply,
                     onReactionClick = { onReactionClick(msg.id, it) },
                     toProfile = toProfile,
@@ -732,6 +754,7 @@ private fun MessageContentSelector(
                     isGroup          = isGroup,
                     onClick          = { /* Call bubbles: tap does nothing */ },
                     onLongClick      = onBubbleCenterLongClick,
+                    onSelectMessage = { onSelectMessageState(msg.id) },
                     onReplyClick     = onGoToReply,
                     onReactionClick  = { onReactionClick(msg.id, it) },
                     toProfile        = toProfile,
