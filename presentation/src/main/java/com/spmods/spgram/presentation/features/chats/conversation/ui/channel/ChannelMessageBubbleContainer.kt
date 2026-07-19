@@ -70,6 +70,7 @@ internal fun ChannelMessageBubbleContainer(
     onAudioClick: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onReplyClick: (Offset, IntSize, Offset) -> Unit,
+    onSelectMessage: (Long) -> Unit = {},
     onGoToReply: (MessageModel) -> Unit = {},
     onReactionClick: (Long, String) -> Unit = { _, _ -> },
     onReplyMarkupButtonClick: (Long, InlineKeyboardButtonModel) -> Unit = { _, _ -> },
@@ -105,6 +106,7 @@ internal fun ChannelMessageBubbleContainer(
     val coroutineScope = rememberCoroutineScope()
     val layoutTracker = remember { MessageBubbleLayoutTracker() }
     val onReplyClickState by rememberUpdatedState(onReplyClick)
+    val onSelectMessageState by rememberUpdatedState(onSelectMessage)
     val onPositionChangeState by rememberUpdatedState(onPositionChange)
 
     Column(
@@ -134,17 +136,8 @@ internal fun ChannelMessageBubbleContainer(
                             )
                         }
                     },
-                    onLongPress = { offset ->
-                        val clickPos = layoutTracker.outerColumnPosition + offset
-                        val bubbleRect =
-                            Rect(layoutTracker.bubblePosition, layoutTracker.bubbleSize.toSize())
-                        if (!bubbleRect.contains(clickPos)) {
-                            onReplyClickState(
-                                layoutTracker.bubblePosition,
-                                layoutTracker.bubbleSize,
-                                clickPos
-                            )
-                        }
+                    onLongPress = { _ ->
+                        onSelectMessageState(msg.id)
                     }
                 )
             }
@@ -196,13 +189,7 @@ internal fun ChannelMessageBubbleContainer(
                                         layoutTracker.bubblePosition + offset
                                     )
                                 },
-                                onLongClick = { offset ->
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + offset
-                                    )
-                                },
+                                onLongClick = { _ -> onSelectMessageState(msg.id) },
                                 onCommentsClick = onCommentsClick,
                                 showComments = showComments,
                                 toProfile = toProfile,
@@ -226,13 +213,7 @@ internal fun ChannelMessageBubbleContainer(
                                 onPhotoClick = onPhotoClick,
                                 onDownloadPhoto = onDownloadPhoto,
                                 onCancelDownload = onCancelDownload,
-                                onLongClick = { offset ->
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + offset
-                                    )
-                                },
+                                onLongClick = { _ -> onSelectMessageState(msg.id) },
                                 onReplyClick = onGoToReply,
                                 onReactionClick = { onReactionClick(msg.id, it) },
                                 onCommentsClick = onCommentsClick,
@@ -259,13 +240,7 @@ internal fun ChannelMessageBubbleContainer(
                                 autoplayVideos = appearance.autoplayVideos,
                                 onVideoClick = onVideoClick,
                                 onCancelDownload = onCancelDownload,
-                                onLongClick = { offset ->
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + offset
-                                    )
-                                },
+                                onLongClick = { _ -> onSelectMessageState(msg.id) },
                                 onReplyClick = onGoToReply,
                                 onReactionClick = { onReactionClick(msg.id, it) },
                                 onCommentsClick = onCommentsClick,
@@ -293,13 +268,7 @@ internal fun ChannelMessageBubbleContainer(
                                 autoDownloadRoaming = appearance.autoDownloadRoaming,
                                 onDocumentClick = onDocumentClick,
                                 onCancelDownload = onCancelDownload,
-                                onLongClick = { offset ->
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + offset
-                                    )
-                                },
+                                onLongClick = { _ -> onSelectMessageState(msg.id) },
                                 toProfile = toProfile,
                                 onForwardOriginClick = onForwardOriginClick,
                                 modifier = Modifier.fillMaxWidth(),
@@ -324,13 +293,7 @@ internal fun ChannelMessageBubbleContainer(
                                 autoDownloadRoaming = appearance.autoDownloadRoaming,
                                 onAudioClick = onAudioClick,
                                 onCancelDownload = onCancelDownload,
-                                onLongClick = { offset ->
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + offset
-                                    )
-                                },
+                                onLongClick = { _ -> onSelectMessageState(msg.id) },
                                 toProfile = toProfile,
                                 onForwardOriginClick = onForwardOriginClick,
                                 modifier = Modifier.fillMaxWidth(),
@@ -355,13 +318,7 @@ internal fun ChannelMessageBubbleContainer(
                                 autoDownloadFiles = appearance.autoDownloadFiles,
                                 onVoiceClick = onAudioClick,
                                 onCancelDownload = onCancelDownload,
-                                onLongClick = { offset ->
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + offset
-                                    )
-                                },
+                                onLongClick = { _ -> onSelectMessageState(msg.id) },
                                 onReplyClick = onGoToReply,
                                 onReactionClick = { onReactionClick(msg.id, it) },
                                 onCommentsClick = onCommentsClick,
@@ -388,13 +345,7 @@ internal fun ChannelMessageBubbleContainer(
                                 autoplayGifs = appearance.autoplayGifs,
                                 onGifClick = onVideoClick,
                                 onCancelDownload = onCancelDownload,
-                                onLongClick = { offset ->
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + offset
-                                    )
-                                },
+                                onLongClick = { _ -> onSelectMessageState(msg.id) },
                                 onReplyClick = onGoToReply,
                                 onReactionClick = { onReactionClick(msg.id, it) },
                                 onCommentsClick = onCommentsClick,
@@ -414,13 +365,7 @@ internal fun ChannelMessageBubbleContainer(
                                 isOutgoing = false,
                                 onVideoClick = onVideoClick,
                                 onCancelDownload = onCancelDownload,
-                                onLongClick = { offset ->
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + offset
-                                    )
-                                },
+                                onLongClick = { _ -> onSelectMessageState(msg.id) },
                                 onReplyClick = onGoToReply,
                                 onReactionClick = { onReactionClick(msg.id, it) },
                                 toProfile = toProfile,
@@ -491,13 +436,7 @@ internal fun ChannelMessageBubbleContainer(
                                 onClosePoll = { onClosePoll(msg.id) },
                                 onReplyClick = onGoToReply,
                                 onReactionClick = { onReactionClick(msg.id, it) },
-                                onLongClick = { offset ->
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + offset
-                                    )
-                                },
+                                onLongClick = { _ -> onSelectMessageState(msg.id) },
                                 onCommentsClick = onCommentsClick,
                                 showComments = showComments,
                                 toProfile = toProfile,
