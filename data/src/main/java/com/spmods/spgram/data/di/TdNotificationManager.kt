@@ -508,7 +508,7 @@ class TdNotificationManager(
             val shouldPreloadAvatar =
                 !appPreferences.isPowerSavingMode.value && !appPreferences.batteryOptimizationEnabled.value
 
-            resolveSender(senderId, chat, true) { senderName, senderBitmap ->
+            resolveSender(senderId, chat, false) { senderName, senderBitmap ->
                 Log.d(
                     TAG,
                     "Resolved sender for notification chatId=${chat.id} messageId=${message.id} " +
@@ -633,10 +633,19 @@ class TdNotificationManager(
         val messagingStyle = NotificationCompat.MessagingStyle(myself)
         val historySnapshot = history.toList()
         historySnapshot.forEach { entry ->
-            val person = Person.Builder()
+            val personBuilder = Person.Builder()
                 .setName(entry.senderName)
                 .setKey(entry.senderName)
-                .build()
+            if (senderBitmap != null) {
+                runCatching {
+                    personBuilder.setIcon(
+                        androidx.core.graphics.drawable.IconCompat.createWithBitmap(
+                            getCircularBitmap(senderBitmap)
+                        )
+                    )
+                }
+            }
+            val person = personBuilder.build()
             messagingStyle.addMessage(
                 NotificationCompat.MessagingStyle.Message(
                     entry.text,
@@ -646,10 +655,12 @@ class TdNotificationManager(
             )
         }
 
-        val isGroup = chatType !is TdApi.ChatTypePrivate
+        val isChannel = chatType is TdApi.ChatTypeSupergroup && chatType.isChannel
+        val isGroup = chatType !is TdApi.ChatTypePrivate && !isChannel
         messagingStyle.isGroupConversation = isGroup
 
         val chatTitle = chatCache[chatId]?.title ?: senderName
+        // conversationTitle set කරන්නේ group chats විතරයි — channels header එකේ channel name show වෙන්නේ නැහැ
         if (isGroup) {
             messagingStyle.conversationTitle = chatTitle
         }
