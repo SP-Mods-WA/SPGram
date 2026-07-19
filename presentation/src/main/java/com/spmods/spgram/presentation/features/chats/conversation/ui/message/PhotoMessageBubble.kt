@@ -79,6 +79,7 @@ fun PhotoMessageBubble(
     onDownloadPhoto: (Int) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
+    onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit = {},
     onReactionClick: (String) -> Unit = {},
     showMetadata: Boolean = true,
@@ -293,7 +294,7 @@ fun PhotoMessageBubble(
                                         }
                                     }
                                 },
-                                onLongPress = { offset -> onLongClick(imagePosition + offset) }
+                                onLongPress = { _ -> onSelectMessage() }
                             )
                         }
                 ) {
@@ -576,7 +577,7 @@ fun PhotoMessageBubble(
                                     }
                                 },
                                 onClick = { offset -> onLongClick(imagePosition + offset) },
-                                onLongClick = { offset -> onLongClick(imagePosition + offset) }
+                                onLongClick = { _ -> onSelectMessage() }
                             )
                         }
                         if (showMetadata) {
