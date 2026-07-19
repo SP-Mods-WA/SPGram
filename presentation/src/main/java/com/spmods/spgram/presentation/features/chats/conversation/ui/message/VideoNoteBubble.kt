@@ -76,6 +76,7 @@ fun VideoNoteBubble(
     onOpenViewOnce: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
+    onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit = {},
     onReactionClick: (String) -> Unit = {},
     toProfile: (Long) -> Unit = {},
@@ -165,7 +166,7 @@ fun VideoNoteBubble(
                                     onVideoClick(msg)
                                 }
                             },
-                            onLongPress = { offset -> onLongClick(notePosition + offset) }
+                            onLongPress = { _ -> onSelectMessage() }
                         )
                     }
             ) {
