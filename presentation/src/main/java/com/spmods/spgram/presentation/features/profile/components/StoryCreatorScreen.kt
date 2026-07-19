@@ -11,9 +11,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.ui.input.pointer.awaitPointerEvent
-import androidx.compose.ui.input.pointer.awaitPointerEventScope
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -24,8 +21,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.input.pointer.awaitPointerEvent
-import androidx.compose.ui.input.pointer.awaitPointerEventScope
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -377,7 +372,7 @@ fun StoryCreatorScreen(
             .fillMaxSize()
             .background(Color(0xFF0A0A0F))
             // Consume ALL pointer events — prevents clicks passing through to chat list behind
-            .pointerInput(Unit) { awaitPointerEventScope { while (true) { awaitPointerEvent() } } }
+            .pointerInput(Unit) { detectTapGestures { /* consume */ } }
     ) {
 
         // ── 1. Preview canvas ─────────────────────────────────────────────
