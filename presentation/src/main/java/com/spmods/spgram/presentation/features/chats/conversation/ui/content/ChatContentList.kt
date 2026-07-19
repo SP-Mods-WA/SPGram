@@ -1311,7 +1311,6 @@ private fun RootMessageSection(
                 onReplyClick = { pos, size, click -> onMessageOptionsClick(root, pos, size, click) },
                 onGoToReply = onGoToReply,
                 onSelectMessage = { component.onToggleMessageSelection(it) },
-                onSelectMessage = { component.onToggleMessageSelection(it) },
                 onReactionClick = { id, r -> component.onSendReaction(id, r) },
                 onReplyMarkupButtonClick = { id, btn -> component.onReplyMarkupButtonClick(id, btn, root.senderId) },
                 onStickerClick = { component.onStickerClick(it) },
