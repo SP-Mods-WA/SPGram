@@ -264,7 +264,7 @@ fun StoryViewerScreen(
         while (elapsedMs < totalMs) {
             delay(50)
             val now = System.currentTimeMillis()
-            val isBlocked = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar || showFullReactionPicker
+            val isBlocked = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar || showFullReactionPicker || showPrivacySheet
             if (!isBlocked) {
                 val isLoading = (story.content as? StoryContentModel.Photo)?.filePath?.isBlank() == true
                 if (!isLoading) {
@@ -297,7 +297,7 @@ fun StoryViewerScreen(
         while (true) {
             delay(50)
             val now = System.currentTimeMillis()
-            val isBlocked2 = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar || showFullReactionPicker
+            val isBlocked2 = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar || showFullReactionPicker || showPrivacySheet
             if (!isBlocked2) {
                 // If ExoPlayer reported a new position, re-sync elapsed to it (smooth, not jump)
                 if (videoProgressMs != lastSync) {
@@ -347,7 +347,7 @@ fun StoryViewerScreen(
                 } else {
                     // key() forces full recompose on path change — prevents stale ExoPlayer
                     key(content.filePath) {
-                        val isVideoBlocked = isPaused || isReplyFieldFocused || showMenu || showReactionBar || showFullReactionPicker
+                        val isVideoBlocked = isPaused || isReplyFieldFocused || showMenu || showReactionBar || showFullReactionPicker || showPrivacySheet
                         com.spmods.spgram.presentation.core.media.VideoStickerPlayer(
                             path             = content.filePath,
                             type             = com.spmods.spgram.presentation.core.media.VideoType.Gif,
@@ -544,33 +544,25 @@ fun StoryViewerScreen(
 
         // viewer count now shown in own-story bottom bar below
 
-        // ── Bottom overlay — caption + emoji row + reply bar ───────────────
-        Column(
+        // ── Bottom overlay — reaction bar floats above, caption + reply bar below ──
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .background(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))
-                    )
-                )
-                .imePadding()
-                .systemBarsPadding()
-                .padding(bottom = 8.dp)
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))
+                        )
+                    )
+                    .imePadding()
+                    .systemBarsPadding()
+                    .padding(bottom = 8.dp)
+            ) {
             // ── Reaction bar (long-press popup) — animated bubble row ───────
-            // Invisible scrim — tap anywhere outside reaction bar to close it
-            if (showReactionBar) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                            indication = null
-                        ) { showReactionBar = false }
-                )
-            }
-
             AnimatedVisibility(
                 visible = showReactionBar,
                 enter = scaleIn(
@@ -584,6 +576,8 @@ fun StoryViewerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
+                        // Dismiss reaction bar on tap outside the bubble row
+                        .pointerInput(Unit) { detectTapGestures { showReactionBar = false } }
                 ) {
                     Row(
                         modifier = Modifier
@@ -653,7 +647,7 @@ fun StoryViewerScreen(
                 }
             }
 
-            // ── Caption + emoji pill row ───────────────────────────────────
+            // ── Caption + chosen reaction pill row ────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -672,6 +666,46 @@ fun StoryViewerScreen(
                     )
                 } else {
                     Spacer(modifier = Modifier.weight(1f))
+                }
+
+                // Chosen reaction pill — shows current reaction, tap to open bar, long-press to clear
+                if (!isOwnStory) {
+                    val chosenEmoji = story.chosenReactionEmoji
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                if (chosenEmoji != null) Color(0xFF4C6EF5).copy(alpha = 0.25f)
+                                else Color.White.copy(alpha = 0.12f)
+                            )
+                            .border(
+                                1.dp,
+                                if (chosenEmoji != null) Color(0xFF4C6EF5).copy(alpha = 0.6f)
+                                else Color.White.copy(alpha = 0.2f),
+                                RoundedCornerShape(20.dp)
+                            )
+                            .pointerInput(chosenEmoji) {
+                                detectTapGestures(
+                                    onTap = {
+                                        // tap → open reaction bar
+                                        showReactionBar = true
+                                    },
+                                    onLongPress = {
+                                        // long-press → clear current reaction
+                                        if (chosenEmoji != null) {
+                                            onSetReaction(story, null)
+                                        }
+                                    }
+                                )
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = chosenEmoji ?: "☺",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
                 }
             }
 
@@ -846,7 +880,83 @@ fun StoryViewerScreen(
                     }
                 }
             }
-        }
+            } // end bottom Column
+
+            // ── Floating reaction bar — above bottom bar, doesn't push it ──
+            AnimatedVisibility(
+                visible = showReactionBar,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 76.dp),
+                enter = scaleIn(
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                    initialScale = 0.5f,
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(1f, 1f)
+                ) + fadeIn(tween(120)),
+                exit = scaleOut(tween(100)) + fadeOut(tween(100))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(Color(0xF01C1C1E))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val quickReactions = listOf("❤️","👍","🔥","🥰","👏","😁","🎉")
+                    quickReactions.forEachIndexed { idx, emoji ->
+                        val isSelected = story.chosenReactionEmoji == emoji
+                        val emojiScale = remember { Animatable(0f) }
+                        LaunchedEffect(showReactionBar) {
+                            if (showReactionBar) {
+                                kotlinx.coroutines.delay(idx * 25L)
+                                emojiScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+                            } else { emojiScale.snapTo(0f) }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .graphicsLayer { scaleX = emojiScale.value; scaleY = emojiScale.value }
+                                .clip(CircleShape)
+                                .background(if (isSelected) Color.White.copy(alpha = 0.18f) else Color.Transparent)
+                                .clickable {
+                                    val newEmoji = if (isSelected) null else emoji
+                                    if (newEmoji != null) triggerReaction(newEmoji)
+                                    onSetReaction(story, newEmoji)
+                                    showReactionBar = false
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = emoji,
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.graphicsLayer {
+                                    scaleX = if (isSelected) 1.25f else 1f
+                                    scaleY = if (isSelected) 1.25f else 1f
+                                }
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF3A3A3C))
+                            .clickable { showReactionBar = false; showFullReactionPicker = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("+", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+            }
+
+            // Transparent scrim — tap outside reaction bar to close it
+            if (showReactionBar) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) { detectTapGestures { showReactionBar = false } }
+                )
+            }
+        } // end bottom Box
     }
 
     // ── Forward sheet ──────────────────────────────────────────────────────
