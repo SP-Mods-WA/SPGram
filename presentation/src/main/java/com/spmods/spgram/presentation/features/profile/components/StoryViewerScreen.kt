@@ -247,10 +247,10 @@ fun StoryViewerScreen(
     }
 
     // ── Progress timer — photos only; videos drive progress via videoProgressMs ─────────────────
-    var videoProgressMs by remember(currentIndex) { androidx.compose.runtime.mutableStateOf(0L) }
-    var videoDurationMs by remember(currentIndex) { androidx.compose.runtime.mutableStateOf(0L) }
-    // Track when video was paused so VideoStickerPlayer can seek back on resume
-    // (VideoStickerPlayer handles seek internally via animate flag — no extra seek needed)
+    var videoProgressMs  by remember(currentIndex) { androidx.compose.runtime.mutableStateOf(0L) }
+    var videoDurationMs  by remember(currentIndex) { androidx.compose.runtime.mutableStateOf(0L) }
+    // Last known position — passed as startPositionMs on resume so ExoPlayer seeks back
+    var pausedPositionMs by remember(currentIndex) { androidx.compose.runtime.mutableStateOf(0L) }
 
     LaunchedEffect(currentIndex, story.content) {
         if (story.content is StoryContentModel.Video) return@LaunchedEffect  // video drives itself
@@ -276,12 +276,12 @@ fun StoryViewerScreen(
     }
 
     // Video: sync progress bar from actual playback position
-    // For video: use activePeriodSeconds as duration seed until we get real posMs
+    // Seed video duration from activePeriodSeconds until onDurationKnown fires
     LaunchedEffect(currentIndex, story.content) {
         if (story.content !is StoryContentModel.Video) return@LaunchedEffect
-        // Seed with activePeriodSeconds (capped at 60s for story videos) so bar starts moving
-        if (videoDurationMs <= 0L && story.activePeriodSeconds > 0) {
-            videoDurationMs = (story.activePeriodSeconds.toLong() * 1000L).coerceAtMost(60_000L)
+        if (videoDurationMs <= 0L) {
+            // Use 30s default (most story videos) — onDurationKnown will override with real value
+            videoDurationMs = 30_000L
         }
     }
     // Video progress: use real ExoPlayer posMs when available; fallback to elapsed time
@@ -294,13 +294,13 @@ fun StoryViewerScreen(
             val now = System.currentTimeMillis()
             val isBlocked2 = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar || showFullReactionPicker
             if (!isBlocked2) {
-                if (videoProgressMs > 0L) {
-                    // Real position available — use it
-                    progress = (videoProgressMs.toFloat() / videoDurationMs.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
-                } else {
-                    // Fallback: time-based estimate until ExoPlayer reports
+                if (videoProgressMs > 0L && videoDurationMs > 0L) {
+                    // Real position from ExoPlayer
+                    progress = (videoProgressMs.toFloat() / videoDurationMs.toFloat()).coerceIn(0f, 1f)
+                } else if (videoDurationMs > 0L) {
+                    // Fallback time-based until first ExoPlayer tick
                     elapsedMs += (now - lastTick)
-                    progress = (elapsedMs.toFloat() / videoDurationMs.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
+                    progress = (elapsedMs.toFloat() / videoDurationMs.toFloat()).coerceIn(0f, 1f)
                 }
             }
             lastTick = now
@@ -339,25 +339,29 @@ fun StoryViewerScreen(
                 if (content.filePath.isBlank()) {
                     StoryLoadingIndicator()
                 } else {
-                    // key() forces VideoStickerPlayer to fully recompose when path changes,
-                    // preventing stale ExoPlayer state / lag / stuck frames
+                    // key() forces full recompose on path change — prevents stale ExoPlayer
                     key(content.filePath) {
+                        val isVideoBlocked = isPaused || isReplyFieldFocused || showMenu || showReactionBar || showFullReactionPicker
                         com.spmods.spgram.presentation.core.media.VideoStickerPlayer(
-                            path = content.filePath,
-                            type = com.spmods.spgram.presentation.core.media.VideoType.Gif,
-                            modifier = Modifier.fillMaxSize(),
-                            animate = !isPaused && !isReplyFieldFocused && !showMenu && !showReactionBar && !showFullReactionPicker,
-                            shouldLoop = false,
-                            volume = if (isMuted) 0f else 1f,
-                            contentScale = ContentScale.Fit,
-                            thumbnailData = content.thumbnailPath.ifEmpty { null },
+                            path             = content.filePath,
+                            type             = com.spmods.spgram.presentation.core.media.VideoType.Gif,
+                            modifier         = Modifier.fillMaxSize(),
+                            animate          = !isVideoBlocked,
+                            shouldLoop       = false,
+                            volume           = if (isMuted) 0f else 1f,
+                            contentScale     = ContentScale.Fit,
+                            thumbnailData    = content.thumbnailPath.ifEmpty { null },
+                            startPositionMs  = pausedPositionMs,  // seek back to paused position on resume
+                            reportProgress   = true,              // required for onProgressUpdate to fire
                             onProgressUpdate = { posMs ->
                                 videoProgressMs = posMs
-                                // Update duration once we have a real position reading
-                                if (posMs > videoDurationMs) videoDurationMs = posMs
+                                if (!isVideoBlocked) pausedPositionMs = posMs   // track for resume
                             },
-                            onPlaybackEnded = {
-                                if (videoProgressMs > 0L && videoDurationMs <= 0L) videoDurationMs = videoProgressMs
+                            onDurationKnown  = { durMs ->
+                                if (durMs > 0L) videoDurationMs = durMs
+                            },
+                            onPlaybackEnded  = {
+                                pausedPositionMs = 0L
                                 if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
                             }
                         )
@@ -724,7 +728,7 @@ fun StoryViewerScreen(
                     val privacyOptions = listOf(
                         Triple("🌍", "Everyone", com.spmods.spgram.domain.models.StoryPrivacy.Everyone()),
                         Triple("👥", "Contacts", com.spmods.spgram.domain.models.StoryPrivacy.Contacts()),
-                        Triple("⭐", "Close Friends", com.spmods.spgram.domain.models.StoryPrivacy.CloseFriends()),
+                        Triple("⭐", "Close Friends", com.spmods.spgram.domain.models.StoryPrivacy.CloseFriends),
                     )
                     ModalBottomSheet(
                         onDismissRequest = { showPrivacySheet = false },
