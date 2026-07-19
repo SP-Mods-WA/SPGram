@@ -71,6 +71,7 @@ fun DocumentMessageBubble(
     onDocumentClick: (MessageModel) -> Unit,
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
+    onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit = {},
     onReactionClick: (String) -> Unit = {},
     onClick: (Offset) -> Unit = {},
@@ -454,7 +455,7 @@ fun DocumentAlbumBubble(
                             }
                         },
                         onClick = { offset -> onLongClick(bubblePosition + offset) },
-                        onLongClick = { offset -> onLongClick(bubblePosition + offset) }
+                        onLongClick = { _ -> onSelectMessage() }
                     )
                 }
 
@@ -599,7 +600,7 @@ fun ChannelDocumentAlbumBubble(
                             }
                         },
                         onClick = { offset -> onLongClick(bubblePosition + offset) },
-                        onLongClick = { offset -> onLongClick(bubblePosition + offset) }
+                        onLongClick = { _ -> onSelectMessage() }
                     )
                 }
 
