@@ -190,7 +190,8 @@ fun StoryViewerScreen(
     var showMenu by remember { mutableStateOf(false) }
     var replyText by remember { mutableStateOf("") }
     var isReplyFieldFocused by remember { mutableStateOf(false) }
-    var showViewersSheet by remember { mutableStateOf(false) }
+    var showViewersSheet  by remember { mutableStateOf(false) }
+    var showPrivacySheet  by remember { mutableStateOf(false) }
     var viewersData by remember(currentIndex) { mutableStateOf<FoundStoryViewersModel?>(null) }
     var isLoadingViewers by remember { mutableStateOf(false) }
     var showReactionBar by remember { mutableStateOf(false) }
@@ -284,24 +285,27 @@ fun StoryViewerScreen(
             videoDurationMs = 30_000L
         }
     }
-    // Video progress: use real ExoPlayer posMs when available; fallback to elapsed time
+    // Video progress: smooth time-based loop, synced to real ExoPlayer position every ~1s
     LaunchedEffect(currentIndex, story.content, videoDurationMs) {
         if (story.content !is StoryContentModel.Video || videoDurationMs <= 0L) return@LaunchedEffect
-        var elapsedMs = 0L
-        var lastTick = System.currentTimeMillis()
+        // Start elapsed from last known position (supports resume)
+        var elapsedMs  = videoProgressMs   // sync start to current position
+        var lastSync   = videoProgressMs   // last real position we received
+        var lastTick   = System.currentTimeMillis()
         while (true) {
             delay(50)
             val now = System.currentTimeMillis()
             val isBlocked2 = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar || showFullReactionPicker
             if (!isBlocked2) {
-                if (videoProgressMs > 0L && videoDurationMs > 0L) {
-                    // Real position from ExoPlayer
-                    progress = (videoProgressMs.toFloat() / videoDurationMs.toFloat()).coerceIn(0f, 1f)
-                } else if (videoDurationMs > 0L) {
-                    // Fallback time-based until first ExoPlayer tick
-                    elapsedMs += (now - lastTick)
-                    progress = (elapsedMs.toFloat() / videoDurationMs.toFloat()).coerceIn(0f, 1f)
+                // If ExoPlayer reported a new position, re-sync elapsed to it (smooth, not jump)
+                if (videoProgressMs != lastSync) {
+                    elapsedMs = videoProgressMs
+                    lastSync  = videoProgressMs
+                } else {
+                    // Interpolate between real syncs
+                    elapsedMs += (now - lastTick).coerceAtLeast(0L)
                 }
+                progress = (elapsedMs.toFloat() / videoDurationMs.toFloat()).coerceIn(0f, 1f)
             }
             lastTick = now
         }
@@ -351,11 +355,14 @@ fun StoryViewerScreen(
                             volume           = if (isMuted) 0f else 1f,
                             contentScale     = ContentScale.Fit,
                             thumbnailData    = content.thumbnailPath.ifEmpty { null },
-                            startPositionMs  = pausedPositionMs,  // seek back to paused position on resume
-                            reportProgress   = true,              // required for onProgressUpdate to fire
+                            startPositionMs  = pausedPositionMs,
+                            // reportProgress NOT set — we do our own smooth 50ms loop
+                            // onProgressUpdate receives real position every ~1s from ExoPlayer
+                            reportProgress   = true,
                             onProgressUpdate = { posMs ->
+                                // Sync our elapsed counter to real position to prevent drift
                                 videoProgressMs = posMs
-                                if (!isVideoBlocked) pausedPositionMs = posMs   // track for resume
+                                if (!isVideoBlocked) pausedPositionMs = posMs
                             },
                             onDurationKnown  = { durMs ->
                                 if (durMs > 0L) videoDurationMs = durMs
@@ -654,7 +661,6 @@ fun StoryViewerScreen(
 
             if (isOwnStory) {
                 // ── Own story bottom bar — viewers + privacy + delete ──────
-                var showPrivacySheet by remember { mutableStateOf(false) }
 
                 Row(
                     modifier = Modifier
@@ -723,57 +729,6 @@ fun StoryViewerScreen(
                     }
                 }
 
-                // Privacy edit bottom sheet
-                if (showPrivacySheet) {
-                    val privacyOptions = listOf(
-                        Triple("🌍", "Everyone", com.spmods.spgram.domain.models.StoryPrivacy.Everyone()),
-                        Triple("👥", "Contacts", com.spmods.spgram.domain.models.StoryPrivacy.Contacts()),
-                        Triple("⭐", "Close Friends", com.spmods.spgram.domain.models.StoryPrivacy.CloseFriends),
-                    )
-                    ModalBottomSheet(
-                        onDismissRequest = { showPrivacySheet = false },
-                        containerColor = Color(0xFF1C1C1E),
-                        contentColor = Color.White,
-                        dragHandle = {
-                            Box(modifier = Modifier.padding(top = 12.dp, bottom = 4.dp).size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.25f)))
-                        }
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
-                            Text(
-                                "Story visibility",
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                modifier = Modifier.padding(vertical = 12.dp)
-                            )
-                            Column(
-                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.07f))
-                            ) {
-                                privacyOptions.forEachIndexed { idx, (icon, label, privacy) ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                showPrivacySheet = false
-                                                coroutineScope.launch {
-                                                    runCatching { onEditStoryPrivacy(story, privacy) }
-                                                }
-                                            }
-                                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Text(icon, style = MaterialTheme.typography.titleMedium)
-                                        Text(label, color = Color.White, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                    }
-                                    if (idx < privacyOptions.lastIndex) {
-                                        HorizontalDivider(modifier = Modifier.padding(start = 52.dp), color = Color.White.copy(alpha = 0.07f))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
 
             } else {
                 // ── Other's story bottom bar — reply + forward + heart ─────
@@ -1075,6 +1030,75 @@ fun StoryViewerScreen(
                         coroutineScope.launch {
                             runCatching { onReportStory(story) }
                             withContext(Dispatchers.Main) { Toast.makeText(context, "Reported", Toast.LENGTH_SHORT).show() }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Privacy edit sheet (own stories — top-level so ModalBottomSheet renders correctly) ──
+    if (isOwnStory && showPrivacySheet) {
+        val privacyOptions = listOf(
+            Triple("🌍", "Everyone",      com.spmods.spgram.domain.models.StoryPrivacy.Everyone()),
+            Triple("👥", "Contacts",      com.spmods.spgram.domain.models.StoryPrivacy.Contacts()),
+            Triple("⭐", "Close Friends", com.spmods.spgram.domain.models.StoryPrivacy.CloseFriends),
+        )
+        ModalBottomSheet(
+            onDismissRequest  = { showPrivacySheet = false },
+            containerColor    = Color(0xFF1C1C1E),
+            contentColor      = Color.White,
+            dragHandle = {
+                Box(modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+                    .size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.25f)))
+            }
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 40.dp)) {
+                Text(
+                    "Who can see this story",
+                    color      = Color.White,
+                    style      = MaterialTheme.typography.titleMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    modifier   = Modifier.padding(vertical = 16.dp)
+                )
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White.copy(alpha = 0.07f))
+                ) {
+                    privacyOptions.forEachIndexed { idx, (icon, label, privacy) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showPrivacySheet = false
+                                    coroutineScope.launch {
+                                        runCatching { onEditStoryPrivacy(story, privacy) }
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "Privacy updated to $label", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                                .padding(horizontal = 16.dp, vertical = 16.dp),
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Text(icon, style = MaterialTheme.typography.titleLarge)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(label, color = Color.White, style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                                val sub = when (idx) {
+                                    0    -> "All Telegram users"
+                                    1    -> "Your contacts only"
+                                    else -> "Your close friends list"
+                                }
+                                Text(sub, color = Color.White.copy(alpha = 0.45f), style = MaterialTheme.typography.bodySmall)
+                            }
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+                        }
+                        if (idx < privacyOptions.lastIndex) {
+                            HorizontalDivider(modifier = Modifier.padding(start = 58.dp), color = Color.White.copy(alpha = 0.06f))
                         }
                     }
                 }
