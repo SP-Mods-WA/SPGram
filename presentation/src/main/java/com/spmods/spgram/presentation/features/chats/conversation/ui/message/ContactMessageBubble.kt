@@ -56,6 +56,7 @@ fun ContactMessageBubble(
     isGroup: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit,
     onReactionClick: (String) -> Unit,
     toProfile: (Long) -> Unit = {},
@@ -109,7 +110,7 @@ fun ContactMessageBubble(
                         onClick()
                     }
                 },
-                onLongClick = onLongClick
+                onLongClick = { onSelectMessage() }
             )
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
