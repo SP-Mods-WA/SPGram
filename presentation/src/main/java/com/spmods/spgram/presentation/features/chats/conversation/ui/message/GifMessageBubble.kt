@@ -88,6 +88,7 @@ fun GifMessageBubble(
     onGifClick: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
+    onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit = {},
     onReactionClick: (String) -> Unit = {},
     showMetadata: Boolean = true,
@@ -345,7 +346,7 @@ fun GifMessageBubble(
                                             onGifClick(msg)
                                         }
                                     },
-                                    onLongPress = { offset -> onLongClick(gifPosition + offset) }
+                                    onLongPress = { _ -> onSelectMessage() }
                                 )
                             }
                     )
@@ -437,7 +438,7 @@ fun GifMessageBubble(
                                     }
                                 },
                                 onClick = { offset -> onLongClick(gifPosition + offset) },
-                                onLongClick = { offset -> onLongClick(gifPosition + offset) }
+                                onLongClick = { _ -> onSelectMessage() }
                             )
                         }
                         if (showMetadata) {
