@@ -258,6 +258,8 @@ fun StoryViewerScreen(
     LaunchedEffect(currentIndex, story.content) {
         if (story.content is StoryContentModel.Video) return@LaunchedEffect  // video drives itself
         progress = 0f
+        // Wait for photo file to be ready before starting progress bar
+        while ((story.content as? StoryContentModel.Photo)?.filePath.isNullOrBlank()) { delay(80) }
         val totalMs = STORY_DURATION_MS
         var elapsedMs = 0L
         var lastTickAt = System.currentTimeMillis()
@@ -266,26 +268,20 @@ fun StoryViewerScreen(
             val now = System.currentTimeMillis()
             val isBlocked = isPaused || isReplyFieldFocused || showMenu || showViewersSheet || showReactionBar || showFullReactionPicker || showPrivacySheet
             if (!isBlocked) {
-                val isLoading = (story.content as? StoryContentModel.Photo)?.filePath?.isBlank() == true
-                if (!isLoading) {
-                    elapsedMs += (now - lastTickAt)
-                    progress = (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
-                }
+                elapsedMs += (now - lastTickAt)
+                progress = (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
             }
-            // Always update lastTickAt so paused time is not counted on resume
             lastTickAt = now
         }
         if (currentIndex < stories.lastIndex) currentIndex++ else onDismiss()
     }
 
-    // Video: sync progress bar from actual playback position
-    // Seed video duration from activePeriodSeconds until onDurationKnown fires
+    // Video: reset state on story change — progress stays 0 until onDurationKnown fires
     LaunchedEffect(currentIndex, story.content) {
         if (story.content !is StoryContentModel.Video) return@LaunchedEffect
-        if (videoDurationMs <= 0L) {
-            // Use 30s default (most story videos) — onDurationKnown will override with real value
-            videoDurationMs = 30_000L
-        }
+        videoDurationMs = 0L
+        videoProgressMs = 0L
+        pausedPositionMs = 0L
     }
     // Video progress: smooth time-based loop, synced to real ExoPlayer position every ~1s
     LaunchedEffect(currentIndex, story.content, videoDurationMs) {
@@ -583,40 +579,27 @@ fun StoryViewerScreen(
                     Spacer(modifier = Modifier.weight(1f))
                 }
 
-                // Chosen reaction pill — shows current reaction, tap to open bar, long-press to clear
-                if (!isOwnStory) {
-                    val chosenEmoji = story.chosenReactionEmoji
+                // Chosen reaction pill — only visible when a reaction is already set
+                if (!isOwnStory && story.chosenReactionEmoji != null) {
+                    val chosenEmoji = story.chosenReactionEmoji!!
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .background(
-                                if (chosenEmoji != null) Color(0xFF4C6EF5).copy(alpha = 0.25f)
-                                else Color.White.copy(alpha = 0.12f)
-                            )
-                            .border(
-                                1.dp,
-                                if (chosenEmoji != null) Color(0xFF4C6EF5).copy(alpha = 0.6f)
-                                else Color.White.copy(alpha = 0.2f),
-                                RoundedCornerShape(20.dp)
-                            )
+                            .background(Color(0xFF4C6EF5).copy(alpha = 0.25f))
+                            .border(1.dp, Color(0xFF4C6EF5).copy(alpha = 0.6f), RoundedCornerShape(20.dp))
                             .pointerInput(chosenEmoji) {
                                 detectTapGestures(
                                     onTap = { showReactionBar = true },
                                     onLongPress = {
-                                        if (chosenEmoji != null) {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            onSetReaction(story, null)
-                                        }
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onSetReaction(story, null)
                                     }
                                 )
                             }
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = chosenEmoji ?: "☺",
-                            style = MaterialTheme.typography.titleSmall
-                        )
+                        Text(text = chosenEmoji, style = MaterialTheme.typography.titleSmall)
                     }
                 }
             }
