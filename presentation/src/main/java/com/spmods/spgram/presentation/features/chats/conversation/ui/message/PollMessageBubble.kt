@@ -97,6 +97,7 @@ fun PollMessageBubble(
     onShowVoters: (Int) -> Unit = {},
     onClosePoll: () -> Unit = {},
     onLongClick: (Offset) -> Unit = {},
+    onSelectMessage: () -> Unit = {},
     hasCommentsButton: Boolean = false,
     toProfile: (Long) -> Unit = {},
     onForwardOriginClick: (ForwardInfo) -> Unit = {},
@@ -146,7 +147,7 @@ fun PollMessageBubble(
             .widthIn(min = 240.dp, max = 332.dp)
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onLongPress = { onLongClick(it) }
+                    onLongPress = { _ -> onSelectMessage() }
                 )
             },
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
