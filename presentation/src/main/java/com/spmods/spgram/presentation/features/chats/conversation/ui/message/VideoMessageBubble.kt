@@ -97,6 +97,7 @@ fun VideoMessageBubble(
     modifier: Modifier = Modifier,
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
+    onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit = {},
     onReactionClick: (String) -> Unit = {},
     showMetadata: Boolean = true,
@@ -408,7 +409,7 @@ fun VideoMessageBubble(
                             }
                             onVideoClickState(msg)
                         },
-                        onLongClick = { anchor -> onLongClickState(anchor) }
+                        onLongClick = { _ -> onSelectMessage() }
                     )
 
                     VideoPlaybackBadge(
@@ -505,7 +506,7 @@ fun VideoMessageBubble(
                                     }
                                 },
                                 onClick = { offset -> onLongClickState(layoutTracker.videoPosition + offset) },
-                                onLongClick = { offset -> onLongClickState(layoutTracker.videoPosition + offset) }
+                                onLongClick = { _ -> onSelectMessage() }
                             )
                         }
                         if (showMetadata) {
@@ -738,7 +739,7 @@ private fun VideoInteractionOverlay(
                         onOpenVideo()
                     }
                 },
-                onLongPress = { offset -> onLongClick(videoPosition() + offset) }
+                onLongPress = { _ -> onSelectMessage() }
             )
         }
     )
