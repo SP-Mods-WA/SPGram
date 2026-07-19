@@ -261,6 +261,7 @@ fun VenueMessageBubble(
     isGroup: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit,
     onReactionClick: (String) -> Unit,
     toProfile: (Long) -> Unit = {},
