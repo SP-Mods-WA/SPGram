@@ -15,6 +15,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -45,6 +46,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Favorite
@@ -385,11 +387,14 @@ fun StoryViewerScreen(
         // ── Tap left/right, hold to pause ─────────────────────────────────
         val tapMaxDurationMs = 250L
         Row(modifier = Modifier.fillMaxSize()) {
+            // Tap zones disabled when any overlay is open — prevents accidental dismiss
+            val anyOverlayOpen = showReactionBar || showMenu || showViewersSheet || showForwardSheet || showFullReactionPicker || showPrivacySheet
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxSize()
-                    .pointerInput(currentIndex) {
+                    .pointerInput(currentIndex, anyOverlayOpen) {
+                        if (anyOverlayOpen) return@pointerInput
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             isPaused = true
@@ -407,7 +412,8 @@ fun StoryViewerScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxSize()
-                    .pointerInput(currentIndex) {
+                    .pointerInput(currentIndex, anyOverlayOpen) {
+                        if (anyOverlayOpen) return@pointerInput
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             isPaused = true
@@ -553,6 +559,18 @@ fun StoryViewerScreen(
                 .padding(bottom = 8.dp)
         ) {
             // ── Reaction bar (long-press popup) — animated bubble row ───────
+            // Invisible scrim — tap anywhere outside reaction bar to close it
+            if (showReactionBar) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) { showReactionBar = false }
+                )
+            }
+
             AnimatedVisibility(
                 visible = showReactionBar,
                 enter = scaleIn(
@@ -660,20 +678,20 @@ fun StoryViewerScreen(
             Spacer(modifier = Modifier.height(6.dp))
 
             if (isOwnStory) {
-                // ── Own story bottom bar — viewers + privacy + delete ──────
-
+                // ── Own story bottom bar (Telegram-style) ─────────────────
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Viewers pill
+                    // LEFT: viewers pill
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(24.dp))
-                            .background(Color.White.copy(alpha = 0.15f))
+                            .background(Color(0x55000000))
+                            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
                             .clickable {
                                 showViewersSheet = true
                                 if (viewersData == null) {
@@ -684,51 +702,52 @@ fun StoryViewerScreen(
                                     }
                                 }
                             }
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(Icons.Default.Visibility, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Visibility, null, tint = Color.White, modifier = Modifier.size(17.dp))
                         Text(
-                            text = story.viewCount.toString(),
+                            text = if (story.viewCount == 0) "No views yet" else story.viewCount.toString(),
                             color = Color.White,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                         )
                         if (story.viewCount > 0) {
-                            Text("viewers", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                            Text("viewed", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
                         }
                     }
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    // Privacy edit button
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.15f))
-                            .clickable { showPrivacySheet = true },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Lock, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                    }
-
-                    // Delete button
-                    if (canDeleteStory) {
+                    // RIGHT: privacy + delete
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFFF453A).copy(alpha = 0.18f))
-                                .clickable { onDelete(story.id) },
+                                .background(Color(0x55000000))
+                                .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+                                .clickable { showPrivacySheet = true },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Delete, null, tint = Color(0xFFFF453A), modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Lock, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                        if (canDeleteStory) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0x44FF453A))
+                                    .border(1.dp, Color(0xFFFF453A).copy(alpha = 0.3f), CircleShape)
+                                    .clickable { onDelete(story.id) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Delete, null, tint = Color(0xFFFF6B6B), modifier = Modifier.size(18.dp))
+                            }
                         }
                     }
                 }
-
 
             } else {
                 // ── Other's story bottom bar — reply + forward + heart ─────
@@ -1095,7 +1114,7 @@ fun StoryViewerScreen(
                                 }
                                 Text(sub, color = Color.White.copy(alpha = 0.45f), style = MaterialTheme.typography.bodySmall)
                             }
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.ArrowForwardIos, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
                         }
                         if (idx < privacyOptions.lastIndex) {
                             HorizontalDivider(modifier = Modifier.padding(start = 58.dp), color = Color.White.copy(alpha = 0.06f))
