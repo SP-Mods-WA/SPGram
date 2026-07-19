@@ -76,6 +76,7 @@ fun VoiceMessageBubble(
     onOpenViewOnce: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
+    onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit = {},
     onReactionClick: (String) -> Unit = {},
     isGroup: Boolean = false,
