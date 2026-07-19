@@ -1019,6 +1019,7 @@ private fun MessageBubbleSwitcher(
                             click
                         )
                     },
+                    onSelectMessage = { component.onToggleMessageSelection(it) },
                     onGoToReply = onGoToReply,
                     onReactionClick = { id, r ->
                         if (behavior.isSelectionMode) component.onToggleMessageSelection(id) else component.onSendReaction(
@@ -1114,6 +1115,7 @@ private fun MessageBubbleSwitcher(
                             click
                         )
                     },
+                    onSelectMessage = { component.onToggleMessageSelection(it) },
                     onGoToReply = onGoToReply,
                     onReactionClick = { id, r ->
                         if (behavior.isSelectionMode) component.onToggleMessageSelection(id) else component.onSendReaction(
@@ -1308,6 +1310,8 @@ private fun RootMessageSection(
                 onCancelDownload = { component.onCancelDownloadFile(it) },
                 onReplyClick = { pos, size, click -> onMessageOptionsClick(root, pos, size, click) },
                 onGoToReply = onGoToReply,
+                onSelectMessage = { component.onToggleMessageSelection(it) },
+                onSelectMessage = { component.onToggleMessageSelection(it) },
                 onReactionClick = { id, r -> component.onSendReaction(id, r) },
                 onReplyMarkupButtonClick = { id, btn -> component.onReplyMarkupButtonClick(id, btn, root.senderId) },
                 onStickerClick = { component.onStickerClick(it) },
@@ -1338,6 +1342,7 @@ private fun RootMessageSection(
                 onAudioClick = onAudioClick,
                 onCancelDownload = { component.onCancelDownloadFile(it) },
                 onReplyClick = { pos, size, click -> onMessageOptionsClick(root, pos, size, click) },
+                onSelectMessage = { component.onToggleMessageSelection(it) },
                 onGoToReply = onGoToReply,
                 onReactionClick = { id, r -> component.onSendReaction(id, r) },
                 onReplyMarkupButtonClick = { id, btn -> component.onReplyMarkupButtonClick(id, btn, root.senderId) },
