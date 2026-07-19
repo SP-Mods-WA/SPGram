@@ -1777,6 +1777,7 @@ fun ChatListContent(component: ChatListComponent) {
             initialIndex = 0,
             posterName = storyViewerName,
             posterAvatarPath = storyViewerAvatar,
+            isOwnStory = storyViewerChatId == currentUser?.id,
             canDeleteStory = storyViewerChatId == currentUser?.id,
             onDelete = { storyId ->
                 storyScope.launch {
@@ -1839,6 +1840,11 @@ fun ChatListContent(component: ChatListComponent) {
                 }
             },
             forwardChatList = allChats,
+            onEditStoryPrivacy = { story, privacy ->
+                storyScope.launch {
+                    runCatching { storyRepository.editStory(story.posterChatId, story.id, story.caption, privacy) }
+                }
+            },
             onDismiss = {
                 storyViewerChatId = null
                 storyViewerStories = emptyList()
