@@ -68,6 +68,7 @@ fun AudioMessageBubble(
     onAudioClick: (MessageModel) -> Unit,
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
+    onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit = {},
     onReactionClick: (String) -> Unit = {},
     onClick: (Offset) -> Unit = {},
@@ -430,7 +431,7 @@ fun AudioAlbumBubble(
                             }
                         },
                         onClick = { offset -> onLongClick(bubblePosition + offset) },
-                        onLongClick = { offset -> onLongClick(bubblePosition + offset) }
+                        onLongClick = { _ -> onSelectMessage() }
                     )
                 }
 
@@ -574,7 +575,7 @@ fun ChannelAudioAlbumBubble(
                             }
                         },
                         onClick = { offset -> onLongClick(bubblePosition + offset) },
-                        onLongClick = { offset -> onLongClick(bubblePosition + offset) }
+                        onLongClick = { _ -> onSelectMessage() }
                     )
                 }
 
