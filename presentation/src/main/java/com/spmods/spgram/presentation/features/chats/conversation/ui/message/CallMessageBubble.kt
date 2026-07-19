@@ -54,6 +54,7 @@ fun CallMessageBubble(
     isGroup: Boolean = false,
     onClick: () -> Unit = {},
     onLongClick: () -> Unit = {},
+    onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit = {},
     onReactionClick: (String) -> Unit = {},
     toProfile: (Long) -> Unit = {},
@@ -150,7 +151,7 @@ fun CallMessageBubble(
             tonalElevation  = 0.dp,
             modifier        = Modifier.combinedClickable(
                 onClick     = onClick,
-                onLongClick = onLongClick
+                onLongClick = { onSelectMessage() }
             )
         ) {
             Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
