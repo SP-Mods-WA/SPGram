@@ -108,10 +108,9 @@ fun ContactMessageBubble(
             tonalElevation = 0.dp,
             modifier = Modifier.combinedClickable(
                 onClick = {
-                    if (content.userId != 0L) {
+                    onClick()
+                    if (content.userId != 0L && !showReactions) {
                         toProfile(content.userId)
-                    } else {
-                        onClick()
                     }
                 },
                 onLongClick = { onSelectMessage() }
