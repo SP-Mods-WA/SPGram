@@ -5,13 +5,10 @@ import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -114,22 +111,11 @@ fun ChannelPhotoMessageBubble(
     }
     var isAutoDownloadSuppressed by remember(msg.id) { mutableStateOf(false) }
 
-    // Compute exact bubble size from photo pixel dimensions — same approach as PhotoMessageBubble.
-    // This allows caption text to expand the bubble width naturally via IntrinsicSize.Max.
-    val maxBubbleW = 260.dp
-    val maxBubbleH = 320.dp
-    val minBubbleW = 120.dp
-    val minBubbleH = 120.dp
-
-    val bubbleSize = remember(content.width, content.height) {
-        val pw = content.width.takeIf { it > 0 } ?: 4
-        val ph = content.height.takeIf { it > 0 } ?: 3
-        val scaleW = maxBubbleW.value / pw
-        val scaleH = maxBubbleH.value / ph
-        val scale = minOf(scaleW, scaleH, 1f)
-        val w = (pw * scale).coerceAtLeast(minBubbleW.value)
-        val h = (ph * scale).coerceAtLeast(minBubbleH.value)
-        androidx.compose.ui.unit.DpSize(w.dp, h.dp)
+    // Official style: wider aspect ratio range (0.3f - 3f)
+    val stableAspectRatio = remember(msg.id, content.fileId) {
+        if (content.width > 0 && content.height > 0)
+            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
+        else 1f
     }
 
     LaunchedEffect(content.path) {
@@ -167,7 +153,7 @@ fun ChannelPhotoMessageBubble(
             tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.width(IntrinsicSize.Max)) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 // Headers (Forward/Reply)
                 if (msg.forwardInfo != null || msg.replyToMsg != null) {
                     Column(
@@ -188,11 +174,17 @@ fun ChannelPhotoMessageBubble(
                     }
                 }
 
+                val mediaRatio = stableAspectRatio
+
+                // ✅ FIXED: Official style - min/max height with aspect ratio
                 Box(
                     modifier = Modifier
-                        .widthIn(min = bubbleSize.width)
                         .fillMaxWidth()
-                        .height(bubbleSize.height)
+                        .heightIn(
+                            min = 120.dp,  // Min height for small images
+                            max = 420.dp   // Max height for very tall images
+                        )
+                        .aspectRatio(mediaRatio)
                         .clip(
                             if (hasCaption) RoundedCornerShape(
                                 topStart = topStart,
@@ -230,7 +222,8 @@ fun ChannelPhotoMessageBubble(
                         if (!hasPath) {
                             MediaLoadingBackground(
                                 previewData = content.minithumbnail,
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Crop,
+                                previewBlur = 0.dp
                             )
                         }
 
