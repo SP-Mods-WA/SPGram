@@ -280,7 +280,7 @@ fun ChannelAlbumMessageBubble(
                                     revealedSpoilers.add(index)
                                 }
                             },
-                            onClick = { offset -> onLongClick(bubblePosition + offset) },
+                            onClick = { offset -> onMenuClick(bubblePosition + offset) },
                             onLongClick = { offset -> onLongClick(bubblePosition + offset) }
                         )
 
@@ -335,6 +335,7 @@ fun ChannelDocumentAlbumBubble(
     onDocumentClick: (MessageModel) -> Unit,
     onCancelDownload: (Int) -> Unit,
     onLongClick: (Offset) -> Unit,
+    onMenuClick: (Offset) -> Unit = onLongClick,
     onReplyClick: (MessageModel) -> Unit,
     onReactionClick: (String) -> Unit,
     onCommentsClick: (Long) -> Unit,
@@ -490,7 +491,7 @@ fun ChannelDocumentAlbumBubble(
                                 revealedSpoilers.add(index)
                             }
                         },
-                        onClick = { offset -> onLongClick(bubblePosition + offset) },
+                        onClick = { offset -> onMenuClick(bubblePosition + offset) },
                         onLongClick = { offset -> onLongClick(bubblePosition + offset) }
                     )
                 }
@@ -697,7 +698,7 @@ fun ChannelAudioAlbumBubble(
                                 revealedSpoilers.add(index)
                             }
                         },
-                        onClick = { offset -> onLongClick(bubblePosition + offset) },
+                        onClick = { offset -> onMenuClick(bubblePosition + offset) },
                         onLongClick = { offset -> onLongClick(bubblePosition + offset) }
                     )
                 }
