@@ -5,6 +5,7 @@ package com.spmods.spgram.presentation.features.chats.conversation.ui.message
 import com.spmods.spgram.presentation.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -147,7 +148,11 @@ fun DocumentMessageBubble(
             shape = bubbleShape,
             color = backgroundColor,
             contentColor = contentColor,
-            tonalElevation = 1.dp
+            tonalElevation = 1.dp,
+            modifier = Modifier.combinedClickable(
+                onClick = { onClick(bubblePosition) },
+                onLongClick = { onLongClick(bubblePosition) }
+            )
         ) {
             Column(
                 modifier = Modifier
@@ -381,7 +386,11 @@ fun DocumentAlbumBubble(
             shape = bubbleShape,
             color = backgroundColor,
             contentColor = contentColor,
-            tonalElevation = 1.dp
+            tonalElevation = 1.dp,
+            modifier = Modifier.combinedClickable(
+                onClick = { onClick(bubblePosition) },
+                onLongClick = { onLongClick(bubblePosition) }
+            )
         ) {
             Column(
                 modifier = Modifier
