@@ -46,8 +46,10 @@ fun StickerPlayer(
         val widthPx = measuredWidth
         val heightPx = measuredHeight
         
-        val renderWidth = if (widthPx > 0) minOf(widthPx, 512) else 512
-        val renderHeight = if (heightPx > 0) minOf(heightPx, 512) else 512
+        // Inline emoji uses smaller render size to reduce memory and CPU
+        val maxRenderSize = if (isInline) 128 else 512
+        val renderWidth = if (widthPx > 0) minOf(widthPx, maxRenderSize) else maxRenderSize
+        val renderHeight = if (heightPx > 0) minOf(heightPx, maxRenderSize) else maxRenderSize
 
         val scope = rememberCoroutineScope()
         val thumbnailKey = remember(path) {
