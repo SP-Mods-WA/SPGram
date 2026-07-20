@@ -1213,6 +1213,7 @@ private fun MessageBubbleSwitcher(
                         click
                     )
                 },
+                onSelectMessage = { component.onToggleMessageSelection(it) },
                 onGoToReply = onGoToReply,
                 onReactionClick = { id, r ->
                     if (behavior.isSelectionMode) component.onToggleMessageSelection(id) else component.onSendReaction(
