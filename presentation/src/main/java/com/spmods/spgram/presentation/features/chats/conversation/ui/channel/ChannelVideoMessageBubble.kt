@@ -241,7 +241,7 @@ fun ChannelVideoMessageBubble(
                                 path = videoPath,
                                 type = VideoType.Gif,
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.FillWidth,  // No crop!
+                                contentScale = ContentScale.Crop,
                                 animate = isVisible && !isAnyViewerOpen,
                                 volume = if (isMuted) 0f else 1f,
                                 reportProgress = true,
@@ -289,7 +289,7 @@ fun ChannelVideoMessageBubble(
                                     ),
                                     contentDescription = null,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.FillWidth  // No crop!
+                                    contentScale = ContentScale.Crop
                                 )
                             } else {
                                 if (content.minithumbnail != null) {
@@ -307,7 +307,7 @@ fun ChannelVideoMessageBubble(
                                         ),
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.FillWidth  // No crop!
+                                        contentScale = ContentScale.Crop
                                     )
                                 }
                             }
@@ -410,8 +410,7 @@ fun ChannelVideoMessageBubble(
                         ) {
                             MediaLoadingBackground(
                                 previewData = content.thumbnailPath ?: content.minithumbnail,
-                                contentScale = ContentScale.FillWidth,  // No crop!
-                                previewBlur = 0.dp
+                                contentScale = ContentScale.Crop
                             )
 
                             MediaLoadingAction(
