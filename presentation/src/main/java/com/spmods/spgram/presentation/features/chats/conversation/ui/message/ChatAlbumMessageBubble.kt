@@ -87,6 +87,7 @@ fun ChatAlbumMessageBubble(
             onDocumentClick = onDocumentClick,
             onCancelDownload = onCancelDownload,
             onLongClick = onLongClick,
+            onClick = onMenuClick,
             onReplyClick = onReplyClick,
             onReactionClick = onReactionClick,
             isGroup = isGroup,
