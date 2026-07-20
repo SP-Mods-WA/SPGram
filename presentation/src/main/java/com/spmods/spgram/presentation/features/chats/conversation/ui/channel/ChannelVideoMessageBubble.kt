@@ -410,7 +410,8 @@ fun ChannelVideoMessageBubble(
                         ) {
                             MediaLoadingBackground(
                                 previewData = content.thumbnailPath ?: content.minithumbnail,
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Crop,
+                                previewBlur = 0.dp
                             )
 
                             MediaLoadingAction(
