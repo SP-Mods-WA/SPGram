@@ -56,6 +56,7 @@ fun ChatAlbumMessageBubble(
     onAudioClick: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onLongClick: (Offset) -> Unit,
+    onMenuClick: (Offset) -> Unit = onLongClick,
     onReplyClick: (MessageModel) -> Unit = {},
     onReactionClick: (String) -> Unit = {},
     toProfile: (Long) -> Unit = {},
@@ -264,7 +265,7 @@ fun ChatAlbumMessageBubble(
                                     revealedSpoilers.add(index)
                                 }
                             },
-                            onClick = { offset -> onLongClick(bubblePosition + offset) },
+                            onClick = { offset -> onMenuClick(bubblePosition + offset) },
                             onLongClick = { offset -> onLongClick(bubblePosition + offset) }
                         )
 
