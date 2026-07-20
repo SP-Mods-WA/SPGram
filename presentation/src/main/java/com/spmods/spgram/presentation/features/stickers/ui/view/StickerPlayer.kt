@@ -16,7 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.unit.IntOffset
@@ -124,7 +124,7 @@ fun StickerPlayer(
                     Spacer(
                         modifier = Modifier
                             .fillMaxSize()
-                            .drawWithContent {
+                            .drawBehind {
                                 val bitmap = controller.currentImageBitmap ?: cachedBitmap
 
                                 if (bitmap != null) {
