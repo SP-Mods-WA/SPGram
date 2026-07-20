@@ -235,7 +235,7 @@ fun CompactMediaMosaic(
                         )
                         .aspectRatio(ratio)  // Original aspect ratio!
                 ) {
-                    Item(0, Modifier.fillMaxSize(), ContentScale.FillWidth) // No crop for single media
+                    Item(0, Modifier.fillMaxSize(), ContentScale.Crop)
                 }
             }
 
@@ -454,7 +454,8 @@ fun PhotoItem(
                 ) {
                     MediaLoadingBackground(
                         previewData = photo.minithumbnail,
-                        contentScale = contentScale
+                        contentScale = contentScale,
+                        previewBlur = 0.dp
                     )
 
                     MediaLoadingAction(
