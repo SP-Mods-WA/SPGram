@@ -1,6 +1,7 @@
 package com.spmods.spgram.presentation.features.stickers.core
 
 import android.graphics.Bitmap
+import android.os.Build
 import androidx.core.graphics.createBitmap
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -9,7 +10,8 @@ import java.util.*
 object BitmapPool {
     private val pool = LinkedList<Bitmap>()
     private val mutex = Mutex()
-    private const val MAX_POOL_SIZE = 50
+    // 12 bitmaps max — 3 per sticker (front/back/spare) × 4 concurrent stickers max
+    private const val MAX_POOL_SIZE = 12
 
     suspend fun obtain(width: Int, height: Int): Bitmap {
         mutex.withLock {
@@ -22,7 +24,13 @@ object BitmapPool {
                 }
             }
         }
-        return createBitmap(width, height)
+        return try {
+            createBitmap(width, height)
+        } catch (oom: OutOfMemoryError) {
+            // Memory pressure — clear pool and retry
+            clear()
+            createBitmap(width.coerceAtMost(256), height.coerceAtMost(256))
+        }
     }
 
     suspend fun recycle(bitmap: Bitmap) {
