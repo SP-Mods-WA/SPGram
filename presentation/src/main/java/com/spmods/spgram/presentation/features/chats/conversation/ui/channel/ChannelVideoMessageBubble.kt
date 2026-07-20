@@ -7,9 +7,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -147,11 +149,15 @@ fun ChannelVideoMessageBubble(
     }
     // AutoDownloadSuppression is the single source of truth — no local mirror needed.
 
-    // Official style: wider aspect ratio range (0.3f - 3f)
-    val stableAspectRatio = remember(msg.id, content.fileId) {
-        if (content.width > 0 && content.height > 0)
-            (content.width.toFloat() / content.height.toFloat()).coerceIn(0.3f, 3f)
-        else 1f
+    val bubbleSize = remember(content.width, content.height) {
+        val pw = content.width.takeIf { it > 0 } ?: 4
+        val ph = content.height.takeIf { it > 0 } ?: 3
+        val maxW = 260f; val maxH = 320f; val minW = 120f; val minH = 120f
+        val scale = minOf(maxW / pw, maxH / ph, 1f)
+        androidx.compose.ui.unit.DpSize(
+            (pw * scale).coerceAtLeast(minW).dp,
+            (ph * scale).coerceAtLeast(minH).dp
+        )
     }
     val hasCaption = content.caption.isNotEmpty()
 
@@ -189,7 +195,7 @@ fun ChannelVideoMessageBubble(
             tonalElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.width(IntrinsicSize.Max)) {
                 // Headers
                 if (msg.forwardInfo != null || msg.replyToMsg != null) {
                     Column(
@@ -210,17 +216,11 @@ fun ChannelVideoMessageBubble(
                     }
                 }
 
-                val mediaRatio = stableAspectRatio
-
-                // ✅ FIXED: Official style - min/max height with aspect ratio
                 Box(
                     modifier = Modifier
+                        .widthIn(min = bubbleSize.width)
                         .fillMaxWidth()
-                        .heightIn(
-                            min = 120.dp,  // Min height for small videos
-                            max = 420.dp   // Max height for very tall videos
-                        )
-                        .aspectRatio(mediaRatio)
+                        .height(bubbleSize.height)
                         .clip(
                             if (hasCaption) RoundedCornerShape(
                                 topStart = topStart,
@@ -231,7 +231,7 @@ fun ChannelVideoMessageBubble(
                         .onGloballyPositioned { videoPosition = it.positionInWindow() }
                 ) {
                     if (hasPath || content.supportsStreaming || isProgressivePlayActive) {
-                        if (autoplayVideos || isProgressivePlayActive) {
+                        if ((autoplayVideos || isProgressivePlayActive) && isVisible) {
                             val videoPath = when {
                                 !stablePath.isNullOrBlank() -> stablePath!!
                                 content.supportsStreaming || isProgressivePlayActive -> "http://streaming/${content.fileId}"
