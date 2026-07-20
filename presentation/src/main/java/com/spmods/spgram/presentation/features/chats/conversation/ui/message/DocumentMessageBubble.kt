@@ -345,6 +345,7 @@ fun DocumentAlbumBubble(
     onSelectMessage: () -> Unit = {},
     onReplyClick: (MessageModel) -> Unit,
     onReactionClick: (String) -> Unit,
+    onClick: (Offset) -> Unit = {},
     isGroup: Boolean = false,
     toProfile: (Long) -> Unit,
     onForwardOriginClick: (ForwardInfo) -> Unit,
