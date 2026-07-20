@@ -156,7 +156,8 @@ internal fun MessageBubbleContainer(
                 layoutTracker.bubbleSize,
                 clickPosition
             )
-        }
+        },
+        onSelectMessage = { onSelectMessageState(msg.id) }
     ) {
         MessageBubbleShell(
             isOutgoing = isOutgoing,
@@ -247,9 +248,11 @@ private fun MessageBubbleGestureLayer(
     onReplySwipe: () -> Unit,
     layoutTracker: MessageBubbleLayoutTracker,
     onOutsideBubblePress: (Offset) -> Unit,
+    onSelectMessage: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
     val onOutsideBubblePressState by rememberUpdatedState(onOutsideBubblePress)
+    val onSelectMessageState by rememberUpdatedState(onSelectMessage)
 
     Column(
         modifier = modifier
@@ -278,7 +281,12 @@ private fun MessageBubbleGestureLayer(
                         val bubbleRect =
                             Rect(layoutTracker.bubblePosition, layoutTracker.bubbleSize.toSize())
                         if (!bubbleRect.contains(clickPos)) {
-                            onOutsideBubblePressState(clickPos)
+                            // Outside bubble long press → select
+                            onSelectMessageState()
+                        } else {
+                            // Inside bubble long press → select (inner bubble handles it too,
+                            // but this catches cases where inner doesn't consume)
+                            onSelectMessageState()
                         }
                     }
                 )
