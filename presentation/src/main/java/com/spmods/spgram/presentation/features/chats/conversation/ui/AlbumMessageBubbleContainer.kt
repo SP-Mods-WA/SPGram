@@ -57,6 +57,7 @@ internal fun AlbumMessageBubbleContainer(
     onAudioClick: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit = {},
     onReplyClick: (Offset, IntSize, Offset) -> Unit,
+    onSelectMessage: (Long) -> Unit = {},
     onGoToReply: (MessageModel) -> Unit = {},
     onReactionClick: (Long, String) -> Unit = { _, _ -> },
     onReplyMarkupButtonClick: (Long, InlineKeyboardButtonModel) -> Unit = { _, _ -> },
@@ -101,6 +102,7 @@ internal fun AlbumMessageBubbleContainer(
     val coroutineScope = rememberCoroutineScope()
     val layoutTracker = remember { MessageBubbleLayoutTracker() }
     val onReplyClickState by rememberUpdatedState(onReplyClick)
+    val onSelectMessageState by rememberUpdatedState(onSelectMessage)
     val onPositionChangeState by rememberUpdatedState(onPositionChange)
 
     Column(
@@ -130,18 +132,7 @@ internal fun AlbumMessageBubbleContainer(
                             )
                         }
                     },
-                    onLongPress = { offset ->
-                        val clickPos = layoutTracker.outerColumnPosition + offset
-                        val bubbleRect =
-                            Rect(layoutTracker.bubblePosition, layoutTracker.bubbleSize.toSize())
-                        if (!bubbleRect.contains(clickPos)) {
-                            onReplyClickState(
-                                layoutTracker.bubblePosition,
-                                layoutTracker.bubbleSize,
-                                clickPos
-                            )
-                        }
-                    }
+                    onLongPress = { _ -> onSelectMessageState(lastMsg.id) }
                 )
             }
     ) {
@@ -210,13 +201,7 @@ internal fun AlbumMessageBubbleContainer(
                             onDocumentClick = onDocumentClick,
                             onAudioClick = onAudioClick,
                             onCancelDownload = onCancelDownload,
-                            onLongClick = { offset ->
-                                onReplyClick(
-                                    layoutTracker.bubblePosition,
-                                    layoutTracker.bubbleSize,
-                                    layoutTracker.bubblePosition + offset
-                                )
-                            },
+                            onLongClick = { _ -> onSelectMessageState(lastMsg.id) },
                             onReplyClick = onGoToReply,
                             onReactionClick = { onReactionClick(lastMsg.id, it) },
                             onCommentsClick = onCommentsClick,
@@ -247,13 +232,7 @@ internal fun AlbumMessageBubbleContainer(
                             onDocumentClick = onDocumentClick,
                             onAudioClick = onAudioClick,
                             onCancelDownload = onCancelDownload,
-                            onLongClick = { offset ->
-                                onReplyClick(
-                                    layoutTracker.bubblePosition,
-                                    layoutTracker.bubbleSize,
-                                    layoutTracker.bubblePosition + offset
-                                )
-                            },
+                            onLongClick = { _ -> onSelectMessageState(lastMsg.id) },
                             onReplyClick = onGoToReply,
                             onReactionClick = { onReactionClick(lastMsg.id, it) },
                             toProfile = toProfile,
