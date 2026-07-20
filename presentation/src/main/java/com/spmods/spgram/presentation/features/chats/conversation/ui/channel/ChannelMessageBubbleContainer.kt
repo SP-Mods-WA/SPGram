@@ -383,13 +383,7 @@ internal fun ChannelMessageBubbleContainer(
                                 onReplyClick = onGoToReply,
                                 onReactionClick = { onReactionClick(msg.id, it) },
                                 onStickerClick = { onStickerClick(content.setId) },
-                                onLongClick = {
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + (layoutTracker.bubbleSize.toSize() / 2f).toOffset()
-                                    )
-                                },
+                                onLongClick = { onSelectMessageState(msg.id) },
                                 toProfile = toProfile,
                                 onForwardOriginClick = onForwardOriginClick
                             )
@@ -406,13 +400,7 @@ internal fun ChannelMessageBubbleContainer(
                                 letterSpacing = appearance.letterSpacing,
                                 bubbleRadius = appearance.bubbleRadius,
                                 onClick = { onGoToReply(msg) },
-                                onLongClick = {
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + (layoutTracker.bubbleSize.toSize() / 2f).toOffset()
-                                    )
-                                },
+                                onLongClick = { onSelectMessageState(msg.id) },
                                 onReplyClick = onGoToReply,
                                 onReactionClick = { onReactionClick(msg.id, it) },
                                 toProfile = toProfile,
@@ -455,13 +443,7 @@ internal fun ChannelMessageBubbleContainer(
                                 letterSpacing = appearance.letterSpacing,
                                 bubbleRadius = appearance.bubbleRadius,
                                 onClick = { onGoToReply(msg) },
-                                onLongClick = {
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + (layoutTracker.bubbleSize.toSize() / 2f).toOffset()
-                                    )
-                                },
+                                onLongClick = { onSelectMessageState(msg.id) },
                                 onReplyClick = onGoToReply,
                                 onReactionClick = { onReactionClick(msg.id, it) },
                                 toProfile = toProfile,
@@ -481,13 +463,7 @@ internal fun ChannelMessageBubbleContainer(
                                 letterSpacing = appearance.letterSpacing,
                                 bubbleRadius = appearance.bubbleRadius,
                                 onClick = { onGoToReply(msg) },
-                                onLongClick = {
-                                    onReplyClickState(
-                                        layoutTracker.bubblePosition,
-                                        layoutTracker.bubbleSize,
-                                        layoutTracker.bubblePosition + (layoutTracker.bubbleSize.toSize() / 2f).toOffset()
-                                    )
-                                },
+                                onLongClick = { onSelectMessageState(msg.id) },
                                 onReplyClick = onGoToReply,
                                 onReactionClick = { onReactionClick(msg.id, it) },
                                 toProfile = toProfile,
