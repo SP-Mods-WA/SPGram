@@ -74,7 +74,12 @@ fun CallMessageBubble(
 
     // ── Colors ────────────────────────────────────────────────────────────────
     val isDark          = LocalDarkTheme.current
-    val backgroundColor = if (isOutgoing) Color(0xFFEEFFDE) else Color(0xFFFFFFFF)
+    val backgroundColor = when {
+        isOutgoing && isDark -> Color(0xFF2B5C3A)
+        isOutgoing           -> Color(0xFFEEFFDE)
+        isDark               -> Color(0xFF1E1E1E)
+        else                 -> Color(0xFFFFFFFF)
+    }
     val contentColor    = if (isDark) Color(0xFFFFFFFF) else Color(0xFF212121)
     val timeColor       = contentColor.copy(alpha = 0.6f)
 
