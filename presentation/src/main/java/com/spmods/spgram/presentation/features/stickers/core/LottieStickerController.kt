@@ -188,7 +188,9 @@ class LottieStickerController(
                     val durationMs = localDecoder.getDurationMs().coerceAtLeast(1L)
                     max(totalFrames / (durationMs / 1000.0), 1.0)
                 }
-            val normalizedFrameRate = frameRate.coerceIn(1.0, 120.0)
+            // Limit frame rate on low-end devices to reduce CPU load
+            val maxFps = if (isArmV7Device) 24.0 else 60.0
+            val normalizedFrameRate = frameRate.coerceIn(1.0, maxFps)
 
             var lastFrameTime = System.nanoTime()
             val frameDurationMs = max(1L, (1000.0 / normalizedFrameRate).toLong())
@@ -208,7 +210,7 @@ class LottieStickerController(
                 val framesToAdvance = frameAccumulator.toInt()
                 if (framesToAdvance <= 0) {
                     lastFrameTime = now
-                    delay(1)
+                    delay(maxOf(1L, frameDurationMs / 2))
                     continue
                 }
                 frameNo = (frameNo + framesToAdvance) % totalFrames
@@ -277,7 +279,7 @@ class LottieStickerController(
     }
     
     companion object {
-        private val renderDispatcher = Dispatchers.Default.limitedParallelism(4)
+        private val renderDispatcher = Dispatchers.Default.limitedParallelism(2)
         private const val OVERFLOW_PADDING_RATIO = 0.20f
         private const val MAX_OVERFLOW_PADDING_PX = 96
     }
