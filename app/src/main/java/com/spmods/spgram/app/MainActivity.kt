@@ -115,6 +115,14 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Trigger immediate reconnect when user opens the app.
+        // Without this, TDLib may take several seconds to reconnect
+        // after the app was in the background.
+        connectionManager.retryConnection()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIntent(intent)
@@ -152,22 +160,13 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun startNotificationService() {
-        // Start service for ALL users so TDLib keeps a persistent connection.
-        // Previously only GMS_LESS users got the service, meaning FCM users had
-        // no background connection and saw a reconnect delay on app open.
+        if (appPreferences.pushProvider.value != PushProvider.GMS_LESS) return
         val intent = Intent(this, TdNotificationService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
         } else {
             startService(intent)
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Tell TDLib we're in the foreground — triggers immediate reconnect.
-        // This is the same pattern WhatsApp/official Telegram use.
-        connectionManager.retryConnection()
     }
 
     private fun resolveIsDarkTheme(): Boolean {
