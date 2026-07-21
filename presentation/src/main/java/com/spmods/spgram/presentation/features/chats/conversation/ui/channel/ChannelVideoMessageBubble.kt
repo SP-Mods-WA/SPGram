@@ -77,6 +77,7 @@ import com.spmods.spgram.presentation.features.chats.conversation.ui.message.Mes
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.MessageReactionsView
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.MessageText
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.ReplyContent
+import com.spmods.spgram.presentation.features.chats.conversation.ui.message.formatDuration
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.rememberMessageTextRenderData
 
 @Composable
@@ -377,9 +378,9 @@ fun ChannelVideoMessageBubble(
                                     androidx.compose.foundation.layout.Column {
                                         Text(
                                             text = if (isProgressivePlayActive) {
-                                                "${formatDuration(context, currentPositionSeconds)} / ${formatDuration(context, content.duration)}"
+                                                "${formatDuration(currentPositionSeconds)} / ${formatDuration(content.duration)}"
                                             } else {
-                                                formatDuration(context, content.duration)
+                                                formatDuration(content.duration)
                                             },
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                             color = Color.White,
@@ -400,9 +401,9 @@ fun ChannelVideoMessageBubble(
                             } else {
                                 Text(
                                     text = if ((hasPath || content.supportsStreaming || isProgressivePlayActive) && (autoplayVideos || isProgressivePlayActive)) {
-                                        "${formatDuration(context, currentPositionSeconds)} / ${formatDuration(context, content.duration)}"
+                                        "${formatDuration(currentPositionSeconds)} / ${formatDuration(content.duration)}"
                                     } else {
-                                        formatDuration(context, content.duration)
+                                        formatDuration(content.duration)
                                     },
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White
