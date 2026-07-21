@@ -1,5 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+        <string name="story_compose_title">New Story</string>
+<string name="story_edit_title">Edit Story</string>
+<string name="story_post_as">Posting as %1$s</string>
+<string name="story_edit_as">Editing as %1$s</string>
+<string name="story_preview_title">Preview</string>
+<string name="story_preview_subtitle">Tap to preview your story</string>
+<string name="story_back_to_editor">Back to editor</string>
+<string name="story_pick_media">Pick media</string>
+<string name="story_select_media_hint">Choose a photo or video to share</string>
+<string name="story_change_media">Change media</string>
+<string name="story_details_title">Details</string>
+<string name="story_caption_label">Caption</string>
+<string name="story_caption_supporting">Add a caption to your story</string>
+<string name="story_privacy_label">Audience</string>
+<string name="story_privacy_everyone">Everyone</string>
+<string name="story_privacy_contacts">Contacts</string>
+<string name="story_privacy_close_friends">Close friends</string>
+<string name="story_privacy_selected_users">Selected users</string>
+<string name="story_privacy_show_to">Show to</string>
+<string name="story_privacy_hide_from">Hide from</string>
+<string name="story_privacy_show_to_empty">Choose who can view this story</string>
+<string name="story_privacy_hide_from_empty">Visible to everyone in this audience</string>
+<string name="story_privacy_manage">Manage</string>
+<string name="story_privacy_clear_selection">Clear</string>
+<string name="story_duration_label">Visible for</string>
+<string name="story_duration_supporting">How long should your story be visible</string>
+<string name="story_duration_6h">6h</string>
+<string name="story_duration_12h">12h</string>
+<string name="story_duration_24h">24h</string>
+<string name="story_duration_48h">48h</string>
+<string name="story_settings_title">Settings</string>
+<string name="story_audience_timing_subtitle">Additional privacy and protection options</string>
+<string name="story_keep_on_profile">Keep on profile</string>
+<string name="story_keep_on_profile_subtitle">Show this story on your profile after it expires</string>
+<string name="story_protect_content">Protect content</string>
+<string name="story_protect_content_subtitle">Prevent others from forwarding or saving this story</string>
+<string name="story_publish">Publish story</string>
+<string name="story_publish_short">Publish</string>
+<string name="story_posting">Publishing…</string>
+<string name="story_saving">Saving…</string>
+<string name="story_preview">Preview</string>
+<string name="story_play">Play</string>
+<string name="story_pause">Pause</string>
+<string name="story_audio_mute">Mute audio</string>
+<string name="story_audio_unmute">Unmute audio</string>
+<string name="story_media_photo">Photo</string>
+<string name="story_media_video">Video</string>
+<string name="story_open_photo_editor">Edit photo</string>
+<string name="story_open_video_editor">Edit video</string>
+<string name="story_audience_picker_show_to_title">Show to</string>
+<string name="story_audience_picker_hide_from_title">Hide from</string>
+<string name="story_audience_picker_show_to_subtitle">Select contacts who can see this story</string>
+<string name="story_audience_picker_hide_from_subtitle">Select contacts to exclude from this story</string>
+<string name="story_audience_picker_search">Search contacts</string>
+<string name="story_audience_picker_no_results">No results found</string>
+<string name="story_audience_picker_empty">No contacts found</string>
+<string name="story_viewer_item_position">%1$d of %2$d</string>
+<string name="story_create">Create story</string>
+
         <!-- View Once Media -->
         <string name="chat_list_story_reply_indicator">Replied to your story</string>
         <string name="menu_quote">Quote</string>
