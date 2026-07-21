@@ -22,6 +22,7 @@ import org.koin.android.ext.android.inject
 import com.spmods.spgram.app.ui.theme.AppThemeContainer
 import com.spmods.spgram.data.service.TdNotificationService
 import com.spmods.spgram.domain.repository.PushProvider
+import com.spmods.spgram.data.infra.ConnectionManager
 import com.spmods.spgram.presentation.core.util.AppPreferences
 import com.spmods.spgram.presentation.core.util.LocalVideoPlayerPool
 import com.spmods.spgram.presentation.core.util.NightMode
@@ -34,6 +35,7 @@ import java.util.Calendar
 class MainActivity : FragmentActivity() {
     private lateinit var root: RootComponent
     private val appPreferences: AppPreferences by inject()
+    private val connectionManager: ConnectionManager by inject()
 
     @Volatile
     private var keepSplashOnScreen: Boolean = true
@@ -150,13 +152,22 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun startNotificationService() {
-        if (appPreferences.pushProvider.value != PushProvider.GMS_LESS) return
+        // Start service for ALL users so TDLib keeps a persistent connection.
+        // Previously only GMS_LESS users got the service, meaning FCM users had
+        // no background connection and saw a reconnect delay on app open.
         val intent = Intent(this, TdNotificationService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
         } else {
             startService(intent)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Tell TDLib we're in the foreground — triggers immediate reconnect.
+        // This is the same pattern WhatsApp/official Telegram use.
+        connectionManager.retryConnection()
     }
 
     private fun resolveIsDarkTheme(): Boolean {
