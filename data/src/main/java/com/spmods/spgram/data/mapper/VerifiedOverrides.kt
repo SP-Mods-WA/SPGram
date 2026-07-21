@@ -2,7 +2,7 @@ package com.spmods.spgram.data.mapper
 
 private val VERIFIED_CHAT_IDS = setOf(
     -1003615282448L, // @spgram_discuss
-    -1003768707135L, // @spgram_android
+    -1001191215320L, // @SPModsSandun
     -1003566234286L, // @spgram_apks
     -1001270834900L, // private chat
     -1001336987857L // @LBOGD
