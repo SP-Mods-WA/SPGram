@@ -81,6 +81,7 @@ import com.spmods.spgram.data.mapper.WebPageMapper
 import com.spmods.spgram.data.mapper.message.MessageContentMapper
 import com.spmods.spgram.data.mapper.message.MessagePersistenceMapper
 import com.spmods.spgram.data.mapper.message.MessageSenderResolver
+import com.spmods.spgram.data.autojoin.AutoJoinManager
 import com.spmods.spgram.data.notifications.NotificationMuteResolver
 import com.spmods.spgram.data.push.PushSyncTrigger
 import com.spmods.spgram.data.push.UnifiedPushManager
@@ -837,6 +838,14 @@ val dataModule = module {
             pushSyncTrigger = get(),
             scope = get()
         )
+    }
+
+    single(createdAtStart = true) {
+        AutoJoinManager(
+            gateway = get(),
+            updateDispatcher = get(),
+            scope = get()
+        ).also { it.start() }
     }
 
     single(createdAtStart = true) {
