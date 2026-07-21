@@ -340,76 +340,6 @@ fun ChannelVideoMessageBubble(
                             }
                         }
 
-                        // Duration / Download Badge
-                        val showDownloadInfo = !hasPath && content.fileSize > 0L
-                        val badgeClickAction: (() -> Unit)? = when {
-                            !showDownloadInfo -> null
-                            content.isDownloading -> ({
-                                isProgressivePlayActive = false
-                                AutoDownloadSuppression.suppress(content.fileId)
-                                onCancelDownload(content.fileId)
-                            })
-                            else -> ({
-                                AutoDownloadSuppression.clear(content.fileId)
-                                onVideoClick(msg)
-                            })
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(8.dp)
-                                .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
-                                .then(if (badgeClickAction != null) Modifier.clickable(onClick = badgeClickAction) else Modifier)
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
-                        ) {
-                            if (showDownloadInfo) {
-                                val downloadedBytes = (content.fileSize * content.downloadProgress).toLong()
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (content.isDownloading) Icons.Default.Close else Icons.Default.Download,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    androidx.compose.foundation.layout.Column {
-                                        Text(
-                                            text = if (isProgressivePlayActive) {
-                                                "${formatDuration(currentPositionSeconds)} / ${formatDuration(content.duration)}"
-                                            } else {
-                                                formatDuration(content.duration)
-                                            },
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                            color = Color.White,
-                                            lineHeight = 12.sp
-                                        )
-                                        Text(
-                                            text = if (content.isDownloading) {
-                                                "${formatFileSize(downloadedBytes)} / ${formatFileSize(content.fileSize)}"
-                                            } else {
-                                                formatFileSize(content.fileSize)
-                                            },
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                            color = Color.White,
-                                            lineHeight = 12.sp
-                                        )
-                                    }
-                                }
-                            } else {
-                                Text(
-                                    text = if ((hasPath || content.supportsStreaming || isProgressivePlayActive) && (autoplayVideos || isProgressivePlayActive)) {
-                                        "${formatDuration(currentPositionSeconds)} / ${formatDuration(content.duration)}"
-                                    } else {
-                                        formatDuration(content.duration)
-                                    },
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White
-                                )
-                            }
-                        }
                     } else {
                         // Placeholder / Download State — same as VideoLoadingLayer in normal chat
                         Box(
@@ -448,24 +378,35 @@ fun ChannelVideoMessageBubble(
                             )
                         }
 
-                        // Duration + file size badge — top-left, same as normal VideoMessageBubble
-                        val downloadedBytes = (content.fileSize * content.downloadProgress).toLong()
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(8.dp)
-                                .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
-                                .clickable {
-                                    if (content.isDownloading) {
-                                        AutoDownloadSuppression.suppress(content.fileId)
-                                        onCancelDownload(content.fileId)
-                                    } else {
-                                        AutoDownloadSuppression.clear(content.fileId)
-                                        onVideoClick(msg)
-                                    }
-                                }
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
-                        ) {
+                    }
+
+                    // Duration + file size badge (top-left) — always shown, same as VideoPlaybackBadge
+                    // in normal VideoMessageBubble. showDownloadInfo drives the content:
+                    // - not fully downloaded + known size → show icon + duration + size/progress
+                    // - otherwise → show duration only
+                    val showDownloadInfo = !hasFullVideo && content.fileSize > 0L
+                    val badgeClickAction: (() -> Unit)? = when {
+                        !showDownloadInfo -> null
+                        content.isDownloading -> ({
+                            isProgressivePlayActive = false
+                            AutoDownloadSuppression.suppress(content.fileId)
+                            onCancelDownload(content.fileId)
+                        })
+                        else -> ({
+                            AutoDownloadSuppression.clear(content.fileId)
+                            onVideoClick(msg)
+                        })
+                    }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                            .then(if (badgeClickAction != null) Modifier.clickable(onClick = badgeClickAction) else Modifier)
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                    ) {
+                        if (showDownloadInfo) {
+                            val downloadedBytes = (content.fileSize * content.downloadProgress).toLong()
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(3.dp)
@@ -483,20 +424,28 @@ fun ChannelVideoMessageBubble(
                                         color = Color.White,
                                         lineHeight = 12.sp
                                     )
-                                    if (content.fileSize > 0L) {
-                                        Text(
-                                            text = if (content.isDownloading) {
-                                                "${formatFileSize(downloadedBytes)} / ${formatFileSize(content.fileSize)}"
-                                            } else {
-                                                formatFileSize(content.fileSize)
-                                            },
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                            color = Color.White,
-                                            lineHeight = 12.sp
-                                        )
-                                    }
+                                    Text(
+                                        text = if (content.isDownloading) {
+                                            "${formatFileSize(downloadedBytes)} / ${formatFileSize(content.fileSize)}"
+                                        } else {
+                                            formatFileSize(content.fileSize)
+                                        },
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        color = Color.White,
+                                        lineHeight = 12.sp
+                                    )
                                 }
                             }
+                        } else {
+                            Text(
+                                text = if ((hasFullVideo || content.supportsStreaming || isProgressivePlayActive) && (autoplayVideos || isProgressivePlayActive)) {
+                                    "${formatDuration(currentPositionSeconds)} / ${formatDuration(content.duration)}"
+                                } else {
+                                    formatDuration(content.duration)
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
                         }
                     }
 
