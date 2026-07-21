@@ -445,6 +445,7 @@ fun ProfileContent(component: ProfileComponent) {
                     if (last.isBlank()) first else "$first $last"
                 },
                 posterAvatarPath = profileUser?.avatarPath,
+                isOwnStory = profileUser != null && profileUser.id == state.currentUser?.id,
                 canDeleteStory = profileUser != null && profileUser.id == state.currentUser?.id,
                 onDelete = { storyId ->
                     component.onDeleteStory(storyId)
