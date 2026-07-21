@@ -151,7 +151,7 @@ fun ProfileStoriesSection(
             itemsIndexed(stories) { index, story ->
                 StoryThumbnailItem(
                     story = story,
-                    posterName = posterName,
+                    posterName = if (isOwnProfile) null else posterName,
                     onClick = { onStoryClick(index) }
                 )
             }
@@ -164,7 +164,7 @@ fun ProfileStoriesSection(
 @Composable
 private fun StoryThumbnailItem(
     story: StoryModel,
-    posterName: String,
+    posterName: String?,
     onClick: () -> Unit
 ) {
     val thumbnailPath = when (val c = story.content) {
@@ -220,17 +220,19 @@ private fun StoryThumbnailItem(
             }
         }
 
-        Text(
-            text = posterName,
-            style = MaterialTheme.typography.labelSmall,
-            fontSize = 10.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp)
-        )
+        if (posterName != null) {
+            Text(
+                text = posterName,
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+            )
+        }
         // Expiry label (e.g. "6h left") using activePeriodSeconds field
         val nowSec = (System.currentTimeMillis() / 1000).toInt()
         val secsLeft = story.expiresAtSeconds - nowSec
