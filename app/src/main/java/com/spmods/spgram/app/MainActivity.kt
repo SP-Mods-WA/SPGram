@@ -22,7 +22,6 @@ import org.koin.android.ext.android.inject
 import com.spmods.spgram.app.ui.theme.AppThemeContainer
 import com.spmods.spgram.data.service.TdNotificationService
 import com.spmods.spgram.domain.repository.PushProvider
-import com.spmods.spgram.data.infra.ConnectionManager
 import com.spmods.spgram.presentation.core.util.AppPreferences
 import com.spmods.spgram.presentation.core.util.LocalVideoPlayerPool
 import com.spmods.spgram.presentation.core.util.NightMode
@@ -35,7 +34,6 @@ import java.util.Calendar
 class MainActivity : FragmentActivity() {
     private lateinit var root: RootComponent
     private val appPreferences: AppPreferences by inject()
-    private val connectionManager: ConnectionManager by inject()
 
     @Volatile
     private var keepSplashOnScreen: Boolean = true
@@ -113,14 +111,6 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Trigger immediate reconnect when user opens the app.
-        // Without this, TDLib may take several seconds to reconnect
-        // after the app was in the background.
-        connectionManager.retryConnection()
     }
 
     override fun onNewIntent(intent: Intent) {
