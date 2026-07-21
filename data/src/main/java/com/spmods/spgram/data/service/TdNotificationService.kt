@@ -62,9 +62,16 @@ class TdNotificationService : Service() {
             // startForegroundService() timing requirements on Android 8+.
             startForegroundNotification()
 
-            // For all push providers: keep the foreground service alive so TDLib
-            // maintains a persistent connection — same as WhatsApp/Telegram behaviour.
-            // Previously FCM was killing the service after 20s causing reconnect delays.
+            // For FCM: keep service alive briefly so TdLib can process push notifications
+            // then auto-stop after processing window
+            if (appPreferences.pushProvider.value != PushProvider.GMS_LESS) {
+                startListeningUpdates()
+                serviceScope.launch {
+                    delay(20_000L)
+                    stopForegroundService()
+                }
+                return START_NOT_STICKY
+            }
 
             acquireWakeLock()
             startListeningUpdates()
@@ -154,11 +161,17 @@ class TdNotificationService : Service() {
                 foregroundServiceType
             )
 
-            // NOTE: We intentionally do NOT detach/remove the foreground notification
-            // even when hideForegroundNotification is true. On Android 8+ detaching the
-            // notification allows the system to kill the service, causing the reconnect
-            // delay the user sees when opening the app. The notification is already set
-            // to PRIORITY_MIN so it appears below the fold and is barely visible.
+            if (appPreferences.hideForegroundNotification.value) {
+                serviceScope.launch {
+                    delay(2000)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        stopForeground(STOP_FOREGROUND_DETACH)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        stopForeground(false)
+                    }
+                }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             stopSelf()
