@@ -141,9 +141,15 @@ fun ChannelVideoMessageBubble(
     val revealedSpoilers = remember { mutableStateListOf<Int>() }
 
     var stablePath by remember(msg.id) { mutableStateOf(content.path) }
-    val hasPath = !stablePath.isNullOrBlank()
-    val videoCacheKey = remember(stablePath, content.fileId) {
-        namespacedCacheKey("channel_video:${content.fileId}", stablePath)
+    val hasFullVideo = !stablePath.isNullOrBlank()
+    // Same as normal VideoMessageBubble: thumbnailPath used as static preview
+    // when full video not downloaded. Without this, channel bubbles fall back
+    // to minithumbnail (tiny blurry image) causing the blur issue.
+    val displayPath: String? = stablePath?.takeIf { it.isNotBlank() }
+        ?: content.thumbnailPath?.takeIf { it.isNotBlank() }
+    val hasPath = !displayPath.isNullOrBlank()
+    val videoCacheKey = remember(displayPath, content.fileId) {
+        namespacedCacheKey("channel_video:${content.fileId}", displayPath)
     }
     val videoMiniCacheKey = remember(content.minithumbnail, content.fileId) {
         content.minithumbnail?.let { namespacedCacheKey("channel_video_mini:${content.fileId}", it) }
@@ -253,7 +259,7 @@ fun ChannelVideoMessageBubble(
                                     }
                                 },
                                 fileId = content.fileId,
-                                thumbnailData = content.thumbnailPath ?: content.minithumbnail
+                                thumbnailData = content.thumbnailPath
                             )
 
                             // Volume Toggle
@@ -278,7 +284,7 @@ fun ChannelVideoMessageBubble(
                                 Image(
                                     painter = rememberAsyncImagePainter(
                                         model = ImageRequest.Builder(context)
-                                            .data(stablePath)
+                                            .data(displayPath)
                                             .apply {
                                                 videoCacheKey?.let {
                                                     memoryCacheKey(it)
