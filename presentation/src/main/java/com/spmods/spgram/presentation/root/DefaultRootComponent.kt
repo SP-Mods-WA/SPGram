@@ -74,6 +74,7 @@ import com.spmods.spgram.presentation.features.webview.DefaultWebViewComponent
 import com.spmods.spgram.presentation.settings.about.DefaultAboutComponent
 import com.spmods.spgram.presentation.settings.adblock.DefaultAdBlockComponent
 import com.spmods.spgram.presentation.settings.chatSettings.DefaultChatSettingsComponent
+import com.spmods.spgram.presentation.settings.homeScreen.DefaultHomeScreenComponent
 import com.spmods.spgram.presentation.settings.dataStorage.DefaultDataStorageComponent
 import com.spmods.spgram.presentation.settings.debug.DefaultDebugComponent
 import com.spmods.spgram.presentation.settings.folders.DefaultFoldersComponent
@@ -588,6 +589,7 @@ class DefaultRootComponent(
                     onEditProfileClick = { navigation.push(Config.EditProfile) },
                     onDevicesClick = { navigation.bringToFront(Config.SessionsConfig) },
                     onFoldersClick = { navigation.bringToFront(Config.Folders) },
+                    onHomeScreenClick = { navigation.bringToFront(Config.HomeScreen) },
                     onChatSettingsClick = { navigation.bringToFront(Config.ChatSettings) },
                     onDataStorageClick = { navigation.bringToFront(Config.DataStorage) },
                     onPowerSavingClick = { navigation.bringToFront(Config.PowerSaving) },
@@ -614,6 +616,9 @@ class DefaultRootComponent(
             )
             is Config.Folders -> RootComponent.Child.FoldersChild(
                 DefaultFoldersComponent(context = context, onBack = { navigation.pop() })
+            )
+            is Config.HomeScreen -> RootComponent.Child.HomeScreenChild(
+                DefaultHomeScreenComponent(context = context, onBack = { navigation.pop() })
             )
             is Config.ChatSettings -> RootComponent.Child.ChatSettingsChild(
                 DefaultChatSettingsComponent(
@@ -812,6 +817,7 @@ class DefaultRootComponent(
         @Parcelize @Serializable object Settings : Config()
         @Parcelize @Serializable object EditProfile : Config()
         @Parcelize @Serializable object Folders : Config()
+        @Parcelize @Serializable object HomeScreen : Config()
         @Parcelize @Serializable object ChatSettings : Config()
         @Parcelize @Serializable object DataStorage : Config()
         @Parcelize @Serializable object StorageUsage : Config()
