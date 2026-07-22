@@ -150,10 +150,13 @@ private enum class StoryMediaType { PHOTO, VIDEO }
 private data class StoryMediaItem(
     val sourcePath: String,
     val mediaType: StoryMediaType,
-    val thumbnail: Bitmap? = null  // only for VIDEO
-)
+    val thumbnail: Bitmap? = null,  // only for VIDEO
+    val editedPath: String? = null  // path after photo/video editor; null = use sourcePath
+) {
+    val finalPath: String get() = editedPath ?: sourcePath
+}
 
-private enum class StoryComposerStage { COMPOSE, PREVIEW }
+private enum class StoryComposerStage { COMPOSE, EDIT, PREVIEW }
 
 private enum class StoryPrivacyUi { EVERYONE, CONTACTS, CLOSE_FRIENDS, SELECTED_USERS }
 
@@ -276,12 +279,15 @@ fun StoryCreatorScreen(
         }
     }
 
-    // ── Back handling ───────────────────────────────────────────────────────
-    BackHandler(enabled = stage == StoryComposerStage.PREVIEW) {
-        stage = StoryComposerStage.COMPOSE
-    }
+    // ── Back handling (highest priority first) ──────────────────────────────
     BackHandler(enabled = audiencePicker.isVisible) {
         audiencePicker = audiencePicker.copy(isVisible = false)
+    }
+    BackHandler(enabled = stage == StoryComposerStage.EDIT) {
+        stage = StoryComposerStage.COMPOSE
+    }
+    BackHandler(enabled = stage == StoryComposerStage.PREVIEW) {
+        stage = StoryComposerStage.COMPOSE
     }
 
     // ── Post logic ──────────────────────────────────────────────────────────
@@ -302,14 +308,14 @@ fun StoryCreatorScreen(
                     val result = when (item.mediaType) {
                         StoryMediaType.PHOTO -> storyRepo.postPhotoStory(
                             chatId = chatId,
-                            photoPath = item.sourcePath,
+                            photoPath = item.finalPath,
                             caption = draft.caption.trim(),
                             activePeriodSeconds = draft.activePeriodSeconds,
                             privacy = buildPrivacy()
                         )
                         StoryMediaType.VIDEO -> storyRepo.postVideoStory(
                             chatId = chatId,
-                            videoPath = item.sourcePath,
+                            videoPath = item.finalPath,
                             caption = draft.caption.trim(),
                             activePeriodSeconds = draft.activePeriodSeconds,
                             privacy = buildPrivacy()
@@ -343,6 +349,7 @@ fun StoryCreatorScreen(
                         Text(
                             text = when (stage) {
                                 StoryComposerStage.COMPOSE -> stringResource(R.string.story_caption_supporting)
+                                StoryComposerStage.EDIT    -> "Edit media"
                                 StoryComposerStage.PREVIEW -> stringResource(R.string.story_preview_subtitle)
                             },
                             style = MaterialTheme.typography.labelMedium,
@@ -351,7 +358,13 @@ fun StoryCreatorScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onDismiss) {
+                    IconButton(onClick = {
+                        when (stage) {
+                            StoryComposerStage.EDIT    -> stage = StoryComposerStage.COMPOSE
+                            StoryComposerStage.PREVIEW -> stage = StoryComposerStage.COMPOSE
+                            StoryComposerStage.COMPOSE -> onDismiss()
+                        }
+                    }) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null)
                     }
                 },
@@ -375,31 +388,32 @@ fun StoryCreatorScreen(
                 ) {
                     OutlinedButton(
                         onClick = {
-                            if (stage == StoryComposerStage.PREVIEW) {
-                                stage = StoryComposerStage.COMPOSE
-                            } else if (draft.isValid) {
-                                stage = StoryComposerStage.PREVIEW
-                            } else {
-                                photoLauncher.launch("image/*")
+                            when (stage) {
+                                StoryComposerStage.PREVIEW -> stage = StoryComposerStage.COMPOSE
+                                StoryComposerStage.EDIT    -> stage = StoryComposerStage.COMPOSE
+                                StoryComposerStage.COMPOSE -> {
+                                    if (draft.isValid) stage = StoryComposerStage.PREVIEW
+                                    else photoLauncher.launch("image/*")
+                                }
                             }
                         },
                         modifier = Modifier.weight(1f).height(56.dp),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Icon(
-                            imageVector = when {
-                                stage == StoryComposerStage.PREVIEW -> Icons.Rounded.Edit
-                                draft.isValid -> Icons.Rounded.PlayArrow
-                                else -> Icons.Rounded.PhotoLibrary
+                            imageVector = when (stage) {
+                                StoryComposerStage.PREVIEW -> Icons.Rounded.Edit
+                                StoryComposerStage.EDIT    -> Icons.AutoMirrored.Rounded.ArrowBack
+                                StoryComposerStage.COMPOSE -> if (draft.isValid) Icons.Rounded.PlayArrow else Icons.Rounded.PhotoLibrary
                             },
                             contentDescription = null
                         )
                         Spacer(Modifier.size(8.dp))
                         Text(
-                            text = when {
-                                stage == StoryComposerStage.PREVIEW -> stringResource(R.string.story_back_to_editor)
-                                draft.isValid -> stringResource(R.string.story_preview)
-                                else -> stringResource(R.string.story_pick_media)
+                            text = when (stage) {
+                                StoryComposerStage.PREVIEW -> stringResource(R.string.story_back_to_editor)
+                                StoryComposerStage.EDIT    -> "Back"
+                                StoryComposerStage.COMPOSE -> if (draft.isValid) stringResource(R.string.story_preview) else stringResource(R.string.story_pick_media)
                             },
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
@@ -473,8 +487,53 @@ fun StoryCreatorScreen(
                             onShowAudiencePicker = { isShowTo ->
                                 audiencePicker = audiencePicker.copy(isVisible = true, isShowTo = isShowTo)
                             },
-                            onPreview = { stage = StoryComposerStage.PREVIEW }
+                            onPreview = { stage = StoryComposerStage.PREVIEW },
+                            onEditMedia = { stage = StoryComposerStage.EDIT }
                         )
+                    }
+                    StoryComposerStage.EDIT -> {
+                        // Show the appropriate editor for the currently selected media item
+                        val currentItem = draft.currentMedia
+                        if (currentItem != null) {
+                            when (currentItem.mediaType) {
+                                StoryMediaType.PHOTO -> {
+                                    com.spmods.spgram.presentation.features.chats.conversation.editor.photo.PhotoEditorScreen(
+                                        imagePath = currentItem.finalPath,
+                                        onClose = { stage = StoryComposerStage.COMPOSE },
+                                        onSave = { editedPath ->
+                                            draft = draft.copy(
+                                                mediaItems = draft.mediaItems.mapIndexed { i, item ->
+                                                    if (i == draft.selectedIndex) item.copy(editedPath = editedPath) else item
+                                                }
+                                            )
+                                            stage = StoryComposerStage.COMPOSE
+                                        }
+                                    )
+                                }
+                                StoryMediaType.VIDEO -> {
+                                    com.spmods.spgram.presentation.features.chats.conversation.editor.video.VideoEditorScreen(
+                                        videoPath = currentItem.finalPath,
+                                        onClose = { stage = StoryComposerStage.COMPOSE },
+                                        onSave = { editedPath ->
+                                            scope.launch {
+                                                val newThumb = getVideoThumbnail(editedPath)
+                                                draft = draft.copy(
+                                                    mediaItems = draft.mediaItems.mapIndexed { i, item ->
+                                                        if (i == draft.selectedIndex)
+                                                            item.copy(editedPath = editedPath, thumbnail = newThumb ?: item.thumbnail)
+                                                        else item
+                                                    }
+                                                )
+                                            }
+                                            stage = StoryComposerStage.COMPOSE
+                                        }
+                                    )
+                                }
+                            }
+                        } else {
+                            // No media selected — go back to compose
+                            LaunchedEffect(Unit) { stage = StoryComposerStage.COMPOSE }
+                        }
                     }
                     StoryComposerStage.PREVIEW -> {
                         StoryPreviewStage(
@@ -536,7 +595,8 @@ private fun StoryComposeStage(
     onPickVideo: () -> Unit,
     onOpenCamera: () -> Unit,
     onShowAudiencePicker: (Boolean) -> Unit,
-    onPreview: () -> Unit
+    onPreview: () -> Unit,
+    onEditMedia: () -> Unit
 ) {
     val scrollState = rememberScrollState()
 
@@ -557,7 +617,8 @@ private fun StoryComposeStage(
             isPreparing = isPreparing,
             onSelectPage = { onDraftChange(draft.copy(selectedIndex = it)) },
             onPickPhotos = onPickPhotos,
-            onPreview = onPreview
+            onPreview = onPreview,
+            onEditMedia = onEditMedia
         )
 
         // ── Media picker actions ───────────────────────────────────────────
@@ -570,7 +631,8 @@ private fun StoryComposeStage(
             onPickPhotos = onPickPhotos,
             onPickVideo = onPickVideo,
             onOpenCamera = onOpenCamera,
-            onPreview = if (draft.isValid) onPreview else null
+            onPreview = if (draft.isValid) onPreview else null,
+            onEditMedia = if (draft.isValid) onEditMedia else null
         )
 
         // ── Error banner ───────────────────────────────────────────────────
@@ -703,7 +765,8 @@ private fun StoryMediaPreviewCard(
     isPreparing: Boolean,
     onSelectPage: (Int) -> Unit,
     onPickPhotos: () -> Unit,
-    onPreview: () -> Unit
+    onPreview: () -> Unit,
+    onEditMedia: () -> Unit
 ) {
     Surface(
         shape = RoundedCornerShape(24.dp),
@@ -789,6 +852,22 @@ private fun StoryMediaPreviewCard(
                             caption = draft.caption,
                             onPageChanged = onSelectPage
                         )
+                        // ── Edit button ── bottom-end corner
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(10.dp),
+                            shape = CircleShape,
+                            color = Color.Black.copy(alpha = 0.55f),
+                            onClick = onEditMedia
+                        ) {
+                            Icon(
+                                Icons.Rounded.Edit,
+                                contentDescription = "Edit media",
+                                tint = Color.White,
+                                modifier = Modifier.padding(8.dp).size(20.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -847,7 +926,7 @@ private fun StoryMediaPagerContent(
             }
             StoryMediaType.PHOTO -> {
                 AsyncImage(
-                    model = current.sourcePath,
+                    model = current.finalPath,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -965,7 +1044,8 @@ private fun StoryMediaActionsCard(
     onPickPhotos: () -> Unit,
     onPickVideo: () -> Unit,
     onOpenCamera: () -> Unit,
-    onPreview: (() -> Unit)?
+    onPreview: (() -> Unit)?,
+    onEditMedia: (() -> Unit)? = null
 ) {
     data class ActionItem(val icon: ImageVector, val title: String, val onClick: () -> Unit)
 
@@ -973,6 +1053,9 @@ private fun StoryMediaActionsCard(
         add(ActionItem(Icons.Rounded.PhotoLibrary, if (hasMedia) stringResource(R.string.story_change_media) else stringResource(R.string.story_pick_media), onPickPhotos))
         add(ActionItem(Icons.Rounded.Image, "Add Video", onPickVideo))
         add(ActionItem(Icons.Rounded.CameraAlt, "Camera", onOpenCamera))
+        if (hasMedia && onEditMedia != null) {
+            add(ActionItem(Icons.Rounded.Edit, "Edit Media", onEditMedia))
+        }
         if (hasMedia && onPreview != null) {
             add(ActionItem(Icons.Rounded.PlayArrow, stringResource(R.string.story_preview), onPreview))
         }
