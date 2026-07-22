@@ -464,21 +464,11 @@ fun ProfileContent(component: ProfileComponent) {
                 onSetReaction = { story, emoji ->
                     component.onSetStoryReaction(story.id, emoji)
                 },
-                onOpenViewers = { story ->
-                    component.onOpenStoryViewers(story.id)
-                },
+                onOpenViewers = { _ -> /* handled internally by StoryViewerScreen via onGetViewers */ },
                 onGetViewers = { story ->
-                    // delegate to ProfileComponent which already loads viewers
-                    component.onOpenStoryViewers(story.id)
-                    // return current loaded state (non-null viewers means loaded)
-                    val s = component.state.value
-                    if (s.storyViewersForStoryId == story.id && !s.isLoadingStoryViewers)
-                        com.spmods.spgram.domain.models.FoundStoryViewersModel(
-                            totalCount = s.storyViewersTotalCount,
-                            viewers    = s.storyViewers,
-                            nextOffset = ""
-                        )
-                    else null
+                    // Directly fetch viewers — avoids opening the external StoryViewersSheet
+                    // (which would cause a double bottom-sheet when isOwnStory = true)
+                    runCatching { storyRepository.getStoryViewers(story.id) }.getOrNull()
                 },
                 onReportStory = { story ->
                     // No report category UI yet — report with empty options
@@ -501,13 +491,6 @@ fun ProfileContent(component: ProfileComponent) {
                 onStoryViewed = component::onStoryViewed,
                 onStoryClosed = component::onStoryClosed,
                 onDismiss = component::onDismissStory
-            )
-        }
-
-        if (state.storyViewersForStoryId != null) {
-            StoryViewersSheet(
-                state = state,
-                onDismiss = component::onDismissStoryViewers
             )
         }
 
