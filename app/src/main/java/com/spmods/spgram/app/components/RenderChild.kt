@@ -17,6 +17,7 @@ import com.spmods.spgram.presentation.root.StartupContent
 import com.spmods.spgram.presentation.settings.about.AboutContent
 import com.spmods.spgram.presentation.settings.adblock.AdBlockContent
 import com.spmods.spgram.presentation.settings.chatSettings.ChatSettingsContent
+import com.spmods.spgram.presentation.settings.homeScreen.HomeScreenContent
 import com.spmods.spgram.presentation.settings.dataStorage.DataStorageContent
 import com.spmods.spgram.presentation.settings.debug.DebugContent
 import com.spmods.spgram.presentation.settings.folders.FoldersContent
@@ -54,6 +55,7 @@ fun RenderChild(
         is RootComponent.Child.EditProfileChild -> EditProfileContent(child.component)
         is RootComponent.Child.SessionsChild -> SessionsContent(child.component)
         is RootComponent.Child.FoldersChild -> FoldersContent(child.component)
+        is RootComponent.Child.HomeScreenChild -> HomeScreenContent(child.component)
         is RootComponent.Child.ChatSettingsChild -> ChatSettingsContent(child.component)
         is RootComponent.Child.DataStorageChild -> DataStorageContent(child.component)
         is RootComponent.Child.StorageUsageChild -> StorageUsageContent(child.component)
