@@ -492,12 +492,14 @@ fun StoryViewerScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(
-                                text = posterName.ifBlank { "Story" },
-                                color = Color.White,
-                                style = MaterialTheme.typography.labelLarge,
-                                maxLines = 1
-                            )
+                            if (posterName.isNotBlank()) {
+                                Text(
+                                    text = posterName,
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    maxLines = 1
+                                )
+                            }
                             if (stories.size > 1) {
                                 Text(
                                     text = "${currentIndex + 1}/${stories.size}",
