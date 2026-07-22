@@ -15,6 +15,7 @@ interface SettingsComponent {
     fun onNotificationToggled(enabled: Boolean)
     fun onDevicesClicked()
     fun onFoldersClicked()
+    fun onHomeScreenClicked()
     fun onChatSettingsClicked()
     fun onDataStorageClicked()
     fun onPowerSavingClicked()
