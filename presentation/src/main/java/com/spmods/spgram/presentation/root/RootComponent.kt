@@ -26,6 +26,7 @@ import com.spmods.spgram.presentation.features.webview.WebViewComponent
 import com.spmods.spgram.presentation.settings.about.AboutComponent
 import com.spmods.spgram.presentation.settings.adblock.AdBlockComponent
 import com.spmods.spgram.presentation.settings.chatSettings.ChatSettingsComponent
+import com.spmods.spgram.presentation.settings.homeScreen.HomeScreenComponent
 import com.spmods.spgram.presentation.settings.dataStorage.DataStorageComponent
 import com.spmods.spgram.presentation.settings.debug.DebugComponent
 import com.spmods.spgram.presentation.settings.networkUsage.NetworkUsageComponent
@@ -82,6 +83,7 @@ interface RootComponent {
         class EditProfileChild(val component: EditProfileComponent) : Child()
         class SessionsChild(val component: SessionsComponent) : Child()
         class FoldersChild(val component: FoldersComponent) : Child()
+        class HomeScreenChild(val component: HomeScreenComponent) : Child()
         class ChatSettingsChild(val component: ChatSettingsComponent) : Child()
         class DataStorageChild(val component: DataStorageComponent) : Child()
         class StorageUsageChild(val component: StorageUsageComponent) : Child()
