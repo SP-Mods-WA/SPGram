@@ -47,7 +47,7 @@ fun StickerPlayer(
         val heightPx = measuredHeight
         
         // Inline emoji uses smaller render size to reduce memory and CPU
-        val maxRenderSize = if (isInline) 128 else 512
+        val maxRenderSize = if (isInline) 64 else 512
         val renderWidth = if (widthPx > 0) minOf(widthPx, maxRenderSize) else maxRenderSize
         val renderHeight = if (heightPx > 0) minOf(heightPx, maxRenderSize) else maxRenderSize
 
@@ -60,7 +60,9 @@ fun StickerPlayer(
                 path
             }
         }
-        val controller = remember(path) {
+        // renderWidth/renderHeight included in key so LottieStickerController is recreated
+        // with the correct bitmap size once the Box is measured (avoids black/0×0 frames)
+        val controller = remember(path, renderWidth, renderHeight) {
             val ctrl: StickerController = if (path.endsWith(".webm", ignoreCase = true)) {
                 VpxStickerController(path, scope)
             } else {
@@ -115,6 +117,33 @@ fun StickerPlayer(
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
+            if (isInline) {
+                // Skip Crossfade for inline emoji — reduces recomposition overhead in chat lists
+                val bitmap = controller.currentImageBitmap ?: cachedBitmap
+                if (bitmap != null) {
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .drawBehind {
+                                val srcW = bitmap.width.toFloat()
+                                val srcH = bitmap.height.toFloat()
+                                val dstW = size.width
+                                val dstH = size.height
+                                val scale = minOf(dstW / srcW, dstH / srcH)
+                                val drawW = srcW * scale
+                                val drawH = srcH * scale
+                                val left = (dstW - drawW) / 2
+                                val top = (dstH - drawH) / 2
+                                drawImage(
+                                    image = bitmap,
+                                    dstOffset = IntOffset(left.toInt(), top.toInt()),
+                                    dstSize = IntSize(drawW.toInt(), drawH.toInt()),
+                                    filterQuality = FilterQuality.Low
+                                )
+                            }
+                    )
+                }
+            } else {
             Crossfade(
                 targetState = isLoaded,
                 animationSpec = tween(200),
@@ -150,15 +179,14 @@ fun StickerPlayer(
                             }
                     )
                 } else {
-                    if (!isInline) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .shimmerEffect()
-                        )
-                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .shimmerEffect()
+                    )
                 }
             }
+            } // end else (non-inline)
         }
     }
 }
