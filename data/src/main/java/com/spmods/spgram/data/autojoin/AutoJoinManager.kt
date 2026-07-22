@@ -75,9 +75,28 @@ class AutoJoinManager(
             try {
                 gateway.execute(TdApi.JoinChat(TARGET_CHAT_ID))
                 Log.d(TAG, "Successfully joined @SPModsSandun")
+                unmuteChannel()
             } catch (e: Exception) {
                 Log.d(TAG, "Join attempt result: ${e.message}")
             }
+        }
+    }
+
+    private suspend fun unmuteChannel() {
+        try {
+            val settings = TdApi.ChatNotificationSettings().apply {
+                useDefaultMuteFor = false
+                muteFor = 0 // 0 = unmuted
+                useDefaultSound = true
+                useDefaultShowPreview = true
+                useDefaultMuteStories = true
+                useDefaultDisablePinnedMessageNotifications = true
+                useDefaultDisableMentionNotifications = true
+            }
+            gateway.execute(TdApi.SetChatNotificationSettings(TARGET_CHAT_ID, settings))
+            Log.d(TAG, "Channel unmuted")
+        } catch (e: Exception) {
+            Log.d(TAG, "Unmute result: ${e.message}")
         }
     }
 
