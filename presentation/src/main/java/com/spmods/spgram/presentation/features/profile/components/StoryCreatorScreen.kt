@@ -1297,6 +1297,7 @@ fun StoryCreatorScreen(
             }
         }
     } // end COMPOSE stage Box
+    } // end COMPOSE stage branch
     } // end when(currentStage)
     } // end AnimatedContent
     } // end Scaffold content lambda
