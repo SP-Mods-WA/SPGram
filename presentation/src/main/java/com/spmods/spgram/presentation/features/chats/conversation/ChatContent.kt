@@ -674,18 +674,28 @@ fun ChatContent(
                             val onAudioClickStable: (MessageModel) -> Unit = remember(component) {
                                 { msg: MessageModel ->
                                     val audio = msg.content as? MessageContent.Audio
-                                    if (audio != null) {
-                                        val validAudioPath = audio.path?.takeIf { File(it).exists() }
-                                        if (validAudioPath != null) {
-                                            currentKeyboardController.value?.hide()
-                                            currentFocusManager.value.clearFocus()
-                                            component.onOpenVideo(
-                                                path = validAudioPath,
-                                                messageId = msg.id,
-                                                caption = audio.caption
-                                            )
-                                        } else {
-                                            component.onDownloadFile(audio.fileId)
+                                    val voice = msg.content as? MessageContent.Voice
+                                    when {
+                                        audio != null -> {
+                                            val validAudioPath = audio.path?.takeIf { File(it).exists() }
+                                            if (validAudioPath != null) {
+                                                currentKeyboardController.value?.hide()
+                                                currentFocusManager.value.clearFocus()
+                                                component.onOpenVideo(
+                                                    path = validAudioPath,
+                                                    messageId = msg.id,
+                                                    caption = audio.caption
+                                                )
+                                            } else {
+                                                component.onDownloadFile(audio.fileId)
+                                            }
+                                        }
+                                        voice != null -> {
+                                            if (voice.path != null) {
+                                                // Already downloaded — playback handled by VoiceRow internally
+                                            } else {
+                                                component.onDownloadFile(voice.fileId)
+                                            }
                                         }
                                     }
                                     Unit
