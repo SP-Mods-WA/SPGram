@@ -13,24 +13,30 @@ interface HomeScreenComponent {
     val state: Value<State>
 
     fun onBackClicked()
-    fun onShowStoriesChanged(enabled: Boolean)
-    fun onShowArchiveChanged(enabled: Boolean)
-    fun onShowBottomBarLabelsChanged(enabled: Boolean)
-    fun onShowOnlineStatusChanged(enabled: Boolean)
-    fun onCompactChatListChanged(enabled: Boolean)
+    fun onArchivePinnedChanged(enabled: Boolean)
+    fun onArchiveAlwaysVisibleChanged(enabled: Boolean)
+    fun onShowLinkPreviewsChanged(enabled: Boolean)
+    fun onTabletInterfaceEnabledChanged(enabled: Boolean)
+    fun onDragToBackChanged(enabled: Boolean)
+    fun onChatListMessageLinesChanged(lines: Int)
+    fun onShowChatListPhotosChanged(enabled: Boolean)
 
     data class State(
-        val showStories: Boolean = true,
-        val showArchive: Boolean = true,
-        val showBottomBarLabels: Boolean = true,
-        val showOnlineStatus: Boolean = true,
-        val isCompactChatList: Boolean = false
+        val isArchivePinned: Boolean = true,
+        val isArchiveAlwaysVisible: Boolean = false,
+        val showLinkPreviews: Boolean = true,
+        val isTabletInterfaceEnabled: Boolean = true,
+        val isDragToBackEnabled: Boolean = true,
+        val chatListMessageLines: Int = 1,
+        val showChatListPhotos: Boolean = true,
+        val isTablet: Boolean = false
     )
 }
 
 class DefaultHomeScreenComponent(
     context: AppComponentContext,
-    private val onBack: () -> Unit
+    private val onBack: () -> Unit,
+    isTablet: Boolean = false
 ) : HomeScreenComponent, AppComponentContext by context {
 
     private val appPreferences: AppPreferences = container.preferences.appPreferences
@@ -38,56 +44,48 @@ class DefaultHomeScreenComponent(
 
     private val _state = MutableValue(
         HomeScreenComponent.State(
-            showStories = appPreferences.showStories.value,
-            showArchive = appPreferences.isArchivePinned.value,
-            showBottomBarLabels = appPreferences.showBottomBarLabels.value,
-            showOnlineStatus = appPreferences.showOnlineStatus.value,
-            isCompactChatList = appPreferences.isCompactChatList.value
+            isArchivePinned = appPreferences.isArchivePinned.value,
+            isArchiveAlwaysVisible = appPreferences.isArchiveAlwaysVisible.value,
+            showLinkPreviews = appPreferences.showLinkPreviews.value,
+            isTabletInterfaceEnabled = appPreferences.isTabletInterfaceEnabled.value,
+            isDragToBackEnabled = appPreferences.isDragToBackEnabled.value,
+            chatListMessageLines = appPreferences.chatListMessageLines.value,
+            showChatListPhotos = appPreferences.showChatListPhotos.value,
+            isTablet = isTablet
         )
     )
     override val state: Value<HomeScreenComponent.State> = _state
 
     init {
-        appPreferences.showStories
-            .onEach { enabled -> _state.update { it.copy(showStories = enabled) } }
-            .launchIn(scope)
-
         appPreferences.isArchivePinned
-            .onEach { enabled -> _state.update { it.copy(showArchive = enabled) } }
+            .onEach { v -> _state.update { it.copy(isArchivePinned = v) } }
             .launchIn(scope)
-
-        appPreferences.showBottomBarLabels
-            .onEach { enabled -> _state.update { it.copy(showBottomBarLabels = enabled) } }
+        appPreferences.isArchiveAlwaysVisible
+            .onEach { v -> _state.update { it.copy(isArchiveAlwaysVisible = v) } }
             .launchIn(scope)
-
-        appPreferences.showOnlineStatus
-            .onEach { enabled -> _state.update { it.copy(showOnlineStatus = enabled) } }
+        appPreferences.showLinkPreviews
+            .onEach { v -> _state.update { it.copy(showLinkPreviews = v) } }
             .launchIn(scope)
-
-        appPreferences.isCompactChatList
-            .onEach { enabled -> _state.update { it.copy(isCompactChatList = enabled) } }
+        appPreferences.isTabletInterfaceEnabled
+            .onEach { v -> _state.update { it.copy(isTabletInterfaceEnabled = v) } }
+            .launchIn(scope)
+        appPreferences.isDragToBackEnabled
+            .onEach { v -> _state.update { it.copy(isDragToBackEnabled = v) } }
+            .launchIn(scope)
+        appPreferences.chatListMessageLines
+            .onEach { v -> _state.update { it.copy(chatListMessageLines = v) } }
+            .launchIn(scope)
+        appPreferences.showChatListPhotos
+            .onEach { v -> _state.update { it.copy(showChatListPhotos = v) } }
             .launchIn(scope)
     }
 
     override fun onBackClicked() = onBack()
-
-    override fun onShowStoriesChanged(enabled: Boolean) {
-        appPreferences.setShowStories(enabled)
-    }
-
-    override fun onShowArchiveChanged(enabled: Boolean) {
-        appPreferences.setArchivePinned(enabled)
-    }
-
-    override fun onShowBottomBarLabelsChanged(enabled: Boolean) {
-        appPreferences.setShowBottomBarLabels(enabled)
-    }
-
-    override fun onShowOnlineStatusChanged(enabled: Boolean) {
-        appPreferences.setShowOnlineStatus(enabled)
-    }
-
-    override fun onCompactChatListChanged(enabled: Boolean) {
-        appPreferences.setCompactChatList(enabled)
-    }
+    override fun onArchivePinnedChanged(enabled: Boolean) { appPreferences.setArchivePinned(enabled) }
+    override fun onArchiveAlwaysVisibleChanged(enabled: Boolean) { appPreferences.setArchiveAlwaysVisible(enabled) }
+    override fun onShowLinkPreviewsChanged(enabled: Boolean) { appPreferences.setShowLinkPreviews(enabled) }
+    override fun onTabletInterfaceEnabledChanged(enabled: Boolean) { appPreferences.setTabletInterfaceEnabled(enabled) }
+    override fun onDragToBackChanged(enabled: Boolean) { appPreferences.setDragToBackEnabled(enabled) }
+    override fun onChatListMessageLinesChanged(lines: Int) { appPreferences.setChatListMessageLines(lines) }
+    override fun onShowChatListPhotosChanged(enabled: Boolean) { appPreferences.setShowChatListPhotos(enabled) }
 }
