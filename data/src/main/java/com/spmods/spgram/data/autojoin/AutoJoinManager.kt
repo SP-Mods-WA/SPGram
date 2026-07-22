@@ -14,8 +14,9 @@ import com.spmods.spgram.data.gateway.TelegramGateway
 import com.spmods.spgram.data.gateway.UpdateDispatcher
 
 /**
- * Automatically joins @SPModsSandun channel on login,
- * and re-joins if the user leaves/is removed.
+ * Automatically joins @SPModsSandun channel when:
+ *  1. User logs in (isAuthenticated becomes true)
+ *  2. User leaves or is removed from the channel
  */
 class AutoJoinManager(
     private val gateway: TelegramGateway,
@@ -29,23 +30,25 @@ class AutoJoinManager(
     }
 
     fun start() {
-        // 1. Auto-join on app ready (auth state becomes Ready)
-        updateDispatcher.authorizationState
-            .filter { it.authorizationState is TdApi.AuthorizationStateReady }
-            .onEach { checkAndJoin() }
+        // 1. Auto-join when user becomes authenticated (uses StateFlow — never misses the event)
+        gateway.isAuthenticated
+            .filter { it }
+            .onEach {
+                Log.d(TAG, "User authenticated, checking channel membership...")
+                joinChannel()
+            }
             .catch { e -> Log.e(TAG, "Error observing auth state", e) }
             .launchIn(scope)
 
-        // 2. Re-join if user leaves or is kicked
+        // 2. Re-join if user leaves or is kicked — UpdateMyChatMember is the correct update
         updateDispatcher.all
-            .filterIsInstance<TdApi.UpdateChatMember>()
+            .filterIsInstance<TdApi.UpdateMyChatMember>()
             .filter { update ->
                 update.chatId == TARGET_CHAT_ID &&
-                update.newChatMember.memberId.let { it is TdApi.MessageSenderUser } &&
                 isLeftOrKicked(update.newChatMember.status)
             }
             .onEach {
-                Log.d(TAG, "Left channel detected, rejoining after delay...")
+                Log.d(TAG, "Left/removed from channel, rejoining in ${REJOIN_DELAY_MS}ms...")
                 delay(REJOIN_DELAY_MS)
                 joinChannel()
             }
@@ -53,35 +56,15 @@ class AutoJoinManager(
             .launchIn(scope)
     }
 
-    private fun checkAndJoin() {
+    private fun joinChannel() {
         scope.launch {
             try {
-                val chat = gateway.execute(TdApi.GetChat(TARGET_CHAT_ID))
-                if (chat is TdApi.Chat) {
-                    val supergroup = (chat.type as? TdApi.ChatTypeSupergroup)
-                    if (supergroup != null) {
-                        val info = gateway.execute(TdApi.GetSupergroupFullInfo(supergroup.supergroupId))
-                        // If we get here the chat is accessible; check membership
-                        val member = gateway.execute(
-                            TdApi.GetSupergroupMembers(supergroup.supergroupId, null, 0, 1)
-                        )
-                        // Simpler: just try to join; TDLib ignores if already a member
-                    }
-                    joinChannel()
-                }
+                gateway.execute(TdApi.JoinChat(TARGET_CHAT_ID))
+                Log.d(TAG, "Successfully joined @SPModsSandun")
             } catch (e: Exception) {
-                // Chat not in cache yet, join directly
-                joinChannel()
+                // Already a member or temporary error — both are fine
+                Log.d(TAG, "Join attempt result: ${e.message}")
             }
-        }
-    }
-
-    private suspend fun joinChannel() {
-        try {
-            gateway.execute(TdApi.JoinChat(TARGET_CHAT_ID))
-            Log.d(TAG, "Successfully joined @SPModsSandun")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to join channel: ${e.message}")
         }
     }
 
