@@ -38,6 +38,15 @@ fun TdApi.AuthorizationState.toDomain(): AuthStep =
         is TdApi.AuthorizationStateWaitTdlibParameters ->
             AuthStep.WaitParameters
 
+        is TdApi.AuthorizationStateLoggingOut ->
+            AuthStep.Loading
+
+        is TdApi.AuthorizationStateClosing ->
+            AuthStep.Loading
+
+        is TdApi.AuthorizationStateClosed ->
+            AuthStep.InputPhone
+
         else ->
             AuthStep.Loading
     }
