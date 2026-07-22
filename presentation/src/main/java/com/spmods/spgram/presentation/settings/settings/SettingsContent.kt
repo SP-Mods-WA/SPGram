@@ -42,6 +42,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Chat
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.automirrored.rounded.ExitToApp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PhoneIphone
@@ -752,11 +753,22 @@ fun SettingsContent(component: SettingsComponent) {
                     item {
                         SectionHeader(stringResource(R.string.section_general))
                         SettingsItem(
+                            icon = Icons.Rounded.Home,
+                            title = "Home Screen",
+                            subtitle = "Stories, chat list, navigation bar",
+                            iconBackgroundColor = purpleColor,
+                            position = ItemPosition.TOP,
+                            onClick = component::onHomeScreenClicked,
+                            modifier = Modifier.semantics {
+                                contentDescription = "SettingsHomeScreen"
+                            }
+                        )
+                        SettingsItem(
                             icon = Icons.AutoMirrored.Rounded.Chat,
                             title = stringResource(R.string.chat_settings_title),
                             subtitle = stringResource(R.string.chat_settings_subtitle),
                             iconBackgroundColor = blueColor,
-                            position = ItemPosition.TOP,
+                            position = ItemPosition.MIDDLE,
                             onClick = component::onChatSettingsClicked,
                             modifier = Modifier.semantics {
                                 contentDescription = "SettingsChatSettings"
