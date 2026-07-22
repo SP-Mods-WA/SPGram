@@ -1,18 +1,17 @@
 package com.spmods.spgram.presentation.features.profile.components
 
+import androidx.compose.ui.graphics.toArgb
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -20,79 +19,83 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.LaunchedEffect
+import com.spmods.spgram.domain.models.UserModel
+import com.spmods.spgram.domain.repository.UserRepository
+import com.spmods.spgram.presentation.core.ui.Avatar
+import com.spmods.spgram.presentation.features.chats.conversation.editor.photo.PhotoEditorScreen
+import com.spmods.spgram.presentation.features.chats.conversation.editor.video.VideoEditorScreen
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FormatAlignCenter
+import androidx.compose.material.icons.rounded.FormatAlignLeft
+import androidx.compose.material.icons.rounded.FormatAlignRight
+import androidx.compose.material.icons.rounded.FormatBold
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.PeopleAlt
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.PhotoLibrary
-import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PlayCircle
-import androidx.compose.material.icons.rounded.Public
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material.icons.rounded.TextFields
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -102,263 +105,340 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
-import coil3.compose.AsyncImage
 import coil3.compose.SubcomposeAsyncImage
 import com.spmods.spgram.domain.models.StoryModel
 import com.spmods.spgram.domain.models.StoryPrivacy
-import com.spmods.spgram.domain.models.UserModel
 import com.spmods.spgram.domain.repository.StoryRepository
-import com.spmods.spgram.domain.repository.UserRepository
-import com.spmods.spgram.presentation.R
-import com.spmods.spgram.presentation.core.ui.Avatar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.roundToInt
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 private const val MAX_STORY_VIDEO_SECONDS = 60
 private const val MAX_STORY_CAPTION_CHARS = 2048
-private const val STORY_MEDIA_ASPECT_RATIO = 9f / 16f
+private const val STORY_ASPECT_RATIO = 9f / 16f
 
-// ─── Domain types ─────────────────────────────────────────────────────────────
+// Monogram-style multi-stage composer flow
+private enum class StoryComposerStage { COMPOSE, PHOTO_EDITOR, VIDEO_EDITOR, PREVIEW }
 
-private enum class StoryMediaType { PHOTO, VIDEO }
+private enum class StoryType { PHOTO, VIDEO, TEXT }
 
-private data class StoryMediaItem(
-    val sourcePath: String,
-    val mediaType: StoryMediaType,
-    val thumbnail: Bitmap? = null  // only for VIDEO
-)
-
-private enum class StoryComposerStage { COMPOSE, PREVIEW }
-
-private enum class StoryPrivacyUi { EVERYONE, CONTACTS, CLOSE_FRIENDS, SELECTED_USERS }
-
-private data class StoryComposerDraft(
-    val mediaItems: List<StoryMediaItem> = emptyList(),
-    val selectedIndex: Int = 0,
-    val caption: String = "",
-    val privacy: StoryPrivacyUi = StoryPrivacyUi.EVERYONE,
-    val exceptUserIds: List<Long> = emptyList(),
-    val selectedUserIds: List<Long> = emptyList(),
-    val activePeriodSeconds: Int = 86400,
-    val keepOnProfile: Boolean = false,
-    val protectContent: Boolean = false
-) {
-    val isValid: Boolean get() = mediaItems.isNotEmpty()
-    val currentMedia: StoryMediaItem? get() = mediaItems.getOrNull(selectedIndex)
-}
-
+private data class DurationOption(val label: String, val seconds: Int)
 private val durationOptions = listOf(
-    6 * 3600 to "6h",
-    12 * 3600 to "12h",
-    24 * 3600 to "24h",
-    48 * 3600 to "48h"
+    DurationOption("6h",  6  * 3600),
+    DurationOption("12h", 12 * 3600),
+    DurationOption("24h", 24 * 3600),
+    DurationOption("48h", 48 * 3600),
 )
 
-// ─── Audience picker state ─────────────────────────────────────────────────────
+private enum class PrivacyType { EVERYONE, CONTACTS, CLOSE_FRIENDS, SELECTED_USERS }
 
-private data class AudiencePickerState(
-    val isVisible: Boolean = false,
-    val isShowTo: Boolean = false,
-    val contacts: List<UserModel> = emptyList(),
-    val searchQuery: String = "",
-    val isLoading: Boolean = false
+private data class PrivacyOption(val label: String, val icon: String, val type: PrivacyType)
+private val privacyOptions = listOf(
+    PrivacyOption("Everyone",       "🌍", PrivacyType.EVERYONE),
+    PrivacyOption("Contacts",       "👥", PrivacyType.CONTACTS),
+    PrivacyOption("Close Friends",  "⭐", PrivacyType.CLOSE_FRIENDS),
+    PrivacyOption("Selected Users", "👤", PrivacyType.SELECTED_USERS),
+)
+
+private val textBgColors = listOf(
+    Color.Transparent,
+    Color(0xCC000000),
+    Color(0xCC1A1A2E),
+    Color(0xCC16213E),
+    Color(0xCC0F3460),
+    Color(0xCC533483),
+    Color(0xCC1B4332),
+    Color(0xCC7B2D00),
+)
+
+private val textColors = listOf(
+    Color.White,
+    Color.Black,
+    Color(0xFFFFD700),
+    Color(0xFFFF6B6B),
+    Color(0xFF4ECDC4),
+    Color(0xFFA8E6CF),
+    Color(0xFFFFAA00),
+    Color(0xFFE040FB),
+)
+
+private val gradientBgs = listOf(
+    listOf(Color(0xFF1A1A2E), Color(0xFF16213E)),
+    listOf(Color(0xFF0F3460), Color(0xFF533483)),
+    listOf(Color(0xFF1B4332), Color(0xFF081C15)),
+    listOf(Color(0xFF7B2D00), Color(0xFF3D0000)),
+    listOf(Color(0xFF23074D), Color(0xFFCC5333)),
+    listOf(Color(0xFF005C97), Color(0xFF363795)),
+    listOf(Color(0xFF134E5E), Color(0xFF71B280)),
+    listOf(Color(0xFF373B44), Color(0xFF4286F4)),
 )
 
 // ─── Main Composable ──────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StoryCreatorScreen(
     chatId: Long,
     onPosted: (StoryModel) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val context      = LocalContext.current
+    val scope        = rememberCoroutineScope()
     val storyRepo: StoryRepository = koinInject()
-    val userRepo: UserRepository = koinInject()
+    val userRepo: UserRepository   = koinInject()
 
-    // ── Composer state ──────────────────────────────────────────────────────
-    var draft by remember { mutableStateOf(StoryComposerDraft()) }
+    // ── Monogram-style dual-stage composer (COMPOSE / PREVIEW)
     var stage by rememberSaveable { mutableStateOf(StoryComposerStage.COMPOSE) }
-    var isPosting by remember { mutableStateOf(false) }
-    var isPreparing by remember { mutableStateOf(false) }
-    var errorMsg by remember { mutableStateOf<String?>(null) }
 
-    // ── Audience picker ─────────────────────────────────────────────────────
-    var audiencePicker by remember { mutableStateOf(AudiencePickerState()) }
+    // ── media state
+    var storyType        by remember { mutableStateOf(StoryType.PHOTO) }
+    var selectedPath     by remember { mutableStateOf<String?>(null) }
+    var videoThumbnail   by remember { mutableStateOf<Bitmap?>(null) }
+    var isPreparing      by remember { mutableStateOf(false) }
+    var isPosting        by remember { mutableStateOf(false) }
+    var errorMsg         by remember { mutableStateOf<String?>(null) }
+
+    // ── text story state
+    var textContent      by remember { mutableStateOf("") }
+    var selectedTextColor   by remember { mutableIntStateOf(0) }
+    var selectedTextBg      by remember { mutableIntStateOf(1) }
+    var selectedGradient    by remember { mutableIntStateOf(0) }
+    var textAlign        by remember { mutableStateOf(TextAlign.Center) }
+    var showTextEditor   by remember { mutableStateOf(false) }
+
+    // ── caption (photo/video)
+    var caption          by remember { mutableStateOf("") }
+    val captionRemaining = MAX_STORY_CAPTION_CHARS - caption.length
+
+    // ── privacy & duration
+    var selectedPrivacyType  by remember { mutableStateOf(PrivacyType.EVERYONE) }
+    var exceptUserIds        by remember { mutableStateOf<List<Long>>(emptyList()) }
+    var selectedUserIds      by remember { mutableStateOf<List<Long>>(emptyList()) }
+    var selectedDuration     by remember { mutableStateOf(durationOptions[2]) }
+
+    // ── user picker panel
+    var showUserPickerPanel  by remember { mutableStateOf(false) }
+    var userPickerMode       by remember { mutableStateOf("selected") } // "selected" or "except"
+    var userSearchQuery      by remember { mutableStateOf("") }
+    var allContacts          by remember { mutableStateOf<List<UserModel>>(emptyList()) }
+    var isLoadingContacts    by remember { mutableStateOf(false) }
 
     // Load contacts when picker opens
-    LaunchedEffect(audiencePicker.isVisible) {
-        if (audiencePicker.isVisible && audiencePicker.contacts.isEmpty()) {
-            audiencePicker = audiencePicker.copy(isLoading = true)
-            val contacts = runCatching { userRepo.getContacts() }.getOrDefault(emptyList())
-            audiencePicker = audiencePicker.copy(contacts = contacts, isLoading = false)
+    LaunchedEffect(showUserPickerPanel) {
+        if (showUserPickerPanel && allContacts.isEmpty()) {
+            isLoadingContacts = true
+            allContacts = runCatching { userRepo.getContacts() }.getOrDefault(emptyList())
+            isLoadingContacts = false
         }
     }
 
-    // ── Permission state ────────────────────────────────────────────────────
-    var hasGalleryAccess by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context, Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED ||
-            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED)
-        )
-    }
-    val galleryPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { results -> hasGalleryAccess = results.values.any { it } }
-
-    var hasCameraPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> hasCameraPermission = granted }
-
-    // ── Media launchers ─────────────────────────────────────────────────────
-    val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        if (uris.isEmpty()) return@rememberLauncherForActivityResult
-        scope.launch {
-            isPreparing = true; errorMsg = null
-            val items = uris.mapNotNull { uri ->
-                val path = copyUriToTemp(context, uri, false) ?: return@mapNotNull null
-                StoryMediaItem(path, StoryMediaType.PHOTO)
-            }
-            if (items.isNotEmpty()) {
-                draft = draft.copy(mediaItems = draft.mediaItems + items, selectedIndex = draft.mediaItems.size)
-            }
-            isPreparing = false
-        }
-    }
-    val videoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        scope.launch {
-            isPreparing = true; errorMsg = null
-            val path = copyUriToTemp(context, uri, true) ?: run { isPreparing = false; return@launch }
-            val dur = getVideoDuration(path)
-            if (dur != null && dur > MAX_STORY_VIDEO_SECONDS) {
-                errorMsg = "Video too long (${dur}s). Max $MAX_STORY_VIDEO_SECONDS s."
-                File(path).delete(); isPreparing = false; return@launch
-            }
-            val thumb = getVideoThumbnail(path)
-            draft = draft.copy(mediaItems = draft.mediaItems + StoryMediaItem(path, StoryMediaType.VIDEO, thumb))
-            isPreparing = false
+    // Search filter
+    val filteredContacts = remember(allContacts, userSearchQuery) {
+        if (userSearchQuery.isBlank()) allContacts
+        else allContacts.filter { u ->
+            val q = userSearchQuery.lowercase()
+            u.firstName.lowercase().contains(q) ||
+            u.lastName?.lowercase()?.contains(q) == true ||
+            u.username?.lowercase()?.contains(q) == true
         }
     }
 
-    // ── Back handling ───────────────────────────────────────────────────────
+    fun buildPrivacy(): StoryPrivacy = when (selectedPrivacyType) {
+        PrivacyType.EVERYONE       -> StoryPrivacy.Everyone(exceptUserIds)
+        PrivacyType.CONTACTS       -> StoryPrivacy.Contacts(exceptUserIds)
+        PrivacyType.CLOSE_FRIENDS  -> StoryPrivacy.CloseFriends
+        PrivacyType.SELECTED_USERS -> StoryPrivacy.SelectedUsers(selectedUserIds)
+    }
+
+    // ── transform (pinch-zoom on preview)
+    var scale            by remember { mutableFloatStateOf(1f) }
+    var offsetX          by remember { mutableFloatStateOf(0f) }
+    var offsetY          by remember { mutableFloatStateOf(0f) }
+
+    // ── panel visibility
+    var showPrivacyPanel   by remember { mutableStateOf(false) }
+    var showDurationPanel  by remember { mutableStateOf(false) }
+    var showTextStylePanel by remember { mutableStateOf(false) }
+
+    // Monogram-style back chain: Preview → Editor → Compose → Dismiss
     BackHandler(enabled = stage == StoryComposerStage.PREVIEW) {
+        stage = if (storyType == StoryType.VIDEO) StoryComposerStage.VIDEO_EDITOR else StoryComposerStage.PHOTO_EDITOR
+    }
+    BackHandler(enabled = stage == StoryComposerStage.PHOTO_EDITOR || stage == StoryComposerStage.VIDEO_EDITOR) {
         stage = StoryComposerStage.COMPOSE
     }
-    BackHandler(enabled = audiencePicker.isVisible) {
-        audiencePicker = audiencePicker.copy(isVisible = false)
+    BackHandler(enabled = stage == StoryComposerStage.COMPOSE) { onDismiss() }
+
+    // ── helpers
+    suspend fun copyUri(uri: Uri, isVideo: Boolean): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val ext  = if (isVideo) "mp4" else "jpg"
+            val file = File(context.cacheDir, "story_${System.nanoTime()}.$ext")
+            context.contentResolver.openInputStream(uri)?.use { i ->
+                FileOutputStream(file).use { o -> i.copyTo(o) }
+            } ?: return@withContext null
+            file.absolutePath
+        }.getOrNull()
     }
 
-    // ── Post logic ──────────────────────────────────────────────────────────
-    fun buildPrivacy(): StoryPrivacy = when (draft.privacy) {
-        StoryPrivacyUi.EVERYONE       -> StoryPrivacy.Everyone(draft.exceptUserIds)
-        StoryPrivacyUi.CONTACTS       -> StoryPrivacy.Contacts(draft.exceptUserIds)
-        StoryPrivacyUi.CLOSE_FRIENDS  -> StoryPrivacy.CloseFriends
-        StoryPrivacyUi.SELECTED_USERS -> StoryPrivacy.SelectedUsers(draft.selectedUserIds)
+    suspend fun videoDuration(path: String): Int? = withContext(Dispatchers.IO) {
+        val r = MediaMetadataRetriever()
+        runCatching {
+            r.setDataSource(path)
+            r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                ?.toLongOrNull()?.let { (it / 1000).toInt() }
+        }.also { r.release() }.getOrNull()
     }
+
+    suspend fun videoThumb(path: String): Bitmap? = withContext(Dispatchers.IO) {
+        val r = MediaMetadataRetriever()
+        runCatching { r.setDataSource(path); r.getFrameAtTime(0) }
+            .also { r.release() }.getOrNull()
+    }
+
+    fun onPickedMedia(uri: Uri, isVideo: Boolean) {
+        scope.launch {
+            isPreparing   = true
+            errorMsg      = null
+            selectedPath  = null
+            videoThumbnail = null
+            scale = 1f; offsetX = 0f; offsetY = 0f
+
+            val path = copyUri(uri, isVideo)
+            if (path == null) { errorMsg = "Couldn't read file."; isPreparing = false; return@launch }
+            if (isVideo) {
+                val dur = videoDuration(path)
+                if (dur != null && dur > MAX_STORY_VIDEO_SECONDS) {
+                    errorMsg = "Video too long (${dur}s). Max $MAX_STORY_VIDEO_SECONDS s."
+                    File(path).delete(); isPreparing = false; return@launch
+                }
+                videoThumbnail = videoThumb(path)
+            }
+            selectedPath  = path
+            storyType     = if (isVideo) StoryType.VIDEO else StoryType.PHOTO
+            isPreparing   = false
+            // Monogram-style: auto-open editor after media pick
+            stage = if (isVideo) StoryComposerStage.VIDEO_EDITOR else StoryComposerStage.PHOTO_EDITOR
+        }
+    }
+
+    val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { it?.let { uri -> onPickedMedia(uri, false) } }
+    val videoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { it?.let { uri -> onPickedMedia(uri, true)  } }
+
+    val canPost = when (storyType) {
+        StoryType.TEXT  -> textContent.isNotBlank()
+        else            -> selectedPath != null
+    } && !isPosting && !isPreparing
 
     fun doPost() {
-        if (!draft.isValid || isPosting) return
         scope.launch {
             isPosting = true; errorMsg = null
             runCatching {
-                var lastStory: StoryModel? = null
-                for (item in draft.mediaItems) {
-                    val result = when (item.mediaType) {
-                        StoryMediaType.PHOTO -> storyRepo.postPhotoStory(
-                            chatId = chatId,
-                            photoPath = item.sourcePath,
-                            caption = draft.caption.trim(),
-                            activePeriodSeconds = draft.activePeriodSeconds,
-                            privacy = buildPrivacy()
+                val result = when (storyType) {
+                    StoryType.VIDEO -> storyRepo.postVideoStory(
+                        chatId              = chatId,
+                        videoPath           = selectedPath!!,
+                        caption             = caption.trim(),
+                        activePeriodSeconds = selectedDuration.seconds,
+                        privacy             = buildPrivacy()
+                    )
+                    StoryType.PHOTO -> storyRepo.postPhotoStory(
+                        chatId              = chatId,
+                        photoPath           = selectedPath!!,
+                        caption             = caption.trim(),
+                        activePeriodSeconds = selectedDuration.seconds,
+                        privacy             = buildPrivacy()
+                    )
+                    StoryType.TEXT -> {
+                        // Render the text canvas to a temp JPEG and post as photo
+                        val textBitmap = renderTextStoryBitmap(
+                            context      = context,
+                            text         = textContent,
+                            textColor    = textColors[selectedTextColor],
+                            textBgColor  = textBgColors[selectedTextBg],
+                            gradColors   = gradientBgs[selectedGradient]
                         )
-                        StoryMediaType.VIDEO -> storyRepo.postVideoStory(
-                            chatId = chatId,
-                            videoPath = item.sourcePath,
-                            caption = draft.caption.trim(),
-                            activePeriodSeconds = draft.activePeriodSeconds,
-                            privacy = buildPrivacy()
+                        val tmpFile = File(context.cacheDir, "story_text_${System.currentTimeMillis()}.jpg")
+                        withContext(Dispatchers.IO) {
+                            FileOutputStream(tmpFile).use { textBitmap.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+                        }
+                        storyRepo.postPhotoStory(
+                            chatId              = chatId,
+                            photoPath           = tmpFile.absolutePath,
+                            caption             = "",   // text is baked into the image
+                            activePeriodSeconds = selectedDuration.seconds,
+                            privacy             = buildPrivacy()
                         )
                     }
-                    if (result != null) lastStory = result
-                    else { errorMsg = "Failed to post one or more stories."; break }
                 }
-                lastStory?.let { onPosted(it) } ?: run { errorMsg = "Failed to post story." }
+                if (result != null) onPosted(result) else errorMsg = "Failed to post. Try again."
             }.onFailure { errorMsg = it.message ?: "Unknown error" }
             isPosting = false
         }
     }
 
-    // ── Scaffold ─────────────────────────────────────────────────────────────
+    // ─── Root — Monogram-style Scaffold ──────────────────────────────────────
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = Color(0xFF0A0A0F),
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(
-                            text = stringResource(R.string.story_compose_title),
+                            text = "New Story",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = Color.White
                         )
                         Text(
                             text = when (stage) {
-                                StoryComposerStage.COMPOSE -> stringResource(R.string.story_caption_supporting)
-                                StoryComposerStage.PREVIEW -> stringResource(R.string.story_preview_subtitle)
+                                StoryComposerStage.COMPOSE      -> "Compose"
+                                StoryComposerStage.PHOTO_EDITOR -> "Edit Photo"
+                                StoryComposerStage.VIDEO_EDITOR -> "Edit Video"
+                                StoryComposerStage.PREVIEW      -> "Preview"
                             },
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color.White.copy(alpha = 0.6f)
                         )
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = Color(0xFF0A0A0F)
                 )
             )
         },
         bottomBar = {
             Surface(
-                color = MaterialTheme.colorScheme.background,
-                shadowElevation = 8.dp
+                color = Color(0xFF111118),
+                shadowElevation = 10.dp
             ) {
                 Row(
                     modifier = Modifier
@@ -370,1093 +450,969 @@ fun StoryCreatorScreen(
                 ) {
                     OutlinedButton(
                         onClick = {
-                            if (stage == StoryComposerStage.PREVIEW) {
-                                stage = StoryComposerStage.COMPOSE
-                            } else if (draft.isValid) {
-                                stage = StoryComposerStage.PREVIEW
-                            } else {
-                                photoLauncher.launch("image/*")
+                            when (stage) {
+                                StoryComposerStage.PREVIEW      -> stage = if (storyType == StoryType.VIDEO) StoryComposerStage.VIDEO_EDITOR else StoryComposerStage.PHOTO_EDITOR
+                                StoryComposerStage.PHOTO_EDITOR -> stage = StoryComposerStage.COMPOSE
+                                StoryComposerStage.VIDEO_EDITOR -> stage = StoryComposerStage.COMPOSE
+                                StoryComposerStage.COMPOSE      -> if (canPost) stage = StoryComposerStage.PREVIEW else photoLauncher.launch("image/*")
                             }
                         },
-                        modifier = Modifier.weight(1f).height(56.dp),
+                        modifier = Modifier.weight(1f).height(52.dp),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Icon(
-                            imageVector = when {
-                                stage == StoryComposerStage.PREVIEW -> Icons.Rounded.Edit
-                                draft.isValid -> Icons.Rounded.PlayArrow
-                                else -> Icons.Rounded.PhotoLibrary
-                            },
-                            contentDescription = null
-                        )
-                        Spacer(Modifier.size(8.dp))
                         Text(
-                            text = when {
-                                stage == StoryComposerStage.PREVIEW -> stringResource(R.string.story_back_to_editor)
-                                draft.isValid -> stringResource(R.string.story_preview)
-                                else -> stringResource(R.string.story_pick_media)
+                            when (stage) {
+                                StoryComposerStage.PREVIEW      -> "← Edit Photo"
+                                StoryComposerStage.PHOTO_EDITOR -> "← Back"
+                                StoryComposerStage.VIDEO_EDITOR -> "← Back"
+                                StoryComposerStage.COMPOSE      -> if (canPost) "Preview" else "Pick Media"
                             },
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     }
-
                     Button(
                         onClick = ::doPost,
-                        enabled = draft.isValid && !isPosting && !isPreparing,
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(16.dp)
+                        enabled = canPost,
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4C6EF5),
+                            disabledContainerColor = Color.White.copy(alpha = 0.1f)
+                        )
                     ) {
                         if (isPosting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
                             Spacer(Modifier.size(8.dp))
                         }
                         Text(
-                            text = if (isPosting) stringResource(R.string.story_posting) else stringResource(R.string.story_publish_short),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
+                            if (isPosting) "Posting…" else "Post Story",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     }
                 }
             }
         }
-    ) { padding ->
-        Box(
+    ) { scaffoldPadding ->
+
+    // AnimatedContent switches between COMPOSE and PREVIEW stages
+    AnimatedContent(
+        targetState = stage,
+        label = "StoryComposerStage",
+        transitionSpec = {
+            (fadeIn() + slideInVertically { it / 12 }) togetherWith (fadeOut() + slideOutVertically { it / 14 })
+        },
+        modifier = Modifier.fillMaxSize()
+    ) { currentStage ->
+    when (currentStage) {
+    StoryComposerStage.PHOTO_EDITOR -> {
+        selectedPath?.let { path ->
+            PhotoEditorScreen(
+                imagePath = path,
+                onClose   = { stage = StoryComposerStage.COMPOSE },
+                onSave    = { editedPath ->
+                    selectedPath = editedPath
+                    stage = StoryComposerStage.COMPOSE
+                }
+            )
+        }
+    }
+    StoryComposerStage.VIDEO_EDITOR -> {
+        selectedPath?.let { path ->
+            VideoEditorScreen(
+                videoPath = path,
+                onClose   = { stage = StoryComposerStage.COMPOSE },
+                onSave    = { editedPath ->
+                    selectedPath = editedPath
+                    videoThumbnail = null   // thumbnail will refresh from new path
+                    stage = StoryComposerStage.COMPOSE
+                }
+            )
+        }
+    }
+    StoryComposerStage.PREVIEW -> {
+        // ── PREVIEW STAGE: Monogram-style large media pager with summary ──
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp)
-                // Consume all pointer events to prevent click-through
-                .pointerInput(Unit) { detectTapGestures { } }
+                .background(Color(0xFF0A0A0F))
+                .padding(scaffoldPadding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            AnimatedContent(
-                targetState = stage,
-                label = "StoryStage",
-                transitionSpec = {
-                    (fadeIn() + slideInVertically { it / 12 }) togetherWith
-                            (fadeOut() + slideOutVertically { it / 14 })
-                }
-            ) { currentStage ->
-                when (currentStage) {
-                    StoryComposerStage.COMPOSE -> {
-                        StoryComposeStage(
-                            draft = draft,
-                            isPreparing = isPreparing,
-                            errorMsg = errorMsg,
-                            onDraftChange = { draft = it },
-                            onPickPhotos = {
-                                if (hasGalleryAccess) {
-                                    photoLauncher.launch("image/*")
-                                } else {
-                                    val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
-                                    } else {
-                                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-                                    }
-                                    galleryPermissionLauncher.launch(perms)
-                                }
-                            },
-                            onPickVideo = { videoLauncher.launch("video/*") },
-                            onOpenCamera = {
-                                if (hasCameraPermission) { /* TODO: open camera */ }
-                                else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                            },
-                            onShowAudiencePicker = { isShowTo ->
-                                audiencePicker = audiencePicker.copy(isVisible = true, isShowTo = isShowTo)
-                            },
-                            onPreview = { stage = StoryComposerStage.PREVIEW }
-                        )
-                    }
-                    StoryComposerStage.PREVIEW -> {
-                        StoryPreviewStage(
-                            draft = draft,
-                            onSelectPage = { draft = draft.copy(selectedIndex = it) }
-                        )
+            if (selectedPath != null) {
+                BoxWithConstraints(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val maxH = 540.dp
+                    val previewW = (maxH * STORY_ASPECT_RATIO).let { w -> if (maxWidth < w) maxWidth else w }
+                    Box(
+                        modifier = Modifier
+                            .width(previewW)
+                            .aspectRatio(STORY_ASPECT_RATIO)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color.Black)
+                    ) {
+                        if (storyType == StoryType.VIDEO) {
+                            videoThumbnail?.let { bmp ->
+                                Image(bmp.asImageBitmap(), null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            }
+                            Icon(Icons.Rounded.PlayCircle, null, tint = Color.White.copy(0.85f), modifier = Modifier.align(Alignment.Center).size(56.dp))
+                        } else {
+                            SubcomposeAsyncImage(model = selectedPath, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        }
+                        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.4f)))))
+                        if (caption.isNotBlank()) {
+                            Surface(modifier = Modifier.align(Alignment.BottomStart).padding(12.dp), shape = RoundedCornerShape(16.dp), color = Color.Black.copy(0.38f)) {
+                                Text(caption, modifier = Modifier.padding(10.dp), color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
                     }
                 }
             }
-        }
-    }
-
-    // ── Audience picker bottom sheet ──────────────────────────────────────────
-    if (audiencePicker.isVisible) {
-        ModalBottomSheet(
-            onDismissRequest = { audiencePicker = audiencePicker.copy(isVisible = false) },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = MaterialTheme.colorScheme.background,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-        ) {
-            StoryAudiencePickerSheet(
-                isShowTo = audiencePicker.isShowTo,
-                contacts = audiencePicker.contacts,
-                searchQuery = audiencePicker.searchQuery,
-                isLoading = audiencePicker.isLoading,
-                selectedIds = if (audiencePicker.isShowTo) draft.selectedUserIds else draft.exceptUserIds,
-                onSearchChange = { audiencePicker = audiencePicker.copy(searchQuery = it) },
-                onToggleUser = { userId ->
-                    if (audiencePicker.isShowTo) {
-                        val newList = if (userId in draft.selectedUserIds)
-                            draft.selectedUserIds - userId else draft.selectedUserIds + userId
-                        draft = draft.copy(selectedUserIds = newList)
-                    } else {
-                        val newList = if (userId in draft.exceptUserIds)
-                            draft.exceptUserIds - userId else draft.exceptUserIds + userId
-                        draft = draft.copy(exceptUserIds = newList)
+            // Preview summary card
+            Surface(shape = RoundedCornerShape(16.dp), color = Color.White.copy(0.06f)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("🎭", style = MaterialTheme.typography.titleMedium)
+                        Column {
+                            Text("Audience", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.5f))
+                            Text(
+                                when (selectedPrivacyType) {
+                                    PrivacyType.EVERYONE       -> "Everyone" + if (exceptUserIds.isNotEmpty()) " (excl. ${exceptUserIds.size})" else ""
+                                    PrivacyType.CONTACTS       -> "Contacts" + if (exceptUserIds.isNotEmpty()) " (excl. ${exceptUserIds.size})" else ""
+                                    PrivacyType.CLOSE_FRIENDS  -> "Close friends"
+                                    PrivacyType.SELECTED_USERS -> "${selectedUserIds.size} selected users"
+                                },
+                                color = Color.White, style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
-                },
-                onClear = {
-                    if (audiencePicker.isShowTo) draft = draft.copy(selectedUserIds = emptyList())
-                    else draft = draft.copy(exceptUserIds = emptyList())
-                },
-                onDismiss = { audiencePicker = audiencePicker.copy(isVisible = false) }
-            )
-        }
-    }
-}
-
-// ─── Compose Stage ────────────────────────────────────────────────────────────
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun StoryComposeStage(
-    draft: StoryComposerDraft,
-    isPreparing: Boolean,
-    errorMsg: String?,
-    onDraftChange: (StoryComposerDraft) -> Unit,
-    onPickPhotos: () -> Unit,
-    onPickVideo: () -> Unit,
-    onOpenCamera: () -> Unit,
-    onShowAudiencePicker: (Boolean) -> Unit,
-    onPreview: () -> Unit
-) {
-    val scrollState = rememberScrollState()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-
-        // ── Media preview card ─────────────────────────────────────────────
-        StorySectionHeader(
-            title = stringResource(R.string.story_preview_title),
-            subtitle = stringResource(R.string.story_preview_subtitle)
-        )
-        StoryMediaPreviewCard(
-            draft = draft,
-            isPreparing = isPreparing,
-            onSelectPage = { onDraftChange(draft.copy(selectedIndex = it)) },
-            onPickPhotos = onPickPhotos,
-            onPreview = onPreview
-        )
-
-        // ── Media picker actions ───────────────────────────────────────────
-        StorySectionHeader(
-            title = stringResource(R.string.story_change_media),
-            subtitle = stringResource(R.string.story_select_media_hint)
-        )
-        StoryMediaActionsCard(
-            hasMedia = draft.isValid,
-            onPickPhotos = onPickPhotos,
-            onPickVideo = onPickVideo,
-            onOpenCamera = onOpenCamera,
-            onPreview = if (draft.isValid) onPreview else null
-        )
-
-        // ── Error banner ───────────────────────────────────────────────────
-        errorMsg?.let { msg ->
-            Spacer(Modifier.size(8.dp))
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.errorContainer
-            ) {
-                Text(
-                    text = msg,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("⏱", style = MaterialTheme.typography.titleMedium)
+                        Column {
+                            Text("Visible for", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.5f))
+                            Text(selectedDuration.label, color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    if (storyType == StoryType.TEXT && textContent.isNotBlank()) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("📝", style = MaterialTheme.typography.titleMedium)
+                            Column {
+                                Text("Text story", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.5f))
+                                Text(textContent.take(80) + if (textContent.length > 80) "…" else "", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
             }
         }
-
-        // ── Caption ────────────────────────────────────────────────────────
-        StorySectionHeader(
-            title = stringResource(R.string.story_details_title),
-            subtitle = stringResource(R.string.story_caption_supporting)
-        )
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow
-        ) {
-            OutlinedTextField(
-                value = draft.caption,
-                onValueChange = { if (it.length <= MAX_STORY_CAPTION_CHARS) onDraftChange(draft.copy(caption = it)) },
-                placeholder = { Text(stringResource(R.string.story_caption_label), color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                modifier = Modifier.fillMaxWidth().padding(4.dp),
-                minLines = 2,
-                maxLines = 4,
-                shape = RoundedCornerShape(16.dp)
-            )
-        }
-
-        // ── Privacy ────────────────────────────────────────────────────────
-        StorySectionHeader(title = stringResource(R.string.story_privacy_label), subtitle = null)
-        StoryPrivacyCard(
-            draft = draft,
-            onDraftChange = onDraftChange,
-            onShowAudiencePicker = onShowAudiencePicker
-        )
-
-        // ── Duration ───────────────────────────────────────────────────────
-        StorySectionHeader(
-            title = stringResource(R.string.story_duration_label),
-            subtitle = stringResource(R.string.story_duration_supporting)
-        )
-        StoryDurationCard(
-            selected = draft.activePeriodSeconds,
-            onSelect = { onDraftChange(draft.copy(activePeriodSeconds = it)) }
-        )
-
-        // ── Settings ───────────────────────────────────────────────────────
-        StorySectionHeader(
-            title = stringResource(R.string.story_settings_title),
-            subtitle = stringResource(R.string.story_audience_timing_subtitle)
-        )
-        StorySettingsCard(
-            keepOnProfile = draft.keepOnProfile,
-            protectContent = draft.protectContent,
-            onKeepOnProfileChange = { onDraftChange(draft.copy(keepOnProfile = it)) },
-            onProtectContentChange = { onDraftChange(draft.copy(protectContent = it)) }
-        )
-
-        Spacer(Modifier.size(16.dp))
     }
-}
-
-// ─── Preview Stage ────────────────────────────────────────────────────────────
-
-@Composable
-private fun StoryPreviewStage(
-    draft: StoryComposerDraft,
-    onSelectPage: (Int) -> Unit
-) {
-    Column(
+    StoryComposerStage.COMPOSE -> {
+    // ── COMPOSE STAGE: original full composer ─────────────────────────────
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .background(Color(0xFF0A0A0F))
+            .padding(scaffoldPadding)
+            // Consume ALL pointer events — prevents clicks passing through to chat list behind
+            .pointerInput(Unit) { detectTapGestures { /* consume */ } }
     ) {
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
+
+        // ── 1. Preview canvas ─────────────────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.72f)
+                .align(Alignment.TopCenter)
+                .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+                .background(Color.Black)
         ) {
-            val maxH = 560.dp
-            val maxW = maxH * STORY_MEDIA_ASPECT_RATIO
-            val previewWidth = if (maxWidth < maxW) maxWidth else maxW
-
-            Surface(
-                modifier = Modifier.width(previewWidth).aspectRatio(STORY_MEDIA_ASPECT_RATIO),
-                shape = RoundedCornerShape(28.dp),
-                color = Color.Black
-            ) {
-                StoryMediaPagerContent(
-                    mediaItems = draft.mediaItems,
-                    selectedIndex = draft.selectedIndex,
-                    caption = draft.caption,
-                    onPageChanged = onSelectPage
-                )
-            }
-        }
-
-        if (draft.mediaItems.size > 1) {
-            StoryPagerDotsIndicator(
-                count = draft.mediaItems.size,
-                selected = draft.selectedIndex
-            )
-        }
-
-        // Summary info
-        StorySectionHeader(
-            title = stringResource(R.string.story_settings_title),
-            subtitle = stringResource(R.string.story_preview_subtitle)
-        )
-        StoryPreviewSummaryCard(draft = draft)
-    }
-}
-
-// ─── Media Preview Card ───────────────────────────────────────────────────────
-
-@Composable
-private fun StoryMediaPreviewCard(
-    draft: StoryComposerDraft,
-    isPreparing: Boolean,
-    onSelectPage: (Int) -> Unit,
-    onPickPhotos: () -> Unit,
-    onPreview: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            BoxWithConstraints(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                val maxH = 360.dp
-                val maxW = maxH * STORY_MEDIA_ASPECT_RATIO
-                val previewWidth = if (maxWidth < maxW) maxWidth else maxW
-
-                if (isPreparing) {
-                    Box(
-                        modifier = Modifier
-                            .width(previewWidth)
-                            .aspectRatio(STORY_MEDIA_ASPECT_RATIO)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+            when {
+                isPreparing -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color.White)
                     }
-                } else if (!draft.isValid) {
+                }
+
+                storyType == StoryType.TEXT -> {
+                    // Gradient background
+                    val grad = gradientBgs[selectedGradient]
                     Box(
                         modifier = Modifier
-                            .width(previewWidth)
-                            .aspectRatio(STORY_MEDIA_ASPECT_RATIO)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                            .clickable(onClick = onPickPhotos),
+                            .fillMaxSize()
+                            .background(Brush.verticalGradient(grad))
+                            .pointerInput(Unit) { detectTapGestures { showTextEditor = true } },
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                modifier = Modifier.size(64.dp)
+                        if (textContent.isEmpty()) {
+                            Text(
+                                text = "Tap to add text",
+                                color = Color.White.copy(alpha = 0.45f),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 32.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(textBgColors[selectedTextBg])
+                                    .padding(horizontal = 20.dp, vertical = 12.dp)
                             ) {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        Icons.Rounded.Image,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                Text(
+                                    text      = textContent,
+                                    color     = textColors[selectedTextColor],
+                                    style     = TextStyle(
+                                        fontSize   = 22.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        textAlign  = textAlign,
+                                        lineHeight = 30.sp,
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                selectedPath != null -> {
+                    val scaleAnim by animateFloatAsState(scale, tween(200), label = "scale")
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                detectTransformGestures { _, pan, zoom, _ ->
+                                    scale   = (scale * zoom).coerceIn(0.8f, 4f)
+                                    offsetX += pan.x
+                                    offsetY += pan.y
+                                }
+                            }
+                    ) {
+                        if (storyType == StoryType.VIDEO) {
+                            videoThumbnail?.let { bmp ->
+                                Image(
+                                    bitmap       = bmp.asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier     = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer {
+                                            scaleX        = scaleAnim
+                                            scaleY        = scaleAnim
+                                            translationX  = offsetX
+                                            translationY  = offsetY
+                                        },
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            Icon(
+                                imageVector      = Icons.Rounded.PlayCircle,
+                                contentDescription = null,
+                                tint             = Color.White.copy(alpha = 0.85f),
+                                modifier         = Modifier
+                                    .align(Alignment.Center)
+                                    .size(56.dp)
+                            )
+                        } else {
+                            SubcomposeAsyncImage(
+                                model            = selectedPath,
+                                contentDescription = null,
+                                modifier         = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        scaleX       = scaleAnim
+                                        scaleY       = scaleAnim
+                                        translationX = offsetX
+                                        translationY = offsetY
+                                    },
+                                contentScale     = ContentScale.Crop
+                            )
+                        }
+                    }
+                }
+
+                else -> {
+                    // Empty canvas — show media type selector
+                    Column(
+                        modifier            = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            MediaPickTile(
+                                icon    = Icons.Rounded.Image,
+                                label   = "Photo",
+                                onClick = { photoLauncher.launch("image/*") }
+                            )
+                            MediaPickTile(
+                                icon    = Icons.Rounded.Videocam,
+                                label   = "Video",
+                                onClick = { videoLauncher.launch("video/*") }
+                            )
+                            MediaPickTile(
+                                icon    = Icons.Rounded.TextFields,
+                                label   = "Text",
+                                onClick = { storyType = StoryType.TEXT }
+                            )
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "Choose story type",
+                            color = Color.White.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+
+            // ── Top bar overlay ─────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = Color.White)
+                }
+
+                Text(
+                    "New Story",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                // Change media button (only if media selected)
+                if (selectedPath != null || storyType == StoryType.TEXT) {
+                    IconButton(onClick = {
+                        selectedPath = null; videoThumbnail = null
+                        textContent  = ""; storyType = StoryType.PHOTO
+                        scale = 1f; offsetX = 0f; offsetY = 0f
+                    }) {
+                        Icon(Icons.Rounded.Close, null, tint = Color.White)
+                    }
+                } else {
+                    Spacer(Modifier.size(48.dp))
+                }
+            }
+
+            // ── Right toolbar (visible when media/text selected) ─────────
+            AnimatedVisibility(
+                visible = selectedPath != null || storyType == StoryType.TEXT,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 12.dp),
+                enter = fadeIn() + slideInVertically(),
+                exit  = fadeOut() + slideOutVertically()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (storyType == StoryType.TEXT) {
+                        ToolbarIconButton(Icons.Rounded.Palette, "Style")  { showTextStylePanel = !showTextStylePanel }
+                        ToolbarIconButton(Icons.Rounded.FormatAlignLeft, "Align") {
+                            textAlign = when (textAlign) {
+                                TextAlign.Left   -> TextAlign.Center
+                                TextAlign.Center -> TextAlign.Right
+                                else             -> TextAlign.Left
+                            }
+                        }
+                    }
+                    if (selectedPath != null) {
+                        ToolbarIconButton(Icons.Rounded.Image, "Change photo") { photoLauncher.launch("image/*") }
+                        ToolbarIconButton(Icons.Rounded.Videocam, "Change video") { videoLauncher.launch("video/*") }
+                    }
+                    ToolbarIconButton(Icons.Rounded.Timer, "Duration") { showDurationPanel = !showDurationPanel; showPrivacyPanel = false }
+                }
+            }
+        }
+
+        // ── 2. Bottom controls panel ──────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(Color(0xFF111118))
+                .padding(WindowInsets.navigationBars.asPaddingValues())
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .imePadding(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Caption / Text input
+            if (storyType != StoryType.TEXT) {
+                OutlinedTextField(
+                    value         = caption,
+                    onValueChange = { caption = it },
+                    placeholder   = { Text("Add a caption…", color = Color.White.copy(alpha = 0.4f)) },
+                    modifier      = Modifier.fillMaxWidth(),
+                    maxLines      = 2,
+                    textStyle     = TextStyle(color = Color.White, fontSize = 14.sp),
+                    colors        = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor   = Color.White.copy(alpha = 0.5f),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                        cursorColor          = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+
+            // Privacy row
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Audience", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall)
+                // ── Privacy — vertical radio-style list ──────────────────────
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White.copy(alpha = 0.06f)),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    privacyOptions.forEachIndexed { idx, opt ->
+                        val selected = opt.type == selectedPrivacyType
+                        val isLast   = idx == privacyOptions.lastIndex
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(
+                                    when (idx) {
+                                        0               -> RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                                        privacyOptions.lastIndex -> RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+                                        else            -> RoundedCornerShape(0.dp)
+                                    }
+                                )
+                                .clickable {
+                                    selectedPrivacyType = opt.type
+                                    if (opt.type == PrivacyType.SELECTED_USERS) {
+                                        userPickerMode = "selected"; showUserPickerPanel = true
+                                    } else {
+                                        showUserPickerPanel = false
+                                    }
+                                }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(opt.icon, style = MaterialTheme.typography.titleMedium)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    opt.label,
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                                val subtitle = when (opt.type) {
+                                    PrivacyType.EVERYONE       -> if (exceptUserIds.isNotEmpty()) "Except ${exceptUserIds.size} users" else "All Telegram users"
+                                    PrivacyType.CONTACTS       -> if (exceptUserIds.isNotEmpty()) "Except ${exceptUserIds.size} contacts" else "Your contacts only"
+                                    PrivacyType.CLOSE_FRIENDS  -> "Your close friends list"
+                                    PrivacyType.SELECTED_USERS -> if (selectedUserIds.isEmpty()) "Tap to choose users" else "${selectedUserIds.size} users selected"
+                                }
+                                Text(
+                                    subtitle,
+                                    color = Color.White.copy(alpha = 0.45f),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                            // Radio indicator
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(if (selected) Color(0xFF4C6EF5) else Color.Transparent)
+                                    .then(
+                                        if (!selected) Modifier.then(
+                                            Modifier.background(Color.White.copy(alpha = 0.15f))
+                                        ) else Modifier
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (selected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.White)
                                     )
                                 }
                             }
-                            Text(
-                                stringResource(R.string.story_pick_media),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                stringResource(R.string.story_select_media_hint),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                textAlign = TextAlign.Center
+                        }
+
+                        if (!isLast) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 52.dp),
+                                color = Color.White.copy(alpha = 0.06f)
                             )
                         }
                     }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .width(previewWidth)
-                            .aspectRatio(STORY_MEDIA_ASPECT_RATIO)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color.Black)
-                            .clickable(onClick = onPreview)
-                    ) {
-                        StoryMediaPagerContent(
-                            mediaItems = draft.mediaItems,
-                            selectedIndex = draft.selectedIndex,
-                            caption = draft.caption,
-                            onPageChanged = onSelectPage
-                        )
-                    }
                 }
-            }
 
-            if (draft.mediaItems.size > 1) {
-                StoryPagerDotsIndicator(
-                    count = draft.mediaItems.size,
-                    selected = draft.selectedIndex
-                )
-            }
-        }
-    }
-}
-
-// ─── Media Pager Content ──────────────────────────────────────────────────────
-
-@Composable
-private fun StoryMediaPagerContent(
-    mediaItems: List<StoryMediaItem>,
-    selectedIndex: Int,
-    caption: String,
-    onPageChanged: (Int) -> Unit
-) {
-    if (mediaItems.isEmpty()) return
-    val current = mediaItems.getOrNull(selectedIndex) ?: mediaItems.first()
-
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        when (current.mediaType) {
-            StoryMediaType.VIDEO -> {
-                current.thumbnail?.let { bmp ->
-                    androidx.compose.foundation.Image(
-                        bitmap = bmp.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-                Icon(
-                    Icons.Rounded.PlayCircle,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.85f),
-                    modifier = Modifier.align(Alignment.Center).size(56.dp)
-                )
-                Surface(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
-                    shape = RoundedCornerShape(999.dp),
-                    color = Color.Black.copy(alpha = 0.42f)
-                ) {
-                    Text(
-                        stringResource(R.string.story_media_video),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White
-                    )
-                }
-            }
-            StoryMediaType.PHOTO -> {
-                AsyncImage(
-                    model = current.sourcePath,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-        }
-
-        // Gradient overlay
-        Box(
-            modifier = Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f)))
-            )
-        )
-
-        // Caption overlay
-        if (caption.isNotBlank()) {
-            Surface(
-                modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = Color.Black.copy(alpha = 0.38f)
-            ) {
-                Text(
-                    text = caption,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        // Page indicator (top right if multiple)
-        if (mediaItems.size > 1) {
-            Surface(
-                modifier = Modifier.align(Alignment.TopStart).padding(10.dp),
-                shape = RoundedCornerShape(999.dp),
-                color = Color.Black.copy(alpha = 0.42f)
-            ) {
-                Text(
-                    text = "${selectedIndex + 1}/${mediaItems.size}",
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White
-                )
-            }
-
-            // Swipe arrows for multi-page navigation
-            if (selectedIndex > 0) {
-                Surface(
-                    modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp),
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.42f),
-                    onClick = { onPageChanged((selectedIndex - 1).coerceAtLeast(0)) }
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.padding(8.dp).size(20.dp)
-                    )
-                }
-            }
-            if (selectedIndex < mediaItems.lastIndex) {
-                Surface(
-                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp),
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.42f),
-                    onClick = { onPageChanged((selectedIndex + 1).coerceAtMost(mediaItems.lastIndex)) }
-                ) {
-                    Icon(
-                        Icons.Rounded.PlayArrow,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.padding(8.dp).size(20.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ─── Pager Dots ───────────────────────────────────────────────────────────────
-
-@Composable
-private fun StoryPagerDotsIndicator(count: Int, selected: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        repeat(count) { index ->
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 3.dp)
-                    .size(
-                        width = if (index == selected) 18.dp else 6.dp,
-                        height = 6.dp
-                    )
-                    .clip(CircleShape)
-                    .background(
-                        if (index == selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outlineVariant
-                    )
-            )
-        }
-    }
-}
-
-// ─── Media Actions Card ───────────────────────────────────────────────────────
-
-@Composable
-private fun StoryMediaActionsCard(
-    hasMedia: Boolean,
-    onPickPhotos: () -> Unit,
-    onPickVideo: () -> Unit,
-    onOpenCamera: () -> Unit,
-    onPreview: (() -> Unit)?
-) {
-    data class ActionItem(val icon: ImageVector, val title: String, val onClick: () -> Unit)
-
-    val items = buildList {
-        add(ActionItem(Icons.Rounded.PhotoLibrary, if (hasMedia) stringResource(R.string.story_change_media) else stringResource(R.string.story_pick_media), onPickPhotos))
-        add(ActionItem(Icons.Rounded.Image, "Add Video", onPickVideo))
-        add(ActionItem(Icons.Rounded.CameraAlt, "Camera", onOpenCamera))
-        if (hasMedia && onPreview != null) {
-            add(ActionItem(Icons.Rounded.PlayArrow, stringResource(R.string.story_preview), onPreview))
-        }
-    }
-
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow
-    ) {
-        Column {
-            items.forEachIndexed { idx, item ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = item.onClick)
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(item.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
-                        }
-                    }
-                    Text(item.title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                }
-                if (idx < items.lastIndex) {
-                    androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(start = 72.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                }
-            }
-        }
-    }
-}
-
-// ─── Privacy Card ─────────────────────────────────────────────────────────────
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun StoryPrivacyCard(
-    draft: StoryComposerDraft,
-    onDraftChange: (StoryComposerDraft) -> Unit,
-    onShowAudiencePicker: (Boolean) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    maxItemsInEachRow = 2
-                ) {
-                    StoryPrivacyUi.entries.forEach { option ->
-                        val isSelected = draft.privacy == option
-                        Surface(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer
-                                    else MaterialTheme.colorScheme.surfaceContainerHigh
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onDraftChange(draft.copy(privacy = option)) }
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = when (option) {
-                                        StoryPrivacyUi.EVERYONE -> Icons.Rounded.Public
-                                        StoryPrivacyUi.CONTACTS -> Icons.Rounded.PeopleAlt
-                                        StoryPrivacyUi.CLOSE_FRIENDS -> Icons.Rounded.Favorite
-                                        StoryPrivacyUi.SELECTED_USERS -> Icons.Rounded.Person
-                                    },
-                                    contentDescription = null,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
-                                           else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = when (option) {
-                                        StoryPrivacyUi.EVERYONE -> stringResource(R.string.story_privacy_everyone)
-                                        StoryPrivacyUi.CONTACTS -> stringResource(R.string.story_privacy_contacts)
-                                        StoryPrivacyUi.CLOSE_FRIENDS -> stringResource(R.string.story_privacy_close_friends)
-                                        StoryPrivacyUi.SELECTED_USERS -> stringResource(R.string.story_privacy_selected_users)
-                                    },
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
-                                            else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Audience filter row
-        AnimatedVisibility(
-            visible = draft.privacy != StoryPrivacyUi.CLOSE_FRIENDS,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
-        ) {
-            val isShowTo = draft.privacy == StoryPrivacyUi.SELECTED_USERS
-            val selectedCount = if (isShowTo) draft.selectedUserIds.size else draft.exceptUserIds.size
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                onClick = { onShowAudiencePicker(isShowTo) }
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isShowTo) Icons.Rounded.PeopleAlt else Icons.Rounded.Shield,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary
-                    )
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = if (isShowTo) stringResource(R.string.story_privacy_show_to)
-                                   else stringResource(R.string.story_privacy_hide_from),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = when {
-                                isShowTo && selectedCount == 0 -> stringResource(R.string.story_privacy_show_to_empty)
-                                !isShowTo && selectedCount == 0 -> stringResource(R.string.story_privacy_hide_from_empty)
-                                else -> "$selectedCount user(s) selected"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ─── Duration Card ────────────────────────────────────────────────────────────
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun StoryDurationCard(selected: Int, onSelect: (Int) -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer
-    ) {
-        FlowRow(
-            modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            maxItemsInEachRow = 2
-        ) {
-            durationOptions.forEach { (seconds, label) ->
-                val isSelected = selected == seconds
-                Surface(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer
-                            else MaterialTheme.colorScheme.surfaceContainerHigh
+                // ── "Except…" / "Choose users…" action row ───────────────────
+                AnimatedVisibility(
+                    visible = selectedPrivacyType == PrivacyType.EVERYONE || selectedPrivacyType == PrivacyType.CONTACTS
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(seconds) }
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF4C6EF5).copy(alpha = 0.12f))
+                            .clickable { userPickerMode = "except"; showUserPickerPanel = true }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Except…", color = Color(0xFF4C6EF5), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        if (exceptUserIds.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF4C6EF5)).padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) { Text("${exceptUserIds.size}", color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) }
+                        }
+                    }
+                }
+
+                AnimatedVisibility(visible = selectedPrivacyType == PrivacyType.SELECTED_USERS) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF4C6EF5).copy(alpha = 0.12f))
+                            .clickable { userPickerMode = "selected"; showUserPickerPanel = true }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Rounded.Schedule,
-                            contentDescription = null,
-                            tint = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
-                                   else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
                         Text(
-                            label,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
-                                    else MaterialTheme.colorScheme.onSurface
+                            if (selectedUserIds.isEmpty()) "Tap to choose users…" else "${selectedUserIds.size} users selected",
+                            color = Color(0xFF4C6EF5), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium
                         )
                     }
                 }
             }
-        }
-    }
-}
 
-// ─── Settings Card ────────────────────────────────────────────────────────────
-
-@Composable
-private fun StorySettingsCard(
-    keepOnProfile: Boolean,
-    protectContent: Boolean,
-    onKeepOnProfileChange: (Boolean) -> Unit,
-    onProtectContentChange: (Boolean) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            onClick = { onKeepOnProfileChange(!keepOnProfile) }
-        ) {
+            // Duration row
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
             ) {
-                Icon(Icons.Rounded.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.story_keep_on_profile), style = MaterialTheme.typography.bodyLarge)
-                    Text(stringResource(R.string.story_keep_on_profile_subtitle), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Visible for", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    durationOptions.forEach { opt ->
+                        val selected = opt == selectedDuration
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(if (selected) Color(0xFF4C6EF5) else Color.White.copy(alpha = 0.08f))
+                                .clickable { selectedDuration = opt }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(opt.label, color = Color.White, style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+                        }
+                    }
                 }
-                Switch(checked = keepOnProfile, onCheckedChange = onKeepOnProfileChange)
+            }
+
+            // Error
+            if (errorMsg != null) {
+                Text(errorMsg!!, color = Color(0xFFFF6B6B), style = MaterialTheme.typography.bodySmall)
             }
         }
 
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            onClick = { onProtectContentChange(!protectContent) }
+        // ── 3. Text style panel (slides up from bottom of canvas) ─────────
+        AnimatedVisibility(
+            visible  = showTextStylePanel && storyType == StoryType.TEXT,
+            modifier = Modifier.align(Alignment.Center).fillMaxWidth(),
+            enter    = slideInVertically { it },
+            exit     = slideOutVertically { it }
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(Icons.Rounded.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.story_protect_content), style = MaterialTheme.typography.bodyLarge)
-                    Text(stringResource(R.string.story_protect_content_subtitle), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = protectContent, onCheckedChange = onProtectContentChange)
-            }
-        }
-    }
-}
-
-// ─── Preview Summary Card ─────────────────────────────────────────────────────
-
-@Composable
-private fun StoryPreviewSummaryCard(draft: StoryComposerDraft) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SummaryRow(Icons.Rounded.Image, "${draft.mediaItems.size} item(s)", draft.mediaItems.joinToString(", ") { it.mediaType.name.lowercase() })
-            SummaryRow(
-                when (draft.privacy) {
-                    StoryPrivacyUi.EVERYONE -> Icons.Rounded.Public
-                    StoryPrivacyUi.CONTACTS -> Icons.Rounded.PeopleAlt
-                    StoryPrivacyUi.CLOSE_FRIENDS -> Icons.Rounded.Favorite
-                    StoryPrivacyUi.SELECTED_USERS -> Icons.Rounded.Person
-                },
-                stringResource(R.string.story_privacy_label),
-                when (draft.privacy) {
-                    StoryPrivacyUi.EVERYONE -> stringResource(R.string.story_privacy_everyone)
-                    StoryPrivacyUi.CONTACTS -> stringResource(R.string.story_privacy_contacts)
-                    StoryPrivacyUi.CLOSE_FRIENDS -> stringResource(R.string.story_privacy_close_friends)
-                    StoryPrivacyUi.SELECTED_USERS -> "${draft.selectedUserIds.size} users"
-                }
-            )
-            SummaryRow(
-                Icons.Rounded.Schedule,
-                stringResource(R.string.story_duration_label),
-                durationOptions.find { it.first == draft.activePeriodSeconds }?.second ?: "${draft.activePeriodSeconds / 3600}h"
-            )
-        }
-    }
-}
-
-@Composable
-private fun SummaryRow(icon: ImageVector, title: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-        Text(title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-// ─── Audience Picker Sheet ────────────────────────────────────────────────────
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun StoryAudiencePickerSheet(
-    isShowTo: Boolean,
-    contacts: List<UserModel>,
-    searchQuery: String,
-    isLoading: Boolean,
-    selectedIds: List<Long>,
-    onSearchChange: (String) -> Unit,
-    onToggleUser: (Long) -> Unit,
-    onClear: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val filtered = remember(contacts, searchQuery) {
-        if (searchQuery.isBlank()) contacts
-        else contacts.filter { u ->
-            val q = searchQuery.lowercase()
-            u.firstName.lowercase().contains(q) ||
-            u.lastName?.lowercase()?.contains(q) == true ||
-            u.username?.lowercase()?.contains(q) == true
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = if (isShowTo) stringResource(R.string.story_audience_picker_show_to_title)
-                           else stringResource(R.string.story_audience_picker_hide_from_title),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                Text(
-                    text = if (isShowTo) stringResource(R.string.story_audience_picker_show_to_subtitle)
-                           else stringResource(R.string.story_audience_picker_hide_from_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            TextButton(onClick = onDismiss) { Text("Done") }
-        }
-
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchChange,
-            placeholder = { Text(stringResource(R.string.story_audience_picker_search)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-            shape = RoundedCornerShape(16.dp)
-        )
-
-        if (selectedIds.isNotEmpty()) {
-            Row(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                color    = Color(0xFF1A1A2A),
+                shape    = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
             ) {
-                Text("${selectedIds.size} selected", style = MaterialTheme.typography.titleSmall)
-                TextButton(onClick = onClear) { Text(stringResource(R.string.story_privacy_clear_selection)) }
-            }
-
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                selectedIds.forEach { id ->
-                    val user = contacts.find { it.id == id }
-                    FilterChip(
-                        selected = true,
-                        onClick = { onToggleUser(id) },
-                        label = { Text(user?.firstName ?: id.toString()) },
-                        trailingIcon = { Icon(Icons.Rounded.Close, contentDescription = null) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer
-                        ),
-                        border = null
-                    )
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Text Color", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        textColors.forEachIndexed { idx, color ->
+                            ColorDot(color = color, selected = idx == selectedTextColor, onClick = { selectedTextColor = idx })
+                        }
+                    }
+                    Text("Text Background", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        textBgColors.forEachIndexed { idx, color ->
+                            val display = if (color == Color.Transparent) Color.White.copy(alpha = 0.15f) else color
+                            ColorDot(
+                                color    = display,
+                                selected = idx == selectedTextBg,
+                                onClick  = { selectedTextBg = idx },
+                                bordered = idx == 0
+                            )
+                        }
+                    }
+                    Text("Gradient Background", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        gradientBgs.forEachIndexed { idx, colors ->
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(Brush.verticalGradient(colors))
+                                    .then(if (idx == selectedGradient) Modifier.border(2.dp, Color.White, CircleShape) else Modifier)
+                                    .clickable { selectedGradient = idx }
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        Box(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp, max = 400.dp),
-            contentAlignment = Alignment.Center
+        // ── 4. Inline text editor overlay ─────────────────────────────────
+        AnimatedVisibility(
+            visible  = showTextEditor && storyType == StoryType.TEXT,
+            modifier = Modifier.fillMaxSize(),
+            enter    = fadeIn(),
+            exit     = fadeOut()
         ) {
-            when {
-                isLoading -> CircularProgressIndicator()
-                filtered.isEmpty() -> Text(
-                    if (searchQuery.isBlank()) stringResource(R.string.story_audience_picker_empty)
-                    else stringResource(R.string.story_audience_picker_no_results),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                else -> LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 4.dp)) {
-                    items(filtered, key = { it.id }) { user ->
-                        val isSelected = user.id in selectedIds
-                        ListItem(
-                            headlineContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .pointerInput(Unit) { detectTapGestures { showTextEditor = false } },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp)
+                        .pointerInput(Unit) { detectTapGestures { /* consume */ } },
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    BasicTextField(
+                        value         = textContent,
+                        onValueChange = { textContent = it },
+                        textStyle     = TextStyle(
+                            color      = textColors[selectedTextColor],
+                            fontSize   = 22.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign  = textAlign,
+                        ),
+                        modifier      = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(textBgColors[selectedTextBg])
+                            .padding(horizontal = 20.dp, vertical = 16.dp),
+                        decorationBox = { inner ->
+                            if (textContent.isEmpty()) {
+                                Text("Type your story…", color = Color.White.copy(alpha = 0.4f), style = MaterialTheme.typography.bodyLarge)
+                            }
+                            inner()
+                        }
+                    )
+                    Button(
+                        onClick  = { showTextEditor = false },
+                        colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF4C6EF5)),
+                        shape    = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Rounded.Check, null, tint = Color.White)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Done", color = Color.White)
+                    }
+                }
+            }
+        }
+
+        // ── 5. User picker panel ──────────────────────────────────────────
+        AnimatedVisibility(
+            visible  = showUserPickerPanel,
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.55f)
+                .align(Alignment.BottomCenter),
+            enter    = slideInVertically { it },
+            exit     = slideOutVertically { it }
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color    = Color(0xFF16161F),
+                shape    = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            if (userPickerMode == "selected") "Select Users" else "Exclude Users",
+                            color = Color.White, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .clickable {
+                                        if (userPickerMode == "selected") selectedUserIds = emptyList()
+                                        else exceptUserIds = emptyList()
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) { Text("Clear", color = Color(0xFFFF6B6B), style = MaterialTheme.typography.labelSmall) }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF4C6EF5))
+                                    .clickable { showUserPickerPanel = false }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) { Text("Done", color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold) }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = userSearchQuery, onValueChange = { userSearchQuery = it },
+                        placeholder = { Text("Search contacts…", color = Color.White.copy(alpha = 0.4f)) },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true,
+                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor   = Color(0xFF4C6EF5),
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                            cursorColor          = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    // Contact list
+                    when {
+                        isLoadingContacts -> {
+                            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = Color(0xFF4C6EF5))
+                            }
+                        }
+                        filteredContacts.isEmpty() -> {
+                            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                                 Text(
-                                    "${user.firstName} ${user.lastName ?: ""}".trim(),
-                                    style = MaterialTheme.typography.bodyLarge
+                                    if (userSearchQuery.isBlank()) "No contacts found" else "No results for \"$userSearchQuery\"",
+                                    color = Color.White.copy(alpha = 0.35f),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    textAlign = TextAlign.Center
                                 )
-                            },
-                            supportingContent = {
-                                user.username?.takeIf { it.isNotBlank() }?.let {
-                                    Text("@$it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        else -> {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxWidth().weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                items(filteredContacts, key = { it.id }) { user ->
+                                    val isChecked = if (userPickerMode == "selected")
+                                        user.id in selectedUserIds
+                                    else
+                                        user.id in exceptUserIds
+
+                                    val displayName = buildString {
+                                        append(user.firstName)
+                                        if (!user.lastName.isNullOrBlank()) append(" ${user.lastName}")
+                                    }
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(
+                                                if (isChecked) Color(0xFF4C6EF5).copy(alpha = 0.15f)
+                                                else Color.Transparent
+                                            )
+                                            .clickable {
+                                                if (userPickerMode == "selected") {
+                                                    selectedUserIds = if (isChecked)
+                                                        selectedUserIds - user.id
+                                                    else
+                                                        selectedUserIds + user.id
+                                                } else {
+                                                    exceptUserIds = if (isChecked)
+                                                        exceptUserIds - user.id
+                                                    else
+                                                        exceptUserIds + user.id
+                                                }
+                                            }
+                                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Avatar(
+                                            path         = user.avatarPath,
+                                            fallbackPath = user.personalAvatarPath,
+                                            name         = user.firstName.ifBlank { "?" },
+                                            size         = 40.dp
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                displayName,
+                                                color      = Color.White,
+                                                style      = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            if (!user.username.isNullOrBlank()) {
+                                                Text(
+                                                    "@${user.username}",
+                                                    color = Color.White.copy(alpha = 0.5f),
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+                                        }
+                                        if (isChecked) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFF4C6EF5)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    Icons.Rounded.Check, null,
+                                                    tint     = Color.White,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
-                            },
-                            leadingContent = {
-                                Avatar(
-                                    path = user.avatarPath,
-                                    fallbackPath = user.personalAvatarPath,
-                                    name = user.firstName,
-                                    size = 40.dp
-                                )
-                            },
-                            trailingContent = {
-                                Checkbox(checked = isSelected, onCheckedChange = { onToggleUser(user.id) })
-                            },
-                            modifier = Modifier.clickable { onToggleUser(user.id) },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                            }
+                        }
+                    }
+                    val count = if (userPickerMode == "selected") selectedUserIds.size else exceptUserIds.size
+                    if (count > 0) {
+                        Text(
+                            "$count user(s) ${if (userPickerMode == "selected") "selected" else "excluded"}",
+                            color = Color(0xFF4C6EF5), style = MaterialTheme.typography.labelSmall
                         )
                     }
                 }
             }
         }
-    }
+    } // end COMPOSE stage Box
+    } // end when(currentStage)
+    } // end AnimatedContent
+    } // end Scaffold
 }
 
-// ─── Section Header ───────────────────────────────────────────────────────────
+// ─── Helper Composables ────────────────────────────────────────────────────────
 
 @Composable
-private fun StorySectionHeader(title: String, subtitle: String?) {
+private fun MediaPickTile(
+    icon    : androidx.compose.ui.graphics.vector.ImageVector,
+    label   : String,
+    onClick : () -> Unit
+) {
     Column(
-        modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        modifier            = Modifier
+            .size(90.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .clickable(onClick = onClick),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (title.isNotBlank()) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        if (!subtitle.isNullOrBlank()) {
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Icon(icon, null, tint = Color.White, modifier = Modifier.size(28.dp))
+        Spacer(Modifier.height(6.dp))
+        Text(label, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelSmall)
     }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-private suspend fun copyUriToTemp(context: Context, uri: Uri, isVideo: Boolean): String? =
-    withContext(Dispatchers.IO) {
-        runCatching {
-            val ext = if (isVideo) "mp4" else "jpg"
-            val file = File(context.cacheDir, "story_${System.nanoTime()}.$ext")
-            context.contentResolver.openInputStream(uri)?.use { i ->
-                FileOutputStream(file).use { o -> i.copyTo(o) }
-            } ?: return@withContext null
-            file.absolutePath
-        }.getOrNull()
+@Composable
+private fun ToolbarIconButton(
+    icon        : androidx.compose.ui.graphics.vector.ImageVector,
+    description : String,
+    onClick     : () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, description, tint = Color.White, modifier = Modifier.size(20.dp))
     }
-
-private suspend fun getVideoDuration(path: String): Int? = withContext(Dispatchers.IO) {
-    val r = MediaMetadataRetriever()
-    runCatching {
-        r.setDataSource(path)
-        r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()?.let { (it / 1000).toInt() }
-    }.also { r.release() }.getOrNull()
 }
 
-private suspend fun getVideoThumbnail(path: String): Bitmap? = withContext(Dispatchers.IO) {
-    val r = MediaMetadataRetriever()
-    runCatching { r.setDataSource(path); r.getFrameAtTime(0) }
-        .also { r.release() }.getOrNull()
+@Composable
+private fun ColorDot(
+    color   : Color,
+    selected: Boolean,
+    onClick : () -> Unit,
+    bordered: Boolean = false
+) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(color)
+            .then(if (bordered) Modifier.border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape) else Modifier)
+            .then(if (selected) Modifier.border(2.dp, Color.White, CircleShape) else Modifier)
+            .clickable(onClick = onClick)
+    )
+}
+
+/**
+ * Renders a text story canvas to a Bitmap (1080x1920) matching what the user sees on screen.
+ * Used to convert TEXT-type stories to an image before posting via TDLib.
+ */
+private fun renderTextStoryBitmap(
+    context    : android.content.Context,
+    text       : String,
+    textColor  : Color,
+    textBgColor: Color,
+    gradColors : List<Color>
+): android.graphics.Bitmap {
+    val width  = 1080
+    val height = 1920
+    val bmp    = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bmp)
+
+    // Draw gradient background
+    val shader = android.graphics.LinearGradient(
+        0f, 0f, 0f, height.toFloat(),
+        intArrayOf(gradColors.first().toArgb(), gradColors.last().toArgb()),
+        null,
+        android.graphics.Shader.TileMode.CLAMP
+    )
+    val bgPaint = android.graphics.Paint().apply { this.shader = shader }
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+
+    // Draw text
+    val textSizePx = width * 0.07f
+    val textPaint  = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        color    = textColor.toArgb()
+        this.textSize = textSizePx
+        textAlign = android.graphics.Paint.Align.CENTER
+        typeface  = android.graphics.Typeface.DEFAULT_BOLD
+    }
+    val bgPad = textSizePx * 0.3f
+    val lineH = textPaint.fontMetrics.let { it.descent - it.ascent } + bgPad
+    val lines = text.split("\n")
+    val totalH = lines.size * lineH
+    var y = (height - totalH) / 2f - textPaint.fontMetrics.ascent
+
+    val bgPaintText = android.graphics.Paint().apply { color = textBgColor.toArgb() }
+    for (line in lines) {
+        val tw = textPaint.measureText(line)
+        if (textBgColor != Color.Transparent) {
+            canvas.drawRoundRect(
+                width / 2f - tw / 2f - bgPad, y + textPaint.fontMetrics.ascent - bgPad,
+                width / 2f + tw / 2f + bgPad, y + textPaint.fontMetrics.descent + bgPad,
+                bgPad, bgPad, bgPaintText
+            )
+        }
+        canvas.drawText(line, width / 2f, y, textPaint)
+        y += lineH
+    }
+    return bmp
 }
