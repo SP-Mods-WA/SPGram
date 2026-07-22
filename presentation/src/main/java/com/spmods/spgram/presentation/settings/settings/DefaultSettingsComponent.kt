@@ -24,6 +24,7 @@ class DefaultSettingsComponent(
     private val onEditProfileClick: () -> Unit,
     private val onDevicesClick: () -> Unit,
     private val onFoldersClick: () -> Unit,
+    private val onHomeScreenClick: () -> Unit,
     private val onChatSettingsClick: () -> Unit,
     private val onDataStorageClick: () -> Unit,
     private val onPowerSavingClick: () -> Unit,
@@ -104,6 +105,10 @@ class DefaultSettingsComponent(
 
     override fun onFoldersClicked() {
         onFoldersClick()
+    }
+
+    override fun onHomeScreenClicked() {
+        onHomeScreenClick()
     }
 
     override fun onChatSettingsClicked() {
