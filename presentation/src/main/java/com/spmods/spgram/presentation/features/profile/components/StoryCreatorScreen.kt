@@ -1299,8 +1299,8 @@ fun StoryCreatorScreen(
     } // end COMPOSE stage Box
     } // end when(currentStage)
     } // end AnimatedContent
-    } // end Scaffold
-}
+    } // end Scaffold content lambda
+} // end StoryCreatorScreen
 
 // ─── Helper Composables ────────────────────────────────────────────────────────
 
@@ -1392,7 +1392,7 @@ private fun renderTextStoryBitmap(
     val textPaint  = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         color    = textColor.toArgb()
         this.textSize = textSizePx
-        textAlign = android.graphics.Paint.Align.CENTER
+        this.textAlign = android.graphics.Paint.Align.CENTER
         typeface  = android.graphics.Typeface.DEFAULT_BOLD
     }
     val bgPad = textSizePx * 0.3f
