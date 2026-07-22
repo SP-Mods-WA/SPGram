@@ -286,7 +286,10 @@ class LottieStickerController(
 
     private fun createImageBitmapSnapshot(bitmap: Bitmap): ImageBitmap? {
         return try {
-            bitmap.asImageBitmap()
+            // Must copy — asImageBitmap() shares the same pixel buffer.
+            // When backBitmap.eraseColor(0) is called for the next frame,
+            // it would corrupt the already-displayed ImageBitmap → black flash.
+            bitmap.copy(Bitmap.Config.ARGB_8888, false)?.asImageBitmap()
         } catch (_: Throwable) {
             null
         }
