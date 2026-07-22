@@ -325,6 +325,18 @@ class AppPreferences(
     private val _showChatListPhotos = MutableStateFlow(prefs.getBoolean(KEY_SHOW_CHAT_LIST_PHOTOS, true))
     override val showChatListPhotos: StateFlow<Boolean> = _showChatListPhotos
 
+    private val _showStories = MutableStateFlow(prefs.getBoolean(KEY_SHOW_STORIES, true))
+    val showStories: StateFlow<Boolean> = _showStories
+
+    private val _showBottomBarLabels = MutableStateFlow(prefs.getBoolean(KEY_SHOW_BOTTOM_BAR_LABELS, true))
+    val showBottomBarLabels: StateFlow<Boolean> = _showBottomBarLabels
+
+    private val _showOnlineStatus = MutableStateFlow(prefs.getBoolean(KEY_SHOW_ONLINE_STATUS, true))
+    val showOnlineStatus: StateFlow<Boolean> = _showOnlineStatus
+
+    private val _isCompactChatList = MutableStateFlow(prefs.getBoolean(KEY_COMPACT_CHAT_LIST, false))
+    val isCompactChatList: StateFlow<Boolean> = _isCompactChatList
+
     private val _showAllChatsFolder =
         MutableStateFlow(prefs.getBoolean(KEY_SHOW_ALL_CHATS_FOLDER, true))
     val showAllChatsFolder: StateFlow<Boolean> = _showAllChatsFolder
@@ -966,6 +978,26 @@ class AppPreferences(
         _showChatListPhotos.value = enabled
     }
 
+    fun setShowStories(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SHOW_STORIES, enabled).apply()
+        _showStories.value = enabled
+    }
+
+    fun setShowBottomBarLabels(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SHOW_BOTTOM_BAR_LABELS, enabled).apply()
+        _showBottomBarLabels.value = enabled
+    }
+
+    fun setShowOnlineStatus(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SHOW_ONLINE_STATUS, enabled).apply()
+        _showOnlineStatus.value = enabled
+    }
+
+    fun setCompactChatList(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_COMPACT_CHAT_LIST, enabled).apply()
+        _isCompactChatList.value = enabled
+    }
+
     fun setShowAllChatsFolder(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_SHOW_ALL_CHATS_FOLDER, enabled).apply()
         _showAllChatsFolder.value = enabled
@@ -1309,6 +1341,10 @@ class AppPreferences(
         private const val KEY_CHAT_ANIMATIONS_ENABLED = "chat_animations_enabled"
         private const val KEY_CHAT_LIST_MESSAGE_LINES = "chat_list_message_lines"
         private const val KEY_SHOW_CHAT_LIST_PHOTOS = "show_chat_list_photos"
+        private const val KEY_SHOW_STORIES = "show_stories"
+        private const val KEY_SHOW_BOTTOM_BAR_LABELS = "show_bottom_bar_labels"
+        private const val KEY_SHOW_ONLINE_STATUS = "show_online_status"
+        private const val KEY_COMPACT_CHAT_LIST = "compact_chat_list"
         private const val KEY_SHOW_ALL_CHATS_FOLDER = "show_all_chats_folder"
         private const val KEY_TABLET_INTERFACE_ENABLED = "tablet_interface_enabled"
 
