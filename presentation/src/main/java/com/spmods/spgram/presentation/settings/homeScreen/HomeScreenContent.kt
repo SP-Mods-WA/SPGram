@@ -1,49 +1,69 @@
 package com.spmods.spgram.presentation.settings.homeScreen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Archive
-import androidx.compose.material.icons.rounded.AutoStories
-import androidx.compose.material.icons.rounded.Compress
-import androidx.compose.material.icons.rounded.ViewAgenda
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.SwipeLeft
+import androidx.compose.material.icons.rounded.TabletAndroid
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.window.core.layout.WindowSizeClass
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.ui.ItemPosition
 import com.spmods.spgram.presentation.core.ui.SettingsSwitchTile
-import com.spmods.spgram.presentation.settings.homeScreen.components.HomeScreenPreview
+import com.spmods.spgram.presentation.settings.chatSettings.components.ChatListPreview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenContent(component: HomeScreenComponent) {
     val state by component.state.subscribeAsState()
+    val adaptiveInfo = currentWindowAdaptiveInfo()
+    val isTablet = adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
 
     val blueColor = Color(0xFF4285F4)
     val greenColor = Color(0xFF34A853)
     val orangeColor = Color(0xFFF9AB00)
     val tealColor = Color(0xFF00BFA5)
-    val purpleColor = Color(0xFF9C27B0)
 
     Scaffold(
         modifier = Modifier.semantics { contentDescription = "HomeScreenContent" },
@@ -61,7 +81,7 @@ fun HomeScreenContent(component: HomeScreenComponent) {
                     IconButton(onClick = component::onBackClicked) {
                         Icon(
                             Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.cd_back)
                         )
                     }
                 },
@@ -84,74 +104,125 @@ fun HomeScreenContent(component: HomeScreenComponent) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // Live preview
-            item {
-                HomeScreenPreview(
-                    showStories = state.showStories,
-                    showArchive = state.showArchive,
-                    showBottomBarLabels = state.showBottomBarLabels,
-                    showOnlineStatus = state.showOnlineStatus,
-                    isCompactChatList = state.isCompactChatList
-                )
-            }
-
             // Chat List section
             item {
-                SectionHeader("Chat List")
-                SettingsSwitchTile(
-                    icon = Icons.Rounded.AutoStories,
-                    title = "Show Stories",
-                    subtitle = "Display stories bar at the top of the chat list",
-                    checked = state.showStories,
-                    iconColor = purpleColor,
-                    position = ItemPosition.TOP,
-                    onCheckedChange = component::onShowStoriesChanged
-                )
+                SectionHeader(stringResource(R.string.chat_list_header))
                 SettingsSwitchTile(
                     icon = Icons.Rounded.Archive,
-                    title = "Show Archived Chats",
-                    subtitle = "Pin the archive folder at the top of the chat list",
-                    checked = state.showArchive,
+                    title = stringResource(R.string.pin_archived_chats_title),
+                    subtitle = stringResource(R.string.pin_archived_chats_subtitle),
+                    checked = state.isArchivePinned,
                     iconColor = orangeColor,
-                    position = ItemPosition.MIDDLE,
-                    onCheckedChange = component::onShowArchiveChanged
+                    position = ItemPosition.TOP,
+                    onCheckedChange = component::onArchivePinnedChanged
                 )
+                AnimatedVisibility(
+                    visible = state.isArchivePinned,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    SettingsSwitchTile(
+                        icon = Icons.Rounded.Archive,
+                        title = stringResource(R.string.always_show_pinned_archive_title),
+                        subtitle = stringResource(R.string.always_show_pinned_archive_subtitle),
+                        checked = state.isArchiveAlwaysVisible,
+                        iconColor = orangeColor,
+                        position = ItemPosition.MIDDLE,
+                        onCheckedChange = component::onArchiveAlwaysVisibleChanged
+                    )
+                }
                 SettingsSwitchTile(
-                    icon = Icons.Rounded.Compress,
-                    title = "Compact Chat List",
-                    subtitle = "Smaller chat rows with less padding",
-                    checked = state.isCompactChatList,
+                    icon = Icons.Rounded.Link,
+                    title = stringResource(R.string.show_link_previews_title),
+                    subtitle = stringResource(R.string.show_link_previews_subtitle),
+                    checked = state.showLinkPreviews,
+                    iconColor = blueColor,
+                    position = ItemPosition.MIDDLE,
+                    onCheckedChange = component::onShowLinkPreviewsChanged
+                )
+                if (isTablet) {
+                    SettingsSwitchTile(
+                        icon = Icons.Rounded.TabletAndroid,
+                        title = stringResource(R.string.tablet_interface_title),
+                        subtitle = stringResource(R.string.tablet_interface_subtitle),
+                        checked = state.isTabletInterfaceEnabled,
+                        iconColor = greenColor,
+                        position = ItemPosition.MIDDLE,
+                        onCheckedChange = component::onTabletInterfaceEnabledChanged
+                    )
+                }
+                SettingsSwitchTile(
+                    icon = Icons.Rounded.SwipeLeft,
+                    title = stringResource(R.string.drag_to_back_title),
+                    subtitle = stringResource(R.string.drag_to_back_subtitle),
+                    checked = state.isDragToBackEnabled,
                     iconColor = tealColor,
                     position = ItemPosition.BOTTOM,
-                    onCheckedChange = component::onCompactChatListChanged
+                    onCheckedChange = component::onDragToBackChanged
                 )
             }
 
-            // Navigation section
+            // Chat List preview + Two-line/Three-line + Show Photos
             item {
-                SectionHeader("Navigation")
-                SettingsSwitchTile(
-                    icon = Icons.Rounded.ViewAgenda,
-                    title = "Show Bottom Bar Labels",
-                    subtitle = "Show text labels under the navigation icons",
-                    checked = state.showBottomBarLabels,
-                    iconColor = blueColor,
-                    position = ItemPosition.STANDALONE,
-                    onCheckedChange = component::onShowBottomBarLabelsChanged
+                ChatListPreview(
+                    messageLines = state.chatListMessageLines,
+                    showPhotos = state.showChatListPhotos,
+                    position = ItemPosition.TOP
                 )
-            }
 
-            // Presence section
-            item {
-                SectionHeader("Presence")
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(1, 2).forEach { lines ->
+                                val label =
+                                    if (lines == 1) stringResource(R.string.two_line_label)
+                                    else stringResource(R.string.three_line_label)
+                                Surface(
+                                    onClick = { component.onChatListMessageLinesChanged(lines) },
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (state.chatListMessageLines == lines)
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceContainerLow,
+                                    border = if (state.chatListMessageLines == lines) BorderStroke(
+                                        2.dp, MaterialTheme.colorScheme.primary
+                                    ) else null,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = if (state.chatListMessageLines == lines)
+                                                MaterialTheme.colorScheme.onPrimaryContainer
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = if (state.chatListMessageLines == lines)
+                                                FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+
                 SettingsSwitchTile(
                     icon = Icons.Rounded.AccountCircle,
-                    title = "Show Online Status",
-                    subtitle = "Display a green dot on the avatar of online contacts",
-                    checked = state.showOnlineStatus,
-                    iconColor = greenColor,
-                    position = ItemPosition.STANDALONE,
-                    onCheckedChange = component::onShowOnlineStatusChanged
+                    title = stringResource(R.string.show_photos_title),
+                    subtitle = stringResource(R.string.show_photos_subtitle),
+                    checked = state.showChatListPhotos,
+                    iconColor = Color(0xFFFF6D66),
+                    position = ItemPosition.BOTTOM,
+                    onCheckedChange = component::onShowChatListPhotosChanged
                 )
             }
         }
@@ -162,11 +233,7 @@ fun HomeScreenContent(component: HomeScreenComponent) {
 private fun SectionHeader(text: String) {
     Text(
         text = text,
-        modifier = Modifier.padding(
-            start = 12.dp,
-            bottom = 8.dp,
-            top = 16.dp
-        ),
+        modifier = Modifier.padding(start = 12.dp, bottom = 8.dp, top = 16.dp),
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold
