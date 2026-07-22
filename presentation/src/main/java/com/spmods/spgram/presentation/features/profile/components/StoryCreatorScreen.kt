@@ -289,6 +289,9 @@ fun StoryCreatorScreen(
     BackHandler(enabled = stage == StoryComposerStage.PREVIEW) {
         stage = StoryComposerStage.COMPOSE
     }
+    BackHandler(enabled = stage == StoryComposerStage.COMPOSE) {
+        onDismiss()
+    }
 
     // ── Post logic ──────────────────────────────────────────────────────────
     fun buildPrivacy(): StoryPrivacy = when (draft.privacy) {
