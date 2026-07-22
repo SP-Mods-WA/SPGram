@@ -3,14 +3,15 @@ package com.spmods.spgram.presentation.settings.homeScreen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.AutoStories
-import androidx.compose.material.icons.rounded.BottomNavigation
 import androidx.compose.material.icons.rounded.Compress
+import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -130,7 +131,7 @@ fun HomeScreenContent(component: HomeScreenComponent) {
             item {
                 SectionHeader("Navigation")
                 SettingsSwitchTile(
-                    icon = Icons.Rounded.BottomNavigation,
+                    icon = Icons.Rounded.ViewAgenda,
                     title = "Show Bottom Bar Labels",
                     subtitle = "Show text labels under the navigation icons",
                     checked = state.showBottomBarLabels,
@@ -161,7 +162,7 @@ fun HomeScreenContent(component: HomeScreenComponent) {
 private fun SectionHeader(text: String) {
     Text(
         text = text,
-        modifier = androidx.compose.ui.Modifier.padding(
+        modifier = Modifier.padding(
             start = 12.dp,
             bottom = 8.dp,
             top = 16.dp
