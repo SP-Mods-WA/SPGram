@@ -151,7 +151,7 @@ fun ProfileStoriesSection(
             itemsIndexed(stories) { index, story ->
                 StoryThumbnailItem(
                     story = story,
-                    posterName = if (isOwnProfile) null else posterName,
+                    posterName = null,
                     onClick = { onStoryClick(index) }
                 )
             }
