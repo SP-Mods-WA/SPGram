@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Archive
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -17,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -53,11 +56,11 @@ fun HomeScreenPreview(
     }
 
     val storyRingColors = listOf(
-        listOf(Color(0xFF4285F4), Color(0xFF9C27B0)),
-        listOf(Color(0xFF34A853), Color(0xFF00BFA5)),
-        listOf(Color(0xFFF9AB00), Color(0xFFFF6D00)),
-        listOf(Color(0xFFEA4335), Color(0xFFFF6D66)),
-        listOf(Color(0xFF9C27B0), Color(0xFF4285F4))
+        listOf(Color(0xFFFF6D00), Color(0xFFAA00FF)),
+        listOf(Color(0xFFFF6D66), Color(0xFFFF9800)),
+        listOf(Color(0xFF9E9E9E), Color(0xFF757575)),
+        listOf(Color(0xFFFF9800), Color(0xFFFFEB3B)),
+        listOf(Color(0xFF9E9E9E), Color(0xFF607D8B))
     )
 
     Column(modifier = modifier) {
@@ -85,34 +88,58 @@ fun HomeScreenPreview(
                 )
             ) {
 
-                // ── Top bar ────────────────────────────────────────────────
+                // ── Top bar: SPGRAM + profile ──────────────────────────────
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .padding(top = 14.dp, bottom = 8.dp),
+                        .padding(top = 14.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "SPGram",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        text = stringResource(R.string.app_name_spgram),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
-                    Icon(
-                        imageVector = Icons.Rounded.Search,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
                     )
-                    Spacer(Modifier.width(14.dp))
-                    Icon(
-                        imageVector = Icons.Rounded.Edit,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp)
-                    )
+                }
+
+                // ── Search bar ─────────────────────────────────────────────
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.search_conversations_placeholder),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 // ── Stories row ────────────────────────────────────────────
@@ -120,17 +147,17 @@ fun HomeScreenPreview(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(bottom = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     repeat(5) { i ->
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.width(52.dp)
+                            modifier = Modifier.width(56.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(52.dp)
+                                    .size(56.dp)
                                     .border(
                                         width = 2.dp,
                                         brush = Brush.linearGradient(storyRingColors[i % storyRingColors.size]),
@@ -143,7 +170,7 @@ fun HomeScreenPreview(
                             Spacer(Modifier.height(4.dp))
                             Box(
                                 modifier = Modifier
-                                    .width(36.dp)
+                                    .width(40.dp)
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp))
                                     .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -152,31 +179,79 @@ fun HomeScreenPreview(
                     }
                 }
 
-                // ── Chat rows ──────────────────────────────────────────────
-                Column(modifier = Modifier.padding(16.dp)) {
-
-                    // Archive row
-                    AnimatedVisibility(
-                        visible = isArchivePinned,
-                        enter = expandVertically(spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
-                        exit = shrinkVertically(spring(stiffness = Spring.StiffnessLow)) + fadeOut()
+                // ── Archive tile (exact ArchiveHeaderCard) ─────────────────
+                AnimatedVisibility(
+                    visible = isArchivePinned,
+                    enter = expandVertically(spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
+                    exit = shrinkVertically(spring(stiffness = Spring.StiffnessLow)) + fadeOut()
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(20),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        elevation = CardDefaults.cardElevation(0.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 4.dp)
+                            .height(78.dp)
                     ) {
-                        Column {
-                            PreviewHomeListItem(
-                                name = stringResource(R.string.preview_archive_label),
-                                message = stringResource(R.string.preview_archive_msg),
-                                time = "",
-                                lines = chatListMessageLines,
-                                showPhotos = showChatListPhotos,
-                                isArchive = true
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Archive,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.archived_chats_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = stringResource(R.string.archived_chats_subtitle),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Rounded.PushPin,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp).rotate(45f),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                     }
+                }
 
+                // ── Chat rows ──────────────────────────────────────────────
+                Column(modifier = Modifier.padding(16.dp)) {
                     PreviewHomeListItem(
                         name = "Sandun Piumal",
-                        message = "Hey, I just reviewed the new UI design updates you sent. The c…",
+                        message = "Hey, I just reviewed the new UI design updates you sent. The chat list layout looks super clean!",
                         time = stringResource(R.string.preview_time_konata),
                         lines = chatListMessageLines,
                         showPhotos = showChatListPhotos,
@@ -207,7 +282,6 @@ private fun PreviewHomeListItem(
     time: String,
     lines: Int,
     showPhotos: Boolean,
-    isArchive: Boolean = false,
     isKonata: Boolean = false
 ) {
     Row(
@@ -220,28 +294,15 @@ private fun PreviewHomeListItem(
             exit = fadeOut() + shrinkHorizontally()
         ) {
             Row {
-                if (isArchive) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("📁", fontSize = 20.sp)
-                    }
-                } else {
-                    Avatar(
-                        path = if (isKonata) "local" else null,
-                        name = name,
-                        size = 48.dp,
-                        isLocal = isKonata
-                    )
-                }
+                Avatar(
+                    path = if (isKonata) "local" else null,
+                    name = name,
+                    size = 48.dp,
+                    isLocal = isKonata
+                )
                 Spacer(modifier = Modifier.width(12.dp))
             }
         }
-
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -255,13 +316,11 @@ private fun PreviewHomeListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (time.isNotEmpty()) {
-                    Text(
-                        text = time,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = time,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Text(
                 text = message,
