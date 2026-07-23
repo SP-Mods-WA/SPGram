@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Archive
-import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.SwipeLeft
 import androidx.compose.material.icons.rounded.TabletAndroid
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -108,12 +107,9 @@ fun HomeScreenContent(component: HomeScreenComponent) {
             // Home Screen live preview
             item {
                 HomeScreenPreview(
-                    showStories = true,
-                    showArchive = state.isArchivePinned,
-                    showBottomBarLabels = true,
-                    showOnlineStatus = true,
-                    isCompactChatList = state.chatListMessageLines == 1,
-                    modifier = Modifier.padding(top = 8.dp)
+                    isArchivePinned = state.isArchivePinned,
+                    chatListMessageLines = state.chatListMessageLines,
+                    showChatListPhotos = state.showChatListPhotos
                 )
             }
 
@@ -144,15 +140,6 @@ fun HomeScreenContent(component: HomeScreenComponent) {
                         onCheckedChange = component::onArchiveAlwaysVisibleChanged
                     )
                 }
-                SettingsSwitchTile(
-                    icon = Icons.Rounded.Link,
-                    title = stringResource(R.string.show_link_previews_title),
-                    subtitle = stringResource(R.string.show_link_previews_subtitle),
-                    checked = state.showLinkPreviews,
-                    iconColor = blueColor,
-                    position = ItemPosition.MIDDLE,
-                    onCheckedChange = component::onShowLinkPreviewsChanged
-                )
                 if (isTablet) {
                     SettingsSwitchTile(
                         icon = Icons.Rounded.TabletAndroid,
