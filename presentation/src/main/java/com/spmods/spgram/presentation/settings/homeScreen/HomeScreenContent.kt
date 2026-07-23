@@ -52,6 +52,7 @@ import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.ui.ItemPosition
 import com.spmods.spgram.presentation.core.ui.SettingsSwitchTile
 import com.spmods.spgram.presentation.settings.chatSettings.components.ChatListPreview
+import com.spmods.spgram.presentation.settings.homeScreen.components.HomeScreenPreview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,6 +104,18 @@ fun HomeScreenContent(component: HomeScreenComponent) {
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+
+            // Home Screen live preview
+            item {
+                HomeScreenPreview(
+                    showStories = true,
+                    showArchive = state.isArchivePinned,
+                    showBottomBarLabels = true,
+                    showOnlineStatus = true,
+                    isCompactChatList = state.chatListMessageLines == 1,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
 
             // Chat List section
             item {
