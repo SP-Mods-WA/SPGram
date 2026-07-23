@@ -5,7 +5,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AccountCircle
@@ -29,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -50,7 +47,6 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.ui.ItemPosition
 import com.spmods.spgram.presentation.core.ui.SettingsSwitchTile
-import com.spmods.spgram.presentation.settings.chatSettings.components.ChatListPreview
 import com.spmods.spgram.presentation.settings.homeScreen.components.HomeScreenPreview
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -109,7 +105,8 @@ fun HomeScreenContent(component: HomeScreenComponent) {
                 HomeScreenPreview(
                     isArchivePinned = state.isArchivePinned,
                     chatListMessageLines = state.chatListMessageLines,
-                    showChatListPhotos = state.showChatListPhotos
+                    showChatListPhotos = state.showChatListPhotos,
+                    onMessageLinesChanged = component::onChatListMessageLinesChanged
                 )
             }
 
@@ -162,66 +159,15 @@ fun HomeScreenContent(component: HomeScreenComponent) {
                 )
             }
 
-            // Chat List preview + Two-line/Three-line + Show Photos
+            // Show Photos
             item {
-                ChatListPreview(
-                    messageLines = state.chatListMessageLines,
-                    showPhotos = state.showChatListPhotos,
-                    position = ItemPosition.TOP
-                )
-
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            listOf(1, 2).forEach { lines ->
-                                val label =
-                                    if (lines == 1) stringResource(R.string.two_line_label)
-                                    else stringResource(R.string.three_line_label)
-                                Surface(
-                                    onClick = { component.onChatListMessageLinesChanged(lines) },
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = if (state.chatListMessageLines == lines)
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surfaceContainerLow,
-                                    border = if (state.chatListMessageLines == lines) BorderStroke(
-                                        2.dp, MaterialTheme.colorScheme.primary
-                                    ) else null,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(48.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = label,
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = if (state.chatListMessageLines == lines)
-                                                MaterialTheme.colorScheme.onPrimaryContainer
-                                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontWeight = if (state.chatListMessageLines == lines)
-                                                FontWeight.Bold else FontWeight.Medium
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(2.dp))
-
                 SettingsSwitchTile(
                     icon = Icons.Rounded.AccountCircle,
                     title = stringResource(R.string.show_photos_title),
                     subtitle = stringResource(R.string.show_photos_subtitle),
                     checked = state.showChatListPhotos,
                     iconColor = Color(0xFFFF6D66),
-                    position = ItemPosition.BOTTOM,
+                    position = ItemPosition.STANDALONE,
                     onCheckedChange = component::onShowChatListPhotosChanged
                 )
             }
