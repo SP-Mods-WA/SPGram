@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+        <string name="home_screen_preview_title">Home Screen</string>
+<string name="preview_archive_label">Archived Chats</string>
+<string name="preview_archive_msg">3 unread chats</string>
+<string name="preview_group_name">SPGram News</string>
+<string name="preview_group_msg">New update released 🚀</string>
+<string name="preview_group_time">11:20</string>
 
         <string name="story_compose_title">New Story</string>
 <string name="story_edit_title">Edit Story</string>
