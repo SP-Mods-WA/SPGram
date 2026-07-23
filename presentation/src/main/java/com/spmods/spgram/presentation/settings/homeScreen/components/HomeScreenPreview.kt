@@ -52,6 +52,14 @@ fun HomeScreenPreview(
         }
     }
 
+    val storyRingColors = listOf(
+        listOf(Color(0xFF4285F4), Color(0xFF9C27B0)),
+        listOf(Color(0xFF34A853), Color(0xFF00BFA5)),
+        listOf(Color(0xFFF9AB00), Color(0xFFFF6D00)),
+        listOf(Color(0xFFEA4335), Color(0xFFFF6D66)),
+        listOf(Color(0xFF9C27B0), Color(0xFF4285F4))
+    )
+
     Column(modifier = modifier) {
         if (position == ItemPosition.TOP || position == ItemPosition.STANDALONE) {
             Text(
@@ -82,7 +90,7 @@ fun HomeScreenPreview(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .padding(top = 14.dp, bottom = 10.dp),
+                        .padding(top = 14.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -108,19 +116,12 @@ fun HomeScreenPreview(
                 }
 
                 // ── Stories row ────────────────────────────────────────────
-                val storyRingColors = listOf(
-                    listOf(Color(0xFF4285F4), Color(0xFF9C27B0)),
-                    listOf(Color(0xFF34A853), Color(0xFF00BFA5)),
-                    listOf(Color(0xFFF9AB00), Color(0xFFEA4335)),
-                    listOf(Color(0xFFEA4335), Color(0xFFFF6D66)),
-                    listOf(Color(0xFF9C27B0), Color(0xFF4285F4))
-                )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     repeat(5) { i ->
                         Column(
@@ -130,7 +131,6 @@ fun HomeScreenPreview(
                             Box(
                                 modifier = Modifier
                                     .size(52.dp)
-                                    .clip(CircleShape)
                                     .border(
                                         width = 2.dp,
                                         brush = Brush.linearGradient(storyRingColors[i % storyRingColors.size]),
@@ -143,7 +143,7 @@ fun HomeScreenPreview(
                             Spacer(Modifier.height(4.dp))
                             Box(
                                 modifier = Modifier
-                                    .width(38.dp)
+                                    .width(36.dp)
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp))
                                     .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -152,40 +152,50 @@ fun HomeScreenPreview(
                     }
                 }
 
-                // ── Archive row ────────────────────────────────────────────
-                AnimatedVisibility(
-                    visible = isArchivePinned,
-                    enter = expandVertically(spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
-                    exit = shrinkVertically(spring(stiffness = Spring.StiffnessLow)) + fadeOut()
-                ) {
+                // ── Chat rows ──────────────────────────────────────────────
+                Column(modifier = Modifier.padding(16.dp)) {
+
+                    // Archive row
+                    AnimatedVisibility(
+                        visible = isArchivePinned,
+                        enter = expandVertically(spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
+                        exit = shrinkVertically(spring(stiffness = Spring.StiffnessLow)) + fadeOut()
+                    ) {
+                        Column {
+                            PreviewHomeListItem(
+                                name = stringResource(R.string.preview_archive_label),
+                                message = stringResource(R.string.preview_archive_msg),
+                                time = "",
+                                lines = chatListMessageLines,
+                                showPhotos = showChatListPhotos,
+                                isArchive = true
+                            )
+                            Spacer(Modifier.height(12.dp))
+                        }
+                    }
+
                     PreviewHomeListItem(
-                        name = stringResource(R.string.preview_archive_label),
-                        message = stringResource(R.string.preview_archive_msg),
-                        time = "",
+                        name = "Sandun Piumal",
+                        message = "Hey, I just reviewed the new UI design updates you sent. The c…",
+                        time = stringResource(R.string.preview_time_konata),
                         lines = chatListMessageLines,
                         showPhotos = showChatListPhotos,
-                        isArchive = true
+                        isKonata = true
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    PreviewHomeListItem(
+                        name = stringResource(R.string.preview_group_name),
+                        message = stringResource(R.string.preview_group_msg),
+                        time = stringResource(R.string.preview_group_time),
+                        lines = chatListMessageLines,
+                        showPhotos = showChatListPhotos
                     )
                 }
-
-                // ── Chat rows ──────────────────────────────────────────────
-                PreviewHomeListItem(
-                    name = "Sandun Piumal",
-                    message = "Hey, I just reviewed the new UI design updates you sent. The c…",
-                    time = stringResource(R.string.preview_time_konata),
-                    lines = chatListMessageLines,
-                    showPhotos = showChatListPhotos,
-                    isKonata = true
-                )
-                PreviewHomeListItem(
-                    name = stringResource(R.string.preview_group_name),
-                    message = stringResource(R.string.preview_group_msg),
-                    time = stringResource(R.string.preview_group_time),
-                    lines = chatListMessageLines,
-                    showPhotos = showChatListPhotos,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
             }
+        }
+
+        if (position != ItemPosition.BOTTOM && position != ItemPosition.STANDALONE) {
+            Spacer(Modifier.size(2.dp))
         }
     }
 }
@@ -198,13 +208,10 @@ private fun PreviewHomeListItem(
     lines: Int,
     showPhotos: Boolean,
     isArchive: Boolean = false,
-    isKonata: Boolean = false,
-    modifier: Modifier = Modifier
+    isKonata: Boolean = false
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AnimatedVisibility(
@@ -231,7 +238,7 @@ private fun PreviewHomeListItem(
                         isLocal = isKonata
                     )
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(12.dp))
             }
         }
 
