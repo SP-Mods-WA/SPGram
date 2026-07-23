@@ -4,19 +4,20 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +33,7 @@ fun HomeScreenPreview(
     isArchivePinned: Boolean,
     chatListMessageLines: Int,
     showChatListPhotos: Boolean,
+    onMessageLinesChanged: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
     position: ItemPosition = ItemPosition.STANDALONE
 ) {
@@ -50,10 +52,6 @@ fun HomeScreenPreview(
             ItemPosition.STANDALONE -> RoundedCornerShape(cornerRadius)
         }
     }
-
-    val activeColor = Color(0xFF52C5F5)
-    val inactiveColor = Color(0xFF7A7A8A)
-    val dividerColor = Color(0xFF2C2C2C)
 
     Column(modifier = modifier) {
         if (position == ItemPosition.TOP || position == ItemPosition.STANDALONE) {
@@ -80,70 +78,116 @@ fun HomeScreenPreview(
                 )
             ) {
 
-                // ── Top bar ────────────────────────────────────────
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "SPGram",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    // Search icon placeholder
-                    Box(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    // Pencil/edit icon placeholder
-                    Box(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
-                    )
-                }
-
-                // ── Stories row ────────────────────────────────────
+                // ── Top bar ────────────────────────────────────────────────
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(top = 14.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val storyColors = listOf(
-                        Color(0xFF4285F4), Color(0xFF34A853),
-                        Color(0xFFF9AB00), Color(0xFFEA4335), Color(0xFF9C27B0)
+                    Text(
+                        text = "SPGram",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
                     )
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Icon(
+                        imageVector = Icons.Rounded.Edit,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                // ── Stories row ────────────────────────────────────────────
+                val storyRingColors = listOf(
+                    listOf(Color(0xFF4285F4), Color(0xFF9C27B0)),
+                    listOf(Color(0xFF34A853), Color(0xFF00BFA5)),
+                    listOf(Color(0xFFF9AB00), Color(0xFFEA4335)),
+                    listOf(Color(0xFFEA4335), Color(0xFFFF6D66)),
+                    listOf(Color(0xFF9C27B0), Color(0xFF4285F4))
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     repeat(5) { i ->
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.width(52.dp)
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(44.dp)
+                                    .size(52.dp)
                                     .clip(CircleShape)
-                                    .background(storyColors[i % storyColors.size].copy(alpha = 0.8f))
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.linearGradient(storyRingColors[i % storyRingColors.size]),
+                                        shape = CircleShape
+                                    )
+                                    .padding(3.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                             )
-                            Spacer(Modifier.height(3.dp))
+                            Spacer(Modifier.height(4.dp))
                             Box(
                                 modifier = Modifier
-                                    .width(36.dp)
+                                    .width(38.dp)
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp))
-                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                             )
                         }
                     }
                 }
 
-                // ── Archive row ────────────────────────────────────
+                // ── Two-line / Three-line toggle ───────────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(1 to stringResource(R.string.two_line_label), 2 to stringResource(R.string.three_line_label))
+                        .forEach { (lines, label) ->
+                            val selected = chatListMessageLines == lines
+                            Surface(
+                                onClick = { onMessageLinesChanged(lines) },
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (selected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceContainerLow,
+                                border = if (selected) androidx.compose.foundation.BorderStroke(
+                                    2.dp, MaterialTheme.colorScheme.primary
+                                ) else null,
+                                modifier = Modifier.weight(1f).height(40.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                }
+
+                // ── Archive row ────────────────────────────────────────────
                 AnimatedVisibility(
                     visible = isArchivePinned,
                     enter = expandVertically(spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
@@ -159,7 +203,7 @@ fun HomeScreenPreview(
                     )
                 }
 
-                // ── Chat rows ──────────────────────────────────────
+                // ── Chat rows ──────────────────────────────────────────────
                 PreviewHomeListItem(
                     name = "Sandun Piumal",
                     message = "Hey, I just reviewed the new UI design updates you sent. The c…",
@@ -173,65 +217,9 @@ fun HomeScreenPreview(
                     message = stringResource(R.string.preview_group_msg),
                     time = stringResource(R.string.preview_group_time),
                     lines = chatListMessageLines,
-                    showPhotos = showChatListPhotos
+                    showPhotos = showChatListPhotos,
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
-
-                // ── Bottom nav bar ─────────────────────────────────
-                val divColor = dividerColor
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .drawBehind {
-                            drawLine(
-                                color = divColor,
-                                start = Offset(0f, 0f),
-                                end = Offset(size.width, 0f),
-                                strokeWidth = 1.dp.toPx()
-                            )
-                        }
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    listOf(
-                        "Chats" to true,
-                        "Stories" to false,
-                        "Calls" to false,
-                        "Download" to false
-                    ).forEach { (label, selected) ->
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (selected) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(width = 40.dp, height = 28.dp)
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(activeColor.copy(alpha = 0.15f))
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .clip(RoundedCornerShape(5.dp))
-                                        .background(
-                                            if (selected) activeColor.copy(alpha = 0.85f)
-                                            else inactiveColor.copy(alpha = 0.45f)
-                                        )
-                                )
-                            }
-                            Spacer(Modifier.height(3.dp))
-                            Text(
-                                text = label,
-                                fontSize = 9.sp,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selected) activeColor else inactiveColor
-                            )
-                        }
-                    }
-                }
             }
         }
     }
@@ -245,10 +233,11 @@ private fun PreviewHomeListItem(
     lines: Int,
     showPhotos: Boolean,
     isArchive: Boolean = false,
-    isKonata: Boolean = false
+    isKonata: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
