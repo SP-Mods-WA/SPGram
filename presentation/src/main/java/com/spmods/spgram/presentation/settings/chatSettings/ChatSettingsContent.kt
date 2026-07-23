@@ -889,6 +889,19 @@ fun ChatSettingsContent(component: ChatSettingsComponent) {
                 )
             }
 
+            item {
+                SectionHeader(stringResource(R.string.chat_list_header))
+                SettingsSwitchTile(
+                    icon = Icons.Rounded.Link,
+                    title = stringResource(R.string.show_link_previews_title),
+                    subtitle = stringResource(R.string.show_link_previews_subtitle),
+                    checked = state.showLinkPreviews,
+                    iconColor = blueColor,
+                    position = ItemPosition.STANDALONE,
+                    onCheckedChange = component::onShowLinkPreviewsChanged
+                )
+            }
+
 
 
             if (!state.isInstalledFromGooglePlay) {
