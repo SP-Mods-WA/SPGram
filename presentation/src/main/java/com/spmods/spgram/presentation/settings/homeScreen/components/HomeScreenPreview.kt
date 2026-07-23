@@ -33,7 +33,6 @@ fun HomeScreenPreview(
     isArchivePinned: Boolean,
     chatListMessageLines: Int,
     showChatListPhotos: Boolean,
-    onMessageLinesChanged: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
     position: ItemPosition = ItemPosition.STANDALONE
 ) {
@@ -151,40 +150,6 @@ fun HomeScreenPreview(
                             )
                         }
                     }
-                }
-
-                // ── Two-line / Three-line toggle ───────────────────────────
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(1 to stringResource(R.string.two_line_label), 2 to stringResource(R.string.three_line_label))
-                        .forEach { (lines, label) ->
-                            val selected = chatListMessageLines == lines
-                            Surface(
-                                onClick = { onMessageLinesChanged(lines) },
-                                shape = RoundedCornerShape(16.dp),
-                                color = if (selected) MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.surfaceContainerLow,
-                                border = if (selected) androidx.compose.foundation.BorderStroke(
-                                    2.dp, MaterialTheme.colorScheme.primary
-                                ) else null,
-                                modifier = Modifier.weight(1f).height(40.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = label,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-                                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                                    )
-                                }
-                            }
-                        }
                 }
 
                 // ── Archive row ────────────────────────────────────────────
