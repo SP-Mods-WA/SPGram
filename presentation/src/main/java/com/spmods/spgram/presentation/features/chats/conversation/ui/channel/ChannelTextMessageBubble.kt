@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,12 +25,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.koinInject
 import com.spmods.spgram.domain.models.ForwardInfo
 import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageModel
+import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.util.DateFormatManager
 import com.spmods.spgram.presentation.features.chats.conversation.ui.TelegramBubbleShape
 import com.spmods.spgram.presentation.features.chats.conversation.ui.message.BigEmojiContent
@@ -203,6 +206,15 @@ fun ChannelTextMessageBubble(
                             )
                             Spacer(Modifier.width(8.dp))
                         }
+                    }
+                    if (msg.isDeleted) {
+                        Icon(
+                            imageVector        = Icons.Rounded.Block,
+                            contentDescription = stringResource(R.string.anti_delete_title),
+                            modifier           = Modifier.size(14.dp),
+                            tint               = Color(0xFFFF3B30)
+                        )
+                        Spacer(Modifier.width(4.dp))
                     }
                     Text(
                         text  = formatTime(msg.date, timeFormat),
