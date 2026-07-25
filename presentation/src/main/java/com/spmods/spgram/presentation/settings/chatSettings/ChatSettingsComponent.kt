@@ -15,6 +15,7 @@ import com.spmods.spgram.domain.managers.AssetsManager
 import com.spmods.spgram.domain.managers.DistrManager
 import com.spmods.spgram.domain.models.WallpaperModel
 import com.spmods.spgram.domain.repository.EmojiRepository
+import com.spmods.spgram.domain.repository.MessageRepository
 import com.spmods.spgram.domain.repository.StickerRepository
 import com.spmods.spgram.domain.repository.WallpaperRepository
 import com.spmods.spgram.presentation.core.util.AppPreferences
@@ -52,6 +53,7 @@ interface ChatSettingsComponent {
     fun onArchivePinnedChanged(pinned: Boolean)
     fun onArchiveAlwaysVisibleChanged(enabled: Boolean)
     fun onShowLinkPreviewsChanged(enabled: Boolean)
+    fun onAntiDeleteChanged(enabled: Boolean)
     fun onNightModeChanged(mode: NightMode)
     fun onDynamicColorsChanged(enabled: Boolean)
     fun onAmoledThemeChanged(enabled: Boolean)
@@ -115,6 +117,7 @@ interface ChatSettingsComponent {
         val isArchivePinned: Boolean = true,
         val isArchiveAlwaysVisible: Boolean = false,
         val showLinkPreviews: Boolean = true,
+        val isAntiDeleteEnabled: Boolean = false,
         val nightMode: NightMode = NightMode.SYSTEM,
         val isDynamicColorsEnabled: Boolean = true,
         val isAmoledThemeEnabled: Boolean = false,
@@ -177,6 +180,7 @@ class DefaultChatSettingsComponent(
     private val emojiRepository: EmojiRepository = container.repositories.emojiRepository
     private val distrManager: DistrManager = container.utils.distrManager()
     private val assetsManager: AssetsManager = container.utils.assetsManager()
+    private val messageRepository: MessageRepository = container.repositories.messageRepository
 
     private val _state = MutableValue(
         ChatSettingsComponent.State(
@@ -342,6 +346,12 @@ class DefaultChatSettingsComponent(
         appPreferences.showLinkPreviews
             .onEach { enabled ->
                 _state.update { it.copy(showLinkPreviews = enabled) }
+            }
+            .launchIn(scope)
+
+        messageRepository.isAntiDeleteEnabledFlow()
+            .onEach { enabled ->
+                _state.update { it.copy(isAntiDeleteEnabled = enabled) }
             }
             .launchIn(scope)
 
@@ -781,6 +791,12 @@ class DefaultChatSettingsComponent(
 
     override fun onShowLinkPreviewsChanged(enabled: Boolean) {
         appPreferences.setShowLinkPreviews(enabled)
+    }
+
+    override fun onAntiDeleteChanged(enabled: Boolean) {
+        scope.launch {
+            messageRepository.setAntiDeleteEnabled(enabled)
+        }
     }
 
     override fun onNightModeChanged(mode: NightMode) {
