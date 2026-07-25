@@ -60,6 +60,7 @@ class TdMessageRemoteDataSource(
     private val fileDownloadQueue: FileDownloadQueue,
     private val fileUpdateHandler: FileUpdateHandler,
     private val dispatcherProvider: DispatcherProvider,
+    private val keyValueDao: com.spmods.spgram.data.db.dao.KeyValueDao,
     val scope: CoroutineScope
 ) : MessageRemoteDataSource {
 
@@ -1633,6 +1634,13 @@ class TdMessageRemoteDataSource(
                 if (!update.fromCache) {
                     val messageIds = update.messageIds.toList()
                     scope.launch(dispatcherProvider.io) {
+                        val antiDeleteEnabled = keyValueDao.getValue("anti_delete_enabled")?.value == "true"
+                        if (antiDeleteEnabled) {
+                            // Anti-Delete is on: keep the message in every cache layer and
+                            // don't notify the UI to remove it — MessageRepositoryImpl already
+                            // flagged it isDeleted = true in Room so the bubble stays visible.
+                            return@launch
+                        }
                         messageIds.forEach { cache.removeMessage(update.chatId, it) }
                         removeMessagesFromCache(update.chatId, messageIds)
                         messageDeletedFlow.emit(
