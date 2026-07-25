@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Timer
@@ -56,6 +57,7 @@ import com.spmods.spgram.domain.models.MessageContent
 import com.spmods.spgram.domain.models.MessageModel
 import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.util.IDownloadUtils
+import com.spmods.spgram.presentation.core.ui.Avatar
 import com.spmods.spgram.presentation.features.chats.conversation.AutoDownloadSuppression
 import com.spmods.spgram.presentation.features.chats.conversation.ui.LocalVoicePlaybackController
 
@@ -185,7 +187,9 @@ fun VoiceMessageBubble(
                     onVoiceClick = onVoiceClick,
                     onOpenViewOnce = onOpenViewOnce,
                     onCancelDownload = onCancelDownload,
-                    isOutgoing = isOutgoing
+                    isOutgoing = isOutgoing,
+                    isGroup = isGroup,
+                    isSameSenderAbove = isSameSenderAbove
                 )
 
                 Box(
@@ -217,7 +221,9 @@ fun VoiceRow(
     onVoiceClick: (MessageModel) -> Unit,
     onOpenViewOnce: (MessageModel) -> Unit = {},
     onCancelDownload: (Int) -> Unit,
-    isOutgoing: Boolean
+    isOutgoing: Boolean,
+    isGroup: Boolean = false,
+    isSameSenderAbove: Boolean = false
 ) {
     val voicePlaybackController = LocalVoicePlaybackController.current
     val playerState = voicePlaybackController.stateFor(
@@ -316,50 +322,110 @@ fun VoiceRow(
             }
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
         Column(
             modifier = Modifier.weight(1f)
         ) {
-            WaveformView(
-                waveform = content.waveform,
-                progress = playerState.progress,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(36.dp)
-                    .pointerInput(msg.id, content.path) {
-                        if (content.path == null) return@pointerInput
-                        // Tap to seek
-                        detectTapGestures { offset ->
-                            val fraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
-                            voicePlaybackController.seekTo(msg.id, fraction)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Progress dot — marks the current playback position on the waveform
+                Box(
+                    modifier = Modifier
+                        .padding(end = 6.dp)
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
+                        )
+                )
+
+                WaveformView(
+                    waveform = content.waveform,
+                    progress = playerState.progress,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(36.dp)
+                        .pointerInput(msg.id, content.path) {
+                            if (content.path == null) return@pointerInput
+                            // Tap to seek
+                            detectTapGestures { offset ->
+                                val fraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                voicePlaybackController.seekTo(msg.id, fraction)
+                            }
+                        }
+                        .pointerInput(msg.id, content.path) {
+                            if (content.path == null) return@pointerInput
+                            // Drag to scrub
+                            detectDragGestures { change, _ ->
+                                val fraction = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                voicePlaybackController.seekTo(msg.id, fraction)
+                            }
+                        },
+                    activeColor = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                    inactiveColor = (if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant).copy(
+                        alpha = 0.3f
+                    )
+                )
+
+                // Sender avatar with a small mic badge — shown on every voice bubble
+                // (incoming and outgoing), mirrors the sender identity of the message
+                if (!isSameSenderAbove) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(contentAlignment = Alignment.BottomStart) {
+                        Avatar(
+                            path = msg.senderAvatar,
+                            fallbackPath = msg.senderPersonalAvatar,
+                            name = msg.senderName,
+                            size = 34.dp
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .offset(x = (-4).dp, y = 4.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(10.dp)
+                            )
                         }
                     }
-                    .pointerInput(msg.id, content.path) {
-                        if (content.path == null) return@pointerInput
-                        // Drag to scrub
-                        detectDragGestures { change, _ ->
-                            val fraction = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
-                            voicePlaybackController.seekTo(msg.id, fraction)
-                        }
-                    },
-                activeColor = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
-                inactiveColor = (if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant).copy(
-                    alpha = 0.3f
-                )
-            )
+                }
+            }
 
-            Text(
-                text = if (playerState.isPlaying || playerState.progress > 0) {
-                    "${formatDuration((playerState.currentPosition / 1000).toInt())} / ${formatDuration(content.duration)}"
-                } else {
-                    formatDuration(content.duration)
-                },
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                color = (if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant).copy(
-                    alpha = 0.7f
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Unlistened marker — small dot shown next to the duration for
+                // incoming voice notes that haven't been played yet
+                if (!isOutgoing && !content.isListened && content.path != null) {
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 4.dp)
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
+                Text(
+                    text = if (playerState.isPlaying || playerState.progress > 0) {
+                        "${formatDuration((playerState.currentPosition / 1000).toInt())} / ${formatDuration(content.duration)}"
+                    } else {
+                        formatDuration(content.duration)
+                    },
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    color = (if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant).copy(
+                        alpha = 0.7f
+                    )
                 )
-            )
+            }
         }
     }
 }
