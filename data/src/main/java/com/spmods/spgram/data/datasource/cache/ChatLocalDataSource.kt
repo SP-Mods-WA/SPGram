@@ -51,6 +51,7 @@ interface ChatLocalDataSource {
     suspend fun deleteMessage(chatId: Long, messageId: Long)
     suspend fun markAsDeleted(chatId: Long, messageId: Long)
     suspend fun getDeletedMessages(chatId: Long): List<MessageEntity>
+    suspend fun isMessageOutgoing(chatId: Long, messageId: Long): Boolean?
     suspend fun clearMessagesForChat(chatId: Long)
 
     suspend fun getChatFullInfo(chatId: Long): ChatFullInfoEntity?
