@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -320,6 +321,15 @@ fun VideoNoteBubble(
                             contentDescription = stringResource(R.string.info_edited),
                             modifier = Modifier.size(12.dp),
                             tint = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    if (msg.isDeleted) {
+                        Icon(
+                            imageVector = Icons.Rounded.Block,
+                            contentDescription = stringResource(R.string.anti_delete_title),
+                            modifier = Modifier.size(12.dp),
+                            tint = Color(0xFFFF6659)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                     }
