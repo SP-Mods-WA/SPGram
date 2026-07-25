@@ -5,6 +5,8 @@ import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import com.spmods.spgram.domain.models.UserModel
+import com.spmods.spgram.domain.repository.UserRepository
 import com.spmods.spgram.presentation.core.util.AppPreferences
 import com.spmods.spgram.presentation.core.util.componentScope
 import com.spmods.spgram.presentation.root.AppComponentContext
@@ -29,7 +31,8 @@ interface HomeScreenComponent {
         val isDragToBackEnabled: Boolean = true,
         val chatListMessageLines: Int = 1,
         val showChatListPhotos: Boolean = true,
-        val isTablet: Boolean = false
+        val isTablet: Boolean = false,
+        val currentUser: UserModel? = null
     )
 }
 
@@ -40,6 +43,7 @@ class DefaultHomeScreenComponent(
 ) : HomeScreenComponent, AppComponentContext by context {
 
     private val appPreferences: AppPreferences = container.preferences.appPreferences
+    private val userRepository: UserRepository = container.repositories.userRepository
     private val scope = componentScope
 
     private val _state = MutableValue(
@@ -77,6 +81,9 @@ class DefaultHomeScreenComponent(
             .launchIn(scope)
         appPreferences.showChatListPhotos
             .onEach { v -> _state.update { it.copy(showChatListPhotos = v) } }
+            .launchIn(scope)
+        userRepository.currentUserFlow
+            .onEach { user -> _state.update { it.copy(currentUser = user) } }
             .launchIn(scope)
     }
 
