@@ -100,6 +100,11 @@ class RoomChatLocalDataSource(
     override suspend fun deleteMessage(chatId: Long, messageId: Long) =
         messageDao.deleteMessage(chatId, messageId)
 
+    override suspend fun markAsDeleted(chatId: Long, messageId: Long) =
+        messageDao.markAsDeleted(chatId, messageId)
+
+    override suspend fun getDeletedMessages(chatId: Long) = messageDao.getDeletedMessages(chatId)
+
     override suspend fun clearMessagesForChat(chatId: Long) = messageDao.clearMessagesForChat(chatId)
 
     override suspend fun getChatFullInfo(chatId: Long): ChatFullInfoEntity? = chatFullInfoDao.getChatFullInfo(chatId)
