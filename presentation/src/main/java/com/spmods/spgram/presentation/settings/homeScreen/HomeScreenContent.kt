@@ -108,7 +108,8 @@ fun HomeScreenContent(component: HomeScreenComponent) {
                 HomeScreenPreview(
                     isArchivePinned = state.isArchivePinned,
                     chatListMessageLines = state.chatListMessageLines,
-                    showChatListPhotos = state.showChatListPhotos
+                    showChatListPhotos = state.showChatListPhotos,
+                    currentUser = state.currentUser
                 )
             }
 
