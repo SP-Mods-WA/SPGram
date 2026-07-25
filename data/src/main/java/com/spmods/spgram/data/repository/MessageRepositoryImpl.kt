@@ -568,7 +568,7 @@ class MessageRepositoryImpl(
             try {
                 val remotePage = messageRemoteDataSource.getMessagesOlder(chatId, fromMessageId, limit, threadId)
                 persistRemoteMessages(chatId, remotePage.messages)
-                val mergedMessages = mergeDeletedIntoRemote(chatId, remotePage.messages)
+                val mergedMessages = mergeDeletedIntoRemote(chatId, remotePage.messages, fromMessageId)
                 remotePage.copy(messages = mergedMessages)
             } catch (e: Exception) {
                 val fallbackMessages = if (cached.isNotEmpty()) {
@@ -1668,7 +1668,8 @@ class MessageRepositoryImpl(
      */
     private suspend fun mergeDeletedIntoRemote(
         chatId: Long,
-        remoteMessages: List<MessageModel>
+        remoteMessages: List<MessageModel>,
+        fromMessageId: Long = 0L
     ): List<MessageModel> {
         val antiDeleteEnabled = keyValueDao.getValue(ANTI_DELETE_PREF_KEY)?.value == "true"
         if (!antiDeleteEnabled) return remoteMessages
@@ -1676,13 +1677,22 @@ class MessageRepositoryImpl(
         val deletedEntities = chatLocalDataSource.getDeletedMessages(chatId)
         if (deletedEntities.isEmpty()) return remoteMessages
 
-        if (remoteMessages.isEmpty()) return remoteMessages
-
-        val remoteIds = remoteMessages.map { it.id }
-        val minId = remoteIds.min()
-        val maxId = remoteIds.max()
-
-        val relevantDeleted = deletedEntities.filter { it.id in minId..maxId }
+        val relevantDeleted = if (remoteMessages.isEmpty()) {
+            // Nothing came back from TDLib for this page at all (e.g. every message
+            // in the chat was deleted, or this is the very first page). Anchor off
+            // fromMessageId instead of an empty remote range so we don't drop them.
+            if (fromMessageId == 0L) deletedEntities else emptyList()
+        } else {
+            val remoteIds = remoteMessages.map { it.id }
+            val minId = remoteIds.min()
+            // fromMessageId == 0 means "give me the newest messages" (initial/bottom
+            // load) — TDLib silently skips deleted messages, so the true upper bound
+            // of this page is unbounded, not just the newest id TDLib happened to
+            // return. Anything at or above minId (down to the oldest deleted id we
+            // have) could belong on this page.
+            val maxId = if (fromMessageId == 0L) Long.MAX_VALUE else remoteIds.max()
+            deletedEntities.filter { it.id in minId..maxId }
+        }
         if (relevantDeleted.isEmpty()) return remoteMessages
 
         val deletedModels = mapLocalMessages(relevantDeleted)
