@@ -367,11 +367,12 @@ fun VoiceRow(
                     )
                 )
 
-                // Sender avatar with a small mic badge — shown on every voice bubble
-                // (incoming and outgoing), mirrors the sender identity of the message
-                if (!isSameSenderAbove) {
+                // Sender avatar with a small mic badge, right after the waveform —
+                // hidden for view-once bubbles, which already show their own badge
+                // on the play button itself
+                if (!isSameSenderAbove && !content.isViewOnce) {
                     Spacer(modifier = Modifier.width(8.dp))
-                    Box(contentAlignment = Alignment.BottomStart) {
+                    Box(contentAlignment = Alignment.BottomEnd) {
                         Avatar(
                             path = msg.senderAvatar,
                             fallbackPath = msg.senderPersonalAvatar,
@@ -381,7 +382,7 @@ fun VoiceRow(
                         Box(
                             modifier = Modifier
                                 .size(16.dp)
-                                .offset(x = (-4).dp, y = 4.dp)
+                                .offset(x = 2.dp, y = 2.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.primary),
                             contentAlignment = Alignment.Center
@@ -397,9 +398,10 @@ fun VoiceRow(
                 }
             }
 
+            // Duration row — sits directly under the waveform, left-aligned,
+            // never pushed over by the avatar column above
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .padding(top = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
