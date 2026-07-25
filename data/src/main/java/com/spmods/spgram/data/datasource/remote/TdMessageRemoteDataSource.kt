@@ -1635,18 +1635,27 @@ class TdMessageRemoteDataSource(
                     val messageIds = update.messageIds.toList()
                     scope.launch(dispatcherProvider.io) {
                         val antiDeleteEnabled = keyValueDao.getValue("anti_delete_enabled")?.value == "true"
-                        if (antiDeleteEnabled) {
-                            // Anti-Delete is on: keep the message in every cache layer and
-                            // don't notify the UI to remove it — MessageRepositoryImpl already
-                            // flagged it isDeleted = true in Room so the bubble stays visible.
-                            return@launch
+
+                        // Anti-Delete only protects messages the other person sent to us.
+                        // Messages we sent ourselves always get removed normally, so split
+                        // the batch: our own messages are dropped immediately, while
+                        // incoming ones are only dropped when Anti-Delete is off.
+                        val idsToRemove = if (!antiDeleteEnabled) {
+                            messageIds
+                        } else {
+                            messageIds.filter { id ->
+                                cache.getMessage(update.chatId, id)?.isOutgoing == true
+                            }
                         }
-                        messageIds.forEach { cache.removeMessage(update.chatId, it) }
-                        removeMessagesFromCache(update.chatId, messageIds)
+
+                        if (idsToRemove.isEmpty()) return@launch
+
+                        idsToRemove.forEach { cache.removeMessage(update.chatId, it) }
+                        removeMessagesFromCache(update.chatId, idsToRemove)
                         messageDeletedFlow.emit(
                             MessageDeletedEvent(
                                 chatId = update.chatId,
-                                messageIds = messageIds
+                                messageIds = idsToRemove
                             )
                         )
                     }
