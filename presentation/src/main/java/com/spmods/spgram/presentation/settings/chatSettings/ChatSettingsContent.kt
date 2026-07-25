@@ -897,8 +897,17 @@ fun ChatSettingsContent(component: ChatSettingsComponent) {
                     subtitle = stringResource(R.string.show_link_previews_subtitle),
                     checked = state.showLinkPreviews,
                     iconColor = blueColor,
-                    position = ItemPosition.STANDALONE,
+                    position = ItemPosition.TOP,
                     onCheckedChange = component::onShowLinkPreviewsChanged
+                )
+                SettingsSwitchTile(
+                    icon = Icons.Rounded.Block,
+                    title = stringResource(R.string.anti_delete_title),
+                    subtitle = stringResource(R.string.anti_delete_subtitle),
+                    checked = state.isAntiDeleteEnabled,
+                    iconColor = redColor,
+                    position = ItemPosition.BOTTOM,
+                    onCheckedChange = component::onAntiDeleteChanged
                 )
             }
 
