@@ -220,24 +220,35 @@ fun HomeScreenPreview(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.width(56.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(56.dp)
-                                        .border(
-                                            width = 2.dp,
-                                            brush = Brush.linearGradient(storyRingColors[i % storyRingColors.size]),
-                                            shape = CircleShape
+                                Box(contentAlignment = Alignment.BottomEnd) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .border(
+                                                width = 2.dp,
+                                                brush = Brush.linearGradient(storyRingColors[i % storyRingColors.size]),
+                                                shape = CircleShape
+                                            )
+                                            .padding(3.dp)
+                                            .clip(CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Avatar(
+                                            path = null,
+                                            name = contactName,
+                                            size = 50.dp
                                         )
-                                        .padding(3.dp)
-                                        .clip(CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Avatar(
-                                        path = null,
-                                        name = contactName,
-                                        size = 50.dp,
-                                        isOnline = isOnline
-                                    )
+                                    }
+                                    if (isOnline) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(14.dp)
+                                                .border(2.dp, MaterialTheme.colorScheme.surfaceContainerLow, CircleShape)
+                                                .padding(2.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF4CAF50))
+                                        )
+                                    }
                                 }
                                 Spacer(Modifier.height(4.dp))
                                 Text(
