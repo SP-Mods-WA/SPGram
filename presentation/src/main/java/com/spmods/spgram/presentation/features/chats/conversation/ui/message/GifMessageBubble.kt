@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -372,6 +373,15 @@ fun GifMessageBubble(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                 }
+                                if (msg.isDeleted) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Block,
+                                        contentDescription = stringResource(R.string.anti_delete_title),
+                                        modifier = Modifier.size(12.dp),
+                                        tint = Color(0xFFFF6659)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
                                 Text(
                                     text = formatTime(msg.date, timeFormat),
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
@@ -452,6 +462,15 @@ fun GifMessageBubble(
                                         contentDescription = stringResource(R.string.info_edited),
                                         modifier = Modifier.size(14.dp),
                                         tint = timeColor
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
+                                if (msg.isDeleted) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Block,
+                                        contentDescription = stringResource(R.string.anti_delete_title),
+                                        modifier = Modifier.size(14.dp),
+                                        tint = Color(0xFFFF3B30)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                 }
