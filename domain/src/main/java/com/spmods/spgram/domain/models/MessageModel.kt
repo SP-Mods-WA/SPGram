@@ -48,7 +48,8 @@ data class MessageModel(
     val viaBotName: String? = null,
     val isSenderPremium: Boolean = false,
     val senderStatusEmojiId: Long = 0L,
-    val senderStatusEmojiPath: String? = null
+    val senderStatusEmojiPath: String? = null,
+    val isDeleted: Boolean = false
 )
 
 data class ForwardInfo(
