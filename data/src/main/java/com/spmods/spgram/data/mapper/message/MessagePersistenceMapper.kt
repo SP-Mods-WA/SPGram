@@ -632,7 +632,8 @@ internal class MessagePersistenceMapper(
             replyCount = entity.replyCount,
             isSenderVerified = cachedSenderUser?.verificationStatus?.isVerified ?: false,
             isSenderPremium = cachedSenderUser?.isPremium ?: false,
-            senderStatusEmojiId = senderStatusEmojiId
+            senderStatusEmojiId = senderStatusEmojiId,
+            isDeleted = entity.isDeleted
         )
     }
 
