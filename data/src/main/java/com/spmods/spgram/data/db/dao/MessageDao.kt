@@ -77,6 +77,12 @@ interface MessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMessages(messages: List<MessageEntity>)
 
+    @Query("SELECT * FROM messages WHERE chatId = :chatId AND isDeleted = 1 ORDER BY id DESC")
+    suspend fun getDeletedMessages(chatId: Long): List<MessageEntity>
+
+    @Query("UPDATE messages SET isDeleted = 1 WHERE chatId = :chatId AND id = :messageId")
+    suspend fun markAsDeleted(chatId: Long, messageId: Long)
+
     @Query("DELETE FROM messages WHERE chatId = :chatId AND id = :messageId")
     suspend fun deleteMessage(chatId: Long, messageId: Long)
 
