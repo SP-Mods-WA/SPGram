@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.spmods.spgram.domain.models.UserModel
 import com.spmods.spgram.presentation.R
 import com.spmods.spgram.presentation.core.ui.Avatar
 import com.spmods.spgram.presentation.core.ui.ItemPosition
@@ -36,9 +38,14 @@ fun HomeScreenPreview(
     isArchivePinned: Boolean,
     chatListMessageLines: Int,
     showChatListPhotos: Boolean,
+    currentUser: UserModel? = null,
     modifier: Modifier = Modifier,
     position: ItemPosition = ItemPosition.STANDALONE
 ) {
+    val myName = listOfNotNull(
+        currentUser?.firstName?.takeIf { it.isNotBlank() },
+        currentUser?.lastName
+    ).joinToString(" ").ifBlank { "Me" }
     val cornerRadius = 24.dp
     val shape = remember(position) {
         when (position) {
@@ -62,6 +69,8 @@ fun HomeScreenPreview(
         listOf(Color(0xFFFF9800), Color(0xFFFFEB3B)),
         listOf(Color(0xFF9E9E9E), Color(0xFF607D8B))
     )
+
+    val sampleContactNames = listOf("Sandun", "Deshan", "Supun", "Nadee", "Thinuka")
 
     Column(modifier = modifier) {
         if (position == ItemPosition.TOP || position == ItemPosition.STANDALONE) {
@@ -103,11 +112,11 @@ fun HomeScreenPreview(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
+                    Avatar(
+                        path = currentUser?.avatarPath,
+                        fallbackPath = currentUser?.personalAvatarPath,
+                        name = myName,
+                        size = 36.dp
                     )
                 }
 
@@ -151,30 +160,95 @@ fun HomeScreenPreview(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     repeat(5) { i ->
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.width(56.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .border(
-                                        width = 2.dp,
-                                        brush = Brush.linearGradient(storyRingColors[i % storyRingColors.size]),
-                                        shape = CircleShape
+                        if (i == 0) {
+                            // ── My Story bubble (real avatar + add badge) ────
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(56.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.BottomEnd) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .border(
+                                                width = 2.dp,
+                                                brush = Brush.linearGradient(
+                                                    listOf(Color(0xFF833AB4), Color(0xFFE1306C), Color(0xFFFCAF45))
+                                                ),
+                                                shape = CircleShape
+                                            )
+                                            .padding(3.dp)
+                                            .clip(CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Avatar(
+                                            path = currentUser?.avatarPath,
+                                            fallbackPath = currentUser?.personalAvatarPath,
+                                            name = myName,
+                                            size = 50.dp
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Add,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(R.string.my_story_label),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 9.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        } else {
+                            val contactName = sampleContactNames[(i - 1) % sampleContactNames.size]
+                            val isOnline = i % 2 == 1
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(56.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .border(
+                                            width = 2.dp,
+                                            brush = Brush.linearGradient(storyRingColors[i % storyRingColors.size]),
+                                            shape = CircleShape
+                                        )
+                                        .padding(3.dp)
+                                        .clip(CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Avatar(
+                                        path = null,
+                                        name = contactName,
+                                        size = 50.dp,
+                                        isOnline = isOnline
                                     )
-                                    .padding(3.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                            )
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = contactName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 9.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
