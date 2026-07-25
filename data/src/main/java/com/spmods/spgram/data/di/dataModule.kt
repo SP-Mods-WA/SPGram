@@ -632,6 +632,7 @@ val dataModule = module {
             fileDownloadQueue = get(),
             fileUpdateHandler = get(),
             dispatcherProvider = get(),
+            keyValueDao = get(),
             scope = get()
         )
     }
