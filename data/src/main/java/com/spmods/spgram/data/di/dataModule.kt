@@ -263,7 +263,8 @@ val dataModule = module {
                 SpgramMigrations.MIGRATION_30_31,
                 SpgramMigrations.MIGRATION_31_32,
                 SpgramMigrations.MIGRATION_32_33,
-                SpgramMigrations.MIGRATION_33_34
+                SpgramMigrations.MIGRATION_33_34,
+                SpgramMigrations.MIGRATION_34_35
             )
             .build()
     }
