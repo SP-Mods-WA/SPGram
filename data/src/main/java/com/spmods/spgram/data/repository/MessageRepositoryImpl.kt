@@ -85,6 +85,10 @@ class MessageRepositoryImpl(
     private val _textCompositionStyles = MutableStateFlow<List<TextCompositionStyleModel>>(emptyList())
     private val hardResetFlagKey = "cache_hard_reset_v2"
 
+    companion object {
+        const val ANTI_DELETE_PREF_KEY = "anti_delete_enabled"
+    }
+
     override val newMessageFlow = messageRemoteDataSource.newMessageFlow
     override val senderUpdateFlow = messageMapper.senderUpdateFlow
     override val messageEditedFlow = messageRemoteDataSource.messageEditedFlow
@@ -265,8 +269,13 @@ class MessageRepositoryImpl(
 
             is TdApi.UpdateDeleteMessages -> {
                 if (update.isPermanent) {
+                    val antiDeleteEnabled = keyValueDao.getValue(ANTI_DELETE_PREF_KEY)?.value == "true"
                     update.messageIds.forEach { messageId ->
-                        chatLocalDataSource.deleteMessage(update.chatId, messageId)
+                        if (antiDeleteEnabled) {
+                            chatLocalDataSource.markAsDeleted(update.chatId, messageId)
+                        } else {
+                            chatLocalDataSource.deleteMessage(update.chatId, messageId)
+                        }
                     }
                 }
             }
@@ -296,6 +305,13 @@ class MessageRepositoryImpl(
                 textCompositionStyleDao.replaceAll(styles.map { it.toEntity() })
             }
         }
+    }
+
+    override fun isAntiDeleteEnabledFlow(): Flow<Boolean> =
+        keyValueDao.observeValue(ANTI_DELETE_PREF_KEY).map { it?.value == "true" }
+
+    override suspend fun setAntiDeleteEnabled(enabled: Boolean) {
+        keyValueDao.insertValue(KeyValueEntity(ANTI_DELETE_PREF_KEY, enabled.toString()))
     }
 
     override suspend fun openChat(chatId: Long) {
@@ -547,7 +563,8 @@ class MessageRepositoryImpl(
             try {
                 val remotePage = messageRemoteDataSource.getMessagesOlder(chatId, fromMessageId, limit, threadId)
                 persistRemoteMessages(chatId, remotePage.messages)
-                remotePage
+                val mergedMessages = mergeDeletedIntoRemote(chatId, remotePage.messages)
+                remotePage.copy(messages = mergedMessages)
             } catch (e: Exception) {
                 val fallbackMessages = if (cached.isNotEmpty()) {
                     cached
@@ -579,7 +596,7 @@ class MessageRepositoryImpl(
             try {
                 val remoteMessages = messageRemoteDataSource.getMessagesNewer(chatId, fromMessageId, limit, threadId)
                 persistRemoteMessages(chatId, remoteMessages)
-                remoteMessages
+                mergeDeletedIntoRemote(chatId, remoteMessages)
             } catch (e: Exception) {
                 chatLocalDataSource.getMessagesNewer(chatId, fromMessageId, limit)
                     .let { mapLocalMessages(it) }
@@ -596,7 +613,7 @@ class MessageRepositoryImpl(
             try {
                 val remoteMessages = messageRemoteDataSource.getMessagesAround(chatId, messageId, limit, threadId)
                 persistRemoteMessages(chatId, remoteMessages)
-                remoteMessages
+                mergeDeletedIntoRemote(chatId, remoteMessages)
             } catch (e: Exception) {
                 val local = chatLocalDataSource.getLatestMessages(chatId, limit)
                 mapLocalMessages(local)
@@ -1635,6 +1652,38 @@ class MessageRepositoryImpl(
         scope.launch(dispatcherProvider.io) {
             chatLocalDataSource.clearAll()
         }
+    }
+
+    /**
+     * Anti-Delete support: TDLib never returns messages that were deleted, so a
+     * fresh remote page will silently drop them. When Anti-Delete is on, we kept
+     * those messages locally with isDeleted = true — this re-inserts them into
+     * the remote page, sorted back into place by id, so the bubble still shows
+     * (with its "deleted" indicator) instead of vanishing from the chat.
+     */
+    private suspend fun mergeDeletedIntoRemote(
+        chatId: Long,
+        remoteMessages: List<MessageModel>
+    ): List<MessageModel> {
+        val antiDeleteEnabled = keyValueDao.getValue(ANTI_DELETE_PREF_KEY)?.value == "true"
+        if (!antiDeleteEnabled) return remoteMessages
+
+        val deletedEntities = chatLocalDataSource.getDeletedMessages(chatId)
+        if (deletedEntities.isEmpty()) return remoteMessages
+
+        if (remoteMessages.isEmpty()) return remoteMessages
+
+        val remoteIds = remoteMessages.map { it.id }
+        val minId = remoteIds.min()
+        val maxId = remoteIds.max()
+
+        val relevantDeleted = deletedEntities.filter { it.id in minId..maxId }
+        if (relevantDeleted.isEmpty()) return remoteMessages
+
+        val deletedModels = mapLocalMessages(relevantDeleted)
+        val merged = (remoteMessages + deletedModels).distinctBy { it.id }
+
+        return merged.sortedByDescending { it.id }
     }
 
     private fun persistRemoteMessages(chatId: Long, remoteMessages: List<MessageModel>) {
