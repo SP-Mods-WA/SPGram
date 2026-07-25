@@ -208,6 +208,10 @@ class InMemoryChatLocalDataSource : ChatLocalDataSource {
         return messages[chatId]?.value?.values?.filter { it.isDeleted }?.sortedByDescending { it.id } ?: emptyList()
     }
 
+    override suspend fun isMessageOutgoing(chatId: Long, messageId: Long): Boolean? {
+        return messages[chatId]?.value?.get(messageId)?.isOutgoing
+    }
+
     override suspend fun clearMessagesForChat(chatId: Long) {
         messages[chatId]?.value = emptyMap()
     }
