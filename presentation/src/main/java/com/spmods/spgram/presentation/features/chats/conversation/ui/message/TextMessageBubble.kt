@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -200,6 +201,15 @@ fun TextMessageBubble(
                             contentDescription = stringResource(R.string.info_edited),
                             modifier           = Modifier.size(14.dp),
                             tint               = timeColor
+                        )
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    if (msg.isDeleted) {
+                        Icon(
+                            imageVector        = Icons.Rounded.Block,
+                            contentDescription = stringResource(R.string.anti_delete_title),
+                            modifier           = Modifier.size(14.dp),
+                            tint               = Color(0xFFFF3B30)
                         )
                         Spacer(Modifier.width(4.dp))
                     }
