@@ -6,7 +6,7 @@
 <string name="preview_group_name">SPGram News</string>
 <string name="preview_group_msg">New update released 🚀</string>
 <string name="preview_group_time">11:20</string>
-
+<string name="my_story_label">My Story</string>
         <string name="story_compose_title">New Story</string>
 <string name="story_edit_title">Edit Story</string>
 <string name="story_post_as">Posting as %1$s</string>
