@@ -72,6 +72,9 @@ interface MessageRepository :
     suspend fun openChat(chatId: Long)
     suspend fun closeChat(chatId: Long)
 
+    fun isAntiDeleteEnabledFlow(): Flow<Boolean>
+    suspend fun setAntiDeleteEnabled(enabled: Boolean)
+
     suspend fun sendVideoNote(chatId: Long, videoPath: String, duration: Int, length: Int)
     suspend fun sendVoiceNote(chatId: Long, voicePath: String, duration: Int, waveform: ByteArray, selfDestructImmediately: Boolean = false)
 
