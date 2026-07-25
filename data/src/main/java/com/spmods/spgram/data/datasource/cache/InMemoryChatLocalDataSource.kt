@@ -195,6 +195,19 @@ class InMemoryChatLocalDataSource : ChatLocalDataSource {
         }
     }
 
+    override suspend fun markAsDeleted(chatId: Long, messageId: Long) {
+        messages[chatId]?.let { flow ->
+            val existing = flow.value[messageId]
+            if (existing != null) {
+                flow.update { it + (messageId to existing.copy(isDeleted = true)) }
+            }
+        }
+    }
+
+    override suspend fun getDeletedMessages(chatId: Long): List<MessageEntity> {
+        return messages[chatId]?.value?.values?.filter { it.isDeleted }?.sortedByDescending { it.id } ?: emptyList()
+    }
+
     override suspend fun clearMessagesForChat(chatId: Long) {
         messages[chatId]?.value = emptyMap()
     }
