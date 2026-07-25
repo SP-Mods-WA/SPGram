@@ -272,7 +272,11 @@ class MessageRepositoryImpl(
                 if (update.isPermanent) {
                     val antiDeleteEnabled = keyValueDao.getValue(ANTI_DELETE_PREF_KEY)?.value == "true"
                     update.messageIds.forEach { messageId ->
-                        if (antiDeleteEnabled) {
+                        // Anti-Delete only protects messages the other person sent to us —
+                        // messages we sent ourselves are always deleted normally, whether we
+                        // or the other party removed them.
+                        val isIncoming = chatLocalDataSource.isMessageOutgoing(update.chatId, messageId) == false
+                        if (antiDeleteEnabled && isIncoming) {
                             chatLocalDataSource.markAsDeleted(update.chatId, messageId)
                         } else {
                             chatLocalDataSource.deleteMessage(update.chatId, messageId)
