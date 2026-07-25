@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -292,6 +293,14 @@ fun MessageMetadata(
                 contentDescription = stringResource(R.string.info_edited),
                 modifier = Modifier.size(12.dp),
                 tint = contentColor
+            )
+        }
+        if (msg.isDeleted) {
+            Icon(
+                imageVector = Icons.Rounded.Block,
+                contentDescription = stringResource(R.string.anti_delete_title),
+                modifier = Modifier.size(12.dp),
+                tint = Color(0xFFFF3B30)
             )
         }
         val dateFormatManager: DateFormatManager = koinInject()
