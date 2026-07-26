@@ -120,6 +120,12 @@ class ChatUpdateHandler(
 
                 val effectiveLastMessage = if (keepDeletedPreview) protectedMessage else update.lastMessage
 
+                // If TDLib is setting a genuinely new last message (not our protected one),
+                // clear the deleted-last-message marker so the 🚫 indicator disappears.
+                if (!keepDeletedPreview) {
+                    cache.deletedLastMessageChatIds.remove(update.chatId)
+                }
+
                 cache.updateChat(update.chatId) { chat ->
                     chat.lastMessage = effectiveLastMessage
                     if (!update.positions.isNullOrEmpty()) {
