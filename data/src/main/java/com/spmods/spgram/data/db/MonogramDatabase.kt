@@ -60,7 +60,7 @@ import com.spmods.spgram.data.db.model.WallpaperEntity
         SponsorEntity::class,
         TextCompositionStyleEntity::class
     ],
-    version = 35,
+    version = 36,
     exportSchema = false
 )
 abstract class SpgramDatabase : RoomDatabase() {
