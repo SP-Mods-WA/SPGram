@@ -79,6 +79,9 @@ data class ChatModel(
     val lastMessageIsStoryReply: Boolean = false,
     val lastMessagePreviewPath: String? = null,
     val lastMessagePreviewPaths: List<String> = emptyList(),
+    // Anti-Delete: true when the last message was soft-deleted and is being kept
+    // visible by the anti-delete feature. The chat list shows a 🚫 indicator.
+    val isLastMessageDeleted: Boolean = false,
 )
 
 @Serializable
