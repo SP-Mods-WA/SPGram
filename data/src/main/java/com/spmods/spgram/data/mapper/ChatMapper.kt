@@ -61,6 +61,7 @@ class ChatMapper(
         lastMessagePreviewPaths: List<String>,
         lastMessageTime: String,
         lastMessageDate: Int,
+        isLastMessageDeleted: Boolean = false,
         isMuted: Boolean,
         isAdmin: Boolean,
         isMember: Boolean,
@@ -130,6 +131,7 @@ class ChatMapper(
             lastReadOutboxMessageId = chat.lastReadOutboxMessageId,
             lastMessageId = chat.lastMessage?.id ?: 0L,
             isLastMessageOutgoing = chat.lastMessage?.isOutgoing ?: false,
+            isLastMessageDeleted = isLastMessageDeleted,
             replyMarkupMessageId = chat.replyMarkupMessageId,
             messageSenderId = when (val sender = chat.messageSenderId) {
                 is TdApi.MessageSenderUser -> sender.userId
@@ -195,6 +197,7 @@ class ChatMapper(
             lastReadOutboxMessageId = entity.lastReadOutboxMessageId,
             lastMessageId = entity.lastMessageId,
             isLastMessageOutgoing = entity.isLastMessageOutgoing,
+            isLastMessageDeleted = entity.isLastMessageDeleted,
             replyMarkupMessageId = entity.replyMarkupMessageId,
             messageSenderId = entity.messageSenderId,
             blockList = entity.blockList,
@@ -272,6 +275,7 @@ class ChatMapper(
             lastReadOutboxMessageId = domain.lastReadOutboxMessageId,
             lastMessageId = domain.lastMessageId,
             isLastMessageOutgoing = domain.isLastMessageOutgoing,
+            isLastMessageDeleted = domain.isLastMessageDeleted,
             replyMarkupMessageId = domain.replyMarkupMessageId,
             messageSenderId = domain.messageSenderId,
             blockList = domain.blockList,
