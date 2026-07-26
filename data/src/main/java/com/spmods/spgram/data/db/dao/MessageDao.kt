@@ -101,6 +101,16 @@ interface MessageDao {
     @Query("DELETE FROM messages")
     suspend fun clearAll()
 
-    @Query("DELETE FROM messages WHERE createdAt < :timestamp")
+    // Anti-Delete: preserve rows that are marked deleted (isDeleted = true) so the
+    // user still sees them after 90 days. Only non-protected rows are expired.
+    @Query("DELETE FROM messages WHERE createdAt < :timestamp AND isDeleted = 0")
     suspend fun deleteExpired(timestamp: Long)
+
+    // Called when the user turns Anti-Delete OFF — wipes all previously saved rows.
+    @Query("DELETE FROM messages WHERE isDeleted = 1")
+    suspend fun clearDeletedMessages()
+
+    // Called when the user turns Anti-Delete OFF for a specific chat.
+    @Query("DELETE FROM messages WHERE chatId = :chatId AND isDeleted = 1")
+    suspend fun clearDeletedMessagesForChat(chatId: Long)
 }
