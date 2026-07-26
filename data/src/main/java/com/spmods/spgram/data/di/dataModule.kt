@@ -536,7 +536,8 @@ val dataModule = module {
             userFullInfoDao = get(),
             fileQueue = get(),
             fileUpdateHandler = get(),
-            stringProvider = get()
+            stringProvider = get(),
+            keyValueDao = get()
         )
     }
     single<ChatListRepository> { get<ChatsListRepositoryImpl>() }
