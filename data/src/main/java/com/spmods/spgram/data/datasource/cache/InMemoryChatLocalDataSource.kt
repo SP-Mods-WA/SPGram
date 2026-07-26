@@ -261,8 +261,16 @@ class InMemoryChatLocalDataSource : ChatLocalDataSource {
     }
 
     override suspend fun deleteExpired(timestamp: Long) {
+        // Anti-Delete: only expire rows that are NOT marked as deleted — protected
+        // rows must survive past the 90-day window.
         messages.values.forEach { flow ->
-            flow.update { it.filterValues { msg -> msg.createdAt >= timestamp } }
+            flow.update { it.filterValues { msg -> msg.createdAt >= timestamp || msg.isDeleted } }
+        }
+    }
+
+    override suspend fun clearDeletedMessages() {
+        messages.values.forEach { flow ->
+            flow.update { it.filterValues { msg -> !msg.isDeleted } }
         }
     }
 }
