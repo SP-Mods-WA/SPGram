@@ -212,6 +212,19 @@ class InMemoryChatLocalDataSource : ChatLocalDataSource {
         return messages[chatId]?.value?.get(messageId)?.isOutgoing
     }
 
+    override suspend fun getMessage(chatId: Long, messageId: Long): MessageEntity? {
+        return messages[chatId]?.value?.get(messageId)
+    }
+
+    override suspend fun updateMediaPath(chatId: Long, messageId: Long, newPath: String) {
+        messages[chatId]?.let { flow ->
+            val existing = flow.value[messageId]
+            if (existing != null) {
+                flow.update { it + (messageId to existing.copy(mediaPath = newPath)) }
+            }
+        }
+    }
+
     override suspend fun clearMessagesForChat(chatId: Long) {
         messages[chatId]?.value = emptyMap()
     }
