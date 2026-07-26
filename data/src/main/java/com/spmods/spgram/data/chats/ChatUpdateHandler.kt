@@ -102,73 +102,61 @@ class ChatUpdateHandler(
 
             is TdApi.UpdateChatLastMessage -> {
                 val activeChatList = activeChatListProvider()
-                scope.launch(dispatchers.io) {
-                    // Anti-Delete support: when the message TDLib just told us is now
-                    // "last" replaced one we're still showing as deleted (i.e. the
-                    // deleted message *was* the last message), keep our own deleted
-                    // message as the preview instead of silently swapping it out —
-                    // otherwise the chat list would quietly hide the fact a message
-                    // was removed.
-                    val antiDeleteEnabled = keyValueDao.getValue("anti_delete_enabled")?.value == "true"
-                    val previousLastMessageId = cache.getChat(update.chatId)?.lastMessage?.id
-                    val keepDeletedPreview = antiDeleteEnabled &&
-                        previousLastMessageId != null &&
-                        previousLastMessageId != 0L &&
-                        previousLastMessageId != update.lastMessage?.id &&
-                        chatLocalDataSource.getMessage(update.chatId, previousLastMessageId)?.isDeleted == true
 
-                    if (!keepDeletedPreview) {
-                        cache.updateChat(update.chatId) { chat ->
-                            chat.lastMessage = update.lastMessage
-                            if (!update.positions.isNullOrEmpty()) {
-                                val mergedPositions = listManager.sanitizePositionsForActiveList(
-                                    chatId = update.chatId,
-                                    currentPositions = chat.positions,
-                                    incomingPositions = update.positions,
-                                    activeChatList = activeChatList,
-                                    source = "UpdateChatLastMessage"
-                                )
-                                chat.positions = mergedPositions
-                                listManager.updateActiveListPositions(
-                                    update.chatId,
-                                    mergedPositions,
-                                    activeChatList
-                                )
-                            }
-                            typingManager.clearTypingStatus(update.chatId)
+                // Anti-Delete support: if the message that was just replaced as "last"
+                // was stashed synchronously by the delete handler (see ChatCache),
+                // keep it as the preview instead of the new one TDLib is offering —
+                // this check is synchronous (no suspend/coroutine gap) so there's no
+                // race against the delete handler's own cache write.
+                val protectedMessage = cache.antiDeleteProtectedLastMessage.remove(update.chatId)
+                val keepDeletedPreview = protectedMessage != null &&
+                    protectedMessage.id != update.lastMessage?.id
+
+                if (!keepDeletedPreview) {
+                    cache.updateChat(update.chatId) { chat ->
+                        chat.lastMessage = update.lastMessage
+                        if (!update.positions.isNullOrEmpty()) {
+                            val mergedPositions = listManager.sanitizePositionsForActiveList(
+                                chatId = update.chatId,
+                                currentPositions = chat.positions,
+                                incomingPositions = update.positions,
+                                activeChatList = activeChatList,
+                                source = "UpdateChatLastMessage"
+                            )
+                            chat.positions = mergedPositions
+                            listManager.updateActiveListPositions(
+                                update.chatId,
+                                mergedPositions,
+                                activeChatList
+                            )
                         }
-                    } else {
-                        // Still apply the position update (chat ordering), just don't
-                        // touch which message is shown as the preview — the chat list
-                        // shows the deleted message's normal text/media label; the 🚫
-                        // indicator only appears once you open the chat itself.
-                        //
-                        // We also defensively re-assert the content/caption on the
-                        // cached object: TDLib can mutate a Message it still holds a
-                        // reference to (e.g. clearing content) after a delete, even
-                        // though we're intentionally keeping it as the chat's preview.
-                        val preservedContent = cache.getChat(update.chatId)?.lastMessage?.content
-                        cache.updateChat(update.chatId) { chat ->
-                            if (preservedContent != null && chat.lastMessage?.content !== preservedContent) {
-                                chat.lastMessage?.content = preservedContent
-                            }
-                            if (!update.positions.isNullOrEmpty()) {
-                                val mergedPositions = listManager.sanitizePositionsForActiveList(
-                                    chatId = update.chatId,
-                                    currentPositions = chat.positions,
-                                    incomingPositions = update.positions,
-                                    activeChatList = activeChatList,
-                                    source = "UpdateChatLastMessage"
-                                )
-                                chat.positions = mergedPositions
-                                listManager.updateActiveListPositions(
-                                    update.chatId,
-                                    mergedPositions,
-                                    activeChatList
-                                )
-                            }
-                            typingManager.clearTypingStatus(update.chatId)
+                        typingManager.clearTypingStatus(update.chatId)
+                    }
+                    onSaveChat(update.chatId)
+                    onTriggerUpdate(update.chatId)
+                } else {
+                    // Still apply the position update (chat ordering), just don't
+                    // touch which message is shown as the preview — the chat list
+                    // shows the deleted message's normal text/media label; the 🚫
+                    // indicator only appears once you open the chat itself.
+                    cache.updateChat(update.chatId) { chat ->
+                        chat.lastMessage = protectedMessage
+                        if (!update.positions.isNullOrEmpty()) {
+                            val mergedPositions = listManager.sanitizePositionsForActiveList(
+                                chatId = update.chatId,
+                                currentPositions = chat.positions,
+                                incomingPositions = update.positions,
+                                activeChatList = activeChatList,
+                                source = "UpdateChatLastMessage"
+                            )
+                            chat.positions = mergedPositions
+                            listManager.updateActiveListPositions(
+                                update.chatId,
+                                mergedPositions,
+                                activeChatList
+                            )
                         }
+                        typingManager.clearTypingStatus(update.chatId)
                     }
                     onSaveChat(update.chatId)
                     onTriggerUpdate(update.chatId)
