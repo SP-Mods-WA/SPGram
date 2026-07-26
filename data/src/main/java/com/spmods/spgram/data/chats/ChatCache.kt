@@ -11,6 +11,11 @@ class ChatCache : ChatsCacheDataSource, UserCacheDataSource {
     val activeListPositions = ConcurrentHashMap<Long, TdApi.ChatPosition>()
     val authoritativeActiveListChatIds = ConcurrentHashMap.newKeySet<Long>()
     val protectedPinnedChatIds = ConcurrentHashMap.newKeySet<Long>()
+    // Anti-Delete support: when a deleted message was the chat's last message, we
+    // stash it here (synchronously, from the same delete-handling code path) so
+    // UpdateChatLastMessage can pick it up and keep it as the preview instead of
+    // racing a suspend/DB lookup against TDLib's own last-message update.
+    val antiDeleteProtectedLastMessage = ConcurrentHashMap<Long, TdApi.Message>()
     val onlineMemberCount = ConcurrentHashMap<Long, Int>()
     val userIdToChatId = ConcurrentHashMap<Long, Long>()
     val supergroupIdToChatId = ConcurrentHashMap<Long, Long>()
