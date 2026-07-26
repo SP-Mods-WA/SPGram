@@ -86,7 +86,8 @@ class ChatsListRepositoryImpl(
     private val userFullInfoDao: UserFullInfoDao,
     private val fileQueue: FileDownloadQueue,
     private val fileUpdateHandler: FileUpdateHandler,
-    private val stringProvider: StringProvider
+    private val stringProvider: StringProvider,
+    private val keyValueDao: com.spmods.spgram.data.db.dao.KeyValueDao
 ) : ChatListRepository,
     ChatFolderRepository,
     ChatOperationsRepository,
@@ -250,6 +251,7 @@ class ChatsListRepositoryImpl(
         fileManager = fileManager,
         folderManager = folderManager,
         chatLocalDataSource = chatLocalDataSource,
+        keyValueDao = keyValueDao,
         dispatchers = dispatchers,
         scope = scope,
         activeChatListProvider = { activeChatList },
