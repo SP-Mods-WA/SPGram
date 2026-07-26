@@ -133,7 +133,7 @@ class MessageRepositoryImpl(
             val ninetyDaysAgo = System.currentTimeMillis() - (90L * 24 * 60 * 60 * 1000)
             Log.i(
                 "MessageRepository",
-                "Expired cache cleanup started: messages only, chats preserved"
+                "Expired cache cleanup started: messages only, chats preserved. Anti-deleted rows are exempt."
             )
             chatLocalDataSource.deleteExpired(ninetyDaysAgo)
             Log.i("MessageRepository", "Expired cache cleanup completed")
@@ -269,29 +269,32 @@ class MessageRepositoryImpl(
             }
 
             is TdApi.UpdateDeleteMessages -> {
-                if (update.isPermanent) {
+                // Only act on permanent deletes. fromCache deletes are TDLib housekeeping
+                // (local eviction) — not real remote deletes — so we skip them here.
+                // TdMessageRemoteDataSource handles the in-memory cache removal for ALL
+                // !fromCache events; this block owns DB persistence only.
+                if (update.isPermanent && !update.fromCache) {
                     val antiDeleteEnabled = keyValueDao.getValue(ANTI_DELETE_PREF_KEY)?.value == "true"
                     update.messageIds.forEach { messageId ->
-                        // Anti-Delete only protects messages the other person sent to us —
-                        // messages we sent ourselves are always deleted normally, whether we
-                        // or the other party removed them.
+                        // Use DB as source of truth for isOutgoing — the in-memory cache
+                        // may not contain this message if it was loaded from DB on a
+                        // previous session or after scrolling back in history.
                         val isIncoming = chatLocalDataSource.isMessageOutgoing(update.chatId, messageId) == false
                         if (antiDeleteEnabled && isIncoming) {
-                            // If this message is currently shown as the chat's last
-                            // message, stash a copy of it synchronously (same call,
-                            // no suspend/coroutine gap) so UpdateChatLastMessage can
-                            // find it deterministically instead of racing a DB read
-                            // against TDLib's own last-message update.
+                            // Stash the TDLib Chat.lastMessage reference synchronously so
+                            // UpdateChatLastMessage (which arrives shortly after on the same
+                            // update stream) can keep the deleted message as the chat-list
+                            // preview instead of replacing it. This write is outside any
+                            // coroutine so there is no suspend gap between this and the
+                            // ChatUpdateHandler reading it.
                             val cachedChat = cache.getChat(update.chatId)
                             if (cachedChat?.lastMessage?.id == messageId) {
                                 cachedChat.lastMessage?.let { msg ->
                                     cache.antiDeleteProtectedLastMessage[update.chatId] = msg
                                 }
                             }
-                            // TDLib can clean up a deleted message's cached file on disk in
-                            // the background, even though our Room row still points at it.
-                            // Race to make our own permanent copy first so the bubble keeps
-                            // working after that cleanup happens.
+                            // Copy any downloaded media to app-private storage before TDLib
+                            // potentially cleans up its own cached copy in the background.
                             backupMediaBeforeDelete(update.chatId, messageId)
                             chatLocalDataSource.markAsDeleted(update.chatId, messageId)
                         } else {
@@ -333,6 +336,13 @@ class MessageRepositoryImpl(
 
     override suspend fun setAntiDeleteEnabled(enabled: Boolean) {
         keyValueDao.insertValue(KeyValueEntity(ANTI_DELETE_PREF_KEY, enabled.toString()))
+        // When the user turns Anti-Delete OFF, remove all previously soft-deleted rows
+        // so they no longer appear in conversations. When turned ON, the slate is clean —
+        // only future deletes (while connected) will be captured.
+        if (!enabled) {
+            chatLocalDataSource.clearDeletedMessages()
+            cache.antiDeleteProtectedLastMessage.clear()
+        }
     }
 
     override suspend fun openChat(chatId: Long) {
@@ -604,7 +614,11 @@ class MessageRepositoryImpl(
     override suspend fun getCachedMessages(chatId: Long, limit: Int): List<MessageModel> =
         withContext(dispatcherProvider.io) {
             val local = chatLocalDataSource.getLatestMessages(chatId, limit)
-            mapLocalMessages(local)
+            val mapped = mapLocalMessages(local)
+            // Anti-Delete: merge soft-deleted rows the same way the remote paths do,
+            // so the initial cached render (before the network page arrives) already
+            // shows deleted-message bubbles rather than gaps.
+            mergeDeletedIntoRemote(chatId, mapped)
         }
 
     override suspend fun getMessagesNewer(
@@ -617,7 +631,9 @@ class MessageRepositoryImpl(
             try {
                 val remoteMessages = messageRemoteDataSource.getMessagesNewer(chatId, fromMessageId, limit, threadId)
                 persistRemoteMessages(chatId, remoteMessages)
-                mergeDeletedIntoRemote(chatId, remoteMessages)
+                // Pass fromMessageId + isNewerPage so mergeDeletedIntoRemote bounds the
+                // range correctly (avoids injecting old deleted messages into a newer page).
+                mergeDeletedIntoRemote(chatId, remoteMessages, fromMessageId, isNewerPage = true)
             } catch (e: Exception) {
                 chatLocalDataSource.getMessagesNewer(chatId, fromMessageId, limit)
                     .let { mapLocalMessages(it) }
@@ -1713,10 +1729,21 @@ class MessageRepositoryImpl(
         }
     }
 
+    /**
+     * Merges soft-deleted (anti-delete) messages back into a page of remote messages.
+     *
+     * [fromMessageId] semantics (mirrors TDLib convention):
+     *   0          → "give me the newest messages" (initial / bottom load, getMessagesOlder)
+     *   > 0, older → anchor for getMessagesOlder — deleted messages in [minRemoteId, ∞) are included
+     *   > 0, newer → anchor for getMessagesNewer — deleted messages in [fromMessageId, maxRemoteId] included
+     *
+     * [isNewerPage] distinguishes the two > 0 cases so the range bound is correct.
+     */
     private suspend fun mergeDeletedIntoRemote(
         chatId: Long,
         remoteMessages: List<MessageModel>,
-        fromMessageId: Long = 0L
+        fromMessageId: Long = 0L,
+        isNewerPage: Boolean = false
     ): List<MessageModel> {
         val antiDeleteEnabled = keyValueDao.getValue(ANTI_DELETE_PREF_KEY)?.value == "true"
         if (!antiDeleteEnabled) return remoteMessages
@@ -1725,26 +1752,29 @@ class MessageRepositoryImpl(
         if (deletedEntities.isEmpty()) return remoteMessages
 
         val relevantDeleted = if (remoteMessages.isEmpty()) {
-            // Nothing came back from TDLib for this page at all (e.g. every message
-            // in the chat was deleted, or this is the very first page). Anchor off
-            // fromMessageId instead of an empty remote range so we don't drop them.
+            // Nothing came back from TDLib for this page (all messages deleted, or
+            // first load). Anchor off fromMessageId so we don't silently drop them.
             if (fromMessageId == 0L) deletedEntities else emptyList()
         } else {
             val remoteIds = remoteMessages.map { it.id }
             val minId = remoteIds.min()
-            // fromMessageId == 0 means "give me the newest messages" (initial/bottom
-            // load) — TDLib silently skips deleted messages, so the true upper bound
-            // of this page is unbounded, not just the newest id TDLib happened to
-            // return. Anything at or above minId (down to the oldest deleted id we
-            // have) could belong on this page.
-            val maxId = if (fromMessageId == 0L) Long.MAX_VALUE else remoteIds.max()
+            val maxId = when {
+                // getMessagesNewer: only include deleted messages ABOVE the anchor and
+                // BELOW or AT the newest remote message — prevents unbounded upper range.
+                isNewerPage -> remoteIds.max()
+                // getMessagesOlder initial load (fromMessageId == 0): upper bound is
+                // unbounded because TDLib silently skips deleted messages, so the true
+                // top of the page is unknown.
+                fromMessageId == 0L -> Long.MAX_VALUE
+                // getMessagesOlder paginated: upper bound is the newest remote id.
+                else -> remoteIds.max()
+            }
             deletedEntities.filter { it.id in minId..maxId }
         }
         if (relevantDeleted.isEmpty()) return remoteMessages
 
         val deletedModels = mapLocalMessages(relevantDeleted)
         val merged = (remoteMessages + deletedModels).distinctBy { it.id }
-
         return merged.sortedByDescending { it.id }
     }
 
