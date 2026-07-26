@@ -16,6 +16,13 @@ class ChatCache : ChatsCacheDataSource, UserCacheDataSource {
     // UpdateChatLastMessage can pick it up and keep it as the preview instead of
     // racing a suspend/DB lookup against TDLib's own last-message update.
     val antiDeleteProtectedLastMessage = ConcurrentHashMap<Long, TdApi.Message>()
+
+    // Chat IDs whose current last message is a soft-deleted (anti-delete) message.
+    // Populated by MessageRepositoryImpl when a last-message delete is protected,
+    // cleared by ChatUpdateHandler when TDLib sends a newer UpdateChatLastMessage.
+    // ChatModelFactory reads this to set ChatModel.isLastMessageDeleted = true so
+    // the chat list can show the 🚫 indicator without a DB lookup.
+    val deletedLastMessageChatIds: MutableSet<Long> = ConcurrentHashMap.newKeySet()
     val onlineMemberCount = ConcurrentHashMap<Long, Int>()
     val userIdToChatId = ConcurrentHashMap<Long, Long>()
     val supergroupIdToChatId = ConcurrentHashMap<Long, Long>()
@@ -349,6 +356,7 @@ class ChatCache : ChatsCacheDataSource, UserCacheDataSource {
         pendingSecretChats.clear()
         pendingChatPermissions.clear()
         pendingMyChatMember.clear()
+        deletedLastMessageChatIds.clear()
     }
 
     fun putChatFromEntity(entity: com.spmods.spgram.data.db.model.ChatEntity) {
