@@ -277,6 +277,11 @@ class MessageRepositoryImpl(
                         // or the other party removed them.
                         val isIncoming = chatLocalDataSource.isMessageOutgoing(update.chatId, messageId) == false
                         if (antiDeleteEnabled && isIncoming) {
+                            // TDLib can clean up a deleted message's cached file on disk in
+                            // the background, even though our Room row still points at it.
+                            // Race to make our own permanent copy first so the bubble keeps
+                            // working after that cleanup happens.
+                            backupMediaBeforeDelete(update.chatId, messageId)
                             chatLocalDataSource.markAsDeleted(update.chatId, messageId)
                         } else {
                             chatLocalDataSource.deleteMessage(update.chatId, messageId)
@@ -1666,6 +1671,37 @@ class MessageRepositoryImpl(
      * the remote page, sorted back into place by id, so the bubble still shows
      * (with its "deleted" indicator) instead of vanishing from the chat.
      */
+    /**
+     * Anti-Delete support: copies a message's already-downloaded media file into a
+     * permanent app-private folder before we flag the message as deleted. TDLib may
+     * clean up its own cached copy of a deleted message's file in the background —
+     * once that happens the original path stops resolving, so the bubble would show
+     * the "tap to download" state again with no way to actually fetch the file
+     * (TDLib generally won't re-serve a deleted message's file). Keeping our own
+     * copy means the media stays viewable regardless of what TDLib does with its copy.
+     */
+    private suspend fun backupMediaBeforeDelete(chatId: Long, messageId: Long) {
+        val entity = chatLocalDataSource.getMessage(chatId, messageId) ?: return
+        val currentPath = entity.mediaPath?.takeIf { it.isNotBlank() } ?: return
+
+        val sourceFile = File(currentPath)
+        if (!sourceFile.exists()) return
+
+        // Already backed up (e.g. a duplicate delete update) — nothing to do.
+        val backupDir = File(context.filesDir, "anti_delete_media")
+        if (sourceFile.parentFile?.absolutePath == backupDir.absolutePath) return
+
+        try {
+            if (!backupDir.exists()) backupDir.mkdirs()
+            val destFile = File(backupDir, "${chatId}_${messageId}_${sourceFile.name}")
+            sourceFile.copyTo(destFile, overwrite = true)
+            chatLocalDataSource.updateMediaPath(chatId, messageId, destFile.absolutePath)
+        } catch (_: Exception) {
+            // Best-effort: if the copy fails (e.g. TDLib deleted the source file
+            // first), the message still shows as deleted, just without recoverable media.
+        }
+    }
+
     private suspend fun mergeDeletedIntoRemote(
         chatId: Long,
         remoteMessages: List<MessageModel>,
