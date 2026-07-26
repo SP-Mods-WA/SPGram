@@ -108,6 +108,12 @@ class RoomChatLocalDataSource(
     override suspend fun isMessageOutgoing(chatId: Long, messageId: Long) =
         messageDao.isMessageOutgoing(chatId, messageId)
 
+    override suspend fun getMessage(chatId: Long, messageId: Long) =
+        messageDao.getMessage(chatId, messageId)
+
+    override suspend fun updateMediaPath(chatId: Long, messageId: Long, newPath: String) =
+        messageDao.updateMediaPath(chatId, messageId, newPath)
+
     override suspend fun clearMessagesForChat(chatId: Long) = messageDao.clearMessagesForChat(chatId)
 
     override suspend fun getChatFullInfo(chatId: Long): ChatFullInfoEntity? = chatFullInfoDao.getChatFullInfo(chatId)
