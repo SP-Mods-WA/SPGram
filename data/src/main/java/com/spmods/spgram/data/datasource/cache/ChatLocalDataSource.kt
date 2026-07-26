@@ -67,4 +67,7 @@ interface ChatLocalDataSource {
     suspend fun clearTopicsForChat(chatId: Long)
 
     suspend fun deleteExpired(timestamp: Long)
+
+    // Wipes all anti-delete saved rows (called when feature is turned off).
+    suspend fun clearDeletedMessages()
 }
