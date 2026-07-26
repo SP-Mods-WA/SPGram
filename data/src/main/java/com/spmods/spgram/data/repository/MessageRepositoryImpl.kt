@@ -292,6 +292,10 @@ class MessageRepositoryImpl(
                                 cachedChat.lastMessage?.let { msg ->
                                     cache.antiDeleteProtectedLastMessage[update.chatId] = msg
                                 }
+                                // Mark this chat so ChatModelFactory sets
+                                // ChatModel.isLastMessageDeleted = true and the chat list
+                                // shows the 🚫 indicator next to the preview.
+                                cache.deletedLastMessageChatIds.add(update.chatId)
                             }
                             // Copy any downloaded media to app-private storage before TDLib
                             // potentially cleans up its own cached copy in the background.
@@ -342,6 +346,7 @@ class MessageRepositoryImpl(
         if (!enabled) {
             chatLocalDataSource.clearDeletedMessages()
             cache.antiDeleteProtectedLastMessage.clear()
+            cache.deletedLastMessageChatIds.clear()
         }
     }
 
