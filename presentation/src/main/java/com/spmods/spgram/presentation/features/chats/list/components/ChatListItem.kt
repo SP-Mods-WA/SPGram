@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AlternateEmail
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Check
@@ -434,6 +435,13 @@ private fun ChatListMessagePreview(
     )
     val hasVisibleTail = visibleMediaLabel != null || bodyText.text.isNotBlank()
     val finalText = buildAnnotatedString {
+        // Anti-Delete: prefix the preview with a 🚫 label so the user knows the
+        // sender deleted this message and it was saved by the anti-delete feature.
+        if (chat.isLastMessageDeleted) {
+            withStyle(SpanStyle(color = Color(0xFFFF3B30), fontWeight = FontWeight.Medium)) {
+                append("🚫 ")
+            }
+        }
         if (!chat.isChannel && chat.lastMessageSenderName.isNotBlank()) {
             withStyle(
                 SpanStyle(
