@@ -339,6 +339,7 @@ class ChatModelFactory(
             lastMessagePreviewPaths = previewPaths,
             lastMessageTime = preview.time,
             lastMessageDate = chat.lastMessage?.date ?: 0,
+            isLastMessageDeleted = cache.deletedLastMessageChatIds.contains(chat.id),
             isMuted = isMuted,
             isAdmin = isAdmin,
             isMember = isMember,
