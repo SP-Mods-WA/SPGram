@@ -1631,31 +1631,20 @@ class TdMessageRemoteDataSource(
                 scope.launch(dispatcherProvider.io) { messageReadFlow.emit(ReadUpdate.Inbox(update.chatId, update.lastReadInboxMessageId)) }
             }
             is TdApi.UpdateDeleteMessages -> {
+                // Anti-Delete DB persistence is handled exclusively by MessageRepositoryImpl
+                // (processCachedUpdate). This layer only manages the in-memory TDLib cache
+                // and the live UI flow — it always removes every id from memory so the
+                // conversation screen redraws immediately. The DB layer decides independently
+                // whether to hard-delete or soft-mark each message.
                 if (!update.fromCache) {
                     val messageIds = update.messageIds.toList()
+                    messageIds.forEach { cache.removeMessage(update.chatId, it) }
+                    removeMessagesFromCache(update.chatId, messageIds)
                     scope.launch(dispatcherProvider.io) {
-                        val antiDeleteEnabled = keyValueDao.getValue("anti_delete_enabled")?.value == "true"
-
-                        // Anti-Delete only protects messages the other person sent to us.
-                        // Messages we sent ourselves always get removed normally, so split
-                        // the batch: our own messages are dropped immediately, while
-                        // incoming ones are only dropped when Anti-Delete is off.
-                        val idsToRemove = if (!antiDeleteEnabled) {
-                            messageIds
-                        } else {
-                            messageIds.filter { id ->
-                                cache.getMessage(update.chatId, id)?.isOutgoing == true
-                            }
-                        }
-
-                        if (idsToRemove.isEmpty()) return@launch
-
-                        idsToRemove.forEach { cache.removeMessage(update.chatId, it) }
-                        removeMessagesFromCache(update.chatId, idsToRemove)
                         messageDeletedFlow.emit(
                             MessageDeletedEvent(
                                 chatId = update.chatId,
-                                messageIds = idsToRemove
+                                messageIds = messageIds
                             )
                         )
                     }
