@@ -77,6 +77,12 @@ interface MessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMessages(messages: List<MessageEntity>)
 
+    @Query("SELECT * FROM messages WHERE chatId = :chatId AND id = :messageId LIMIT 1")
+    suspend fun getMessage(chatId: Long, messageId: Long): MessageEntity?
+
+    @Query("UPDATE messages SET mediaPath = :newPath WHERE chatId = :chatId AND id = :messageId")
+    suspend fun updateMediaPath(chatId: Long, messageId: Long, newPath: String)
+
     @Query("SELECT isOutgoing FROM messages WHERE chatId = :chatId AND id = :messageId")
     suspend fun isMessageOutgoing(chatId: Long, messageId: Long): Boolean?
 
