@@ -137,4 +137,8 @@ class RoomChatLocalDataSource(
             messageDao.deleteExpired(timestamp)
         }
     }
+
+    override suspend fun clearDeletedMessages() {
+        messageDao.clearDeletedMessages()
+    }
 }
