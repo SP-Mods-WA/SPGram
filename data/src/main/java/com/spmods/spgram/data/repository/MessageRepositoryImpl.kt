@@ -277,6 +277,17 @@ class MessageRepositoryImpl(
                         // or the other party removed them.
                         val isIncoming = chatLocalDataSource.isMessageOutgoing(update.chatId, messageId) == false
                         if (antiDeleteEnabled && isIncoming) {
+                            // If this message is currently shown as the chat's last
+                            // message, stash a copy of it synchronously (same call,
+                            // no suspend/coroutine gap) so UpdateChatLastMessage can
+                            // find it deterministically instead of racing a DB read
+                            // against TDLib's own last-message update.
+                            val cachedChat = cache.getChat(update.chatId)
+                            if (cachedChat?.lastMessage?.id == messageId) {
+                                cachedChat.lastMessage?.let { msg ->
+                                    cache.antiDeleteProtectedLastMessage[update.chatId] = msg
+                                }
+                            }
                             // TDLib can clean up a deleted message's cached file on disk in
                             // the background, even though our Room row still points at it.
                             // Race to make our own permanent copy first so the bubble keeps
