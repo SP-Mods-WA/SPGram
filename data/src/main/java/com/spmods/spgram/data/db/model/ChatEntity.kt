@@ -91,5 +91,7 @@ data class ChatEntity(
     val lastMessageContentType: String = "text",
     val lastMessageSenderName: String = "",
     val lastMessageIsStoryReply: Boolean = false,
+    // Anti-Delete: persisted so the 🚫 indicator survives app restarts.
+    val isLastMessageDeleted: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )
