@@ -90,6 +90,11 @@ class MessageRepositoryImpl(
         const val ANTI_DELETE_PREF_KEY = "anti_delete_enabled"
     }
 
+    // In-memory mirror of the anti-delete pref so UpdateDeleteMessages can read it
+    // without a suspend DB call, eliminating the race with UpdateChatLastMessage.
+    @Volatile
+    private var antiDeleteEnabledCache: Boolean = false
+
     override val newMessageFlow = messageRemoteDataSource.newMessageFlow
     override val senderUpdateFlow = messageMapper.senderUpdateFlow
     override val messageEditedFlow = messageRemoteDataSource.messageEditedFlow
@@ -145,6 +150,14 @@ class MessageRepositoryImpl(
 
         scope.launch(dispatcherProvider.io) {
             purgeTransientMediaCacheOnStartup()
+        }
+
+        // Keep antiDeleteEnabledCache in sync so UpdateDeleteMessages can read it
+        // without a suspend call (eliminates race with UpdateChatLastMessage).
+        scope.launch(dispatcherProvider.io) {
+            keyValueDao.observeValue(ANTI_DELETE_PREF_KEY).collect { entity ->
+                antiDeleteEnabledCache = entity?.value == "true"
+            }
         }
 
         scope.launch(dispatcherProvider.io) {
@@ -274,34 +287,38 @@ class MessageRepositoryImpl(
                 // TdMessageRemoteDataSource handles the in-memory cache removal for ALL
                 // !fromCache events; this block owns DB persistence only.
                 if (update.isPermanent && !update.fromCache) {
-                    val antiDeleteEnabled = keyValueDao.getValue(ANTI_DELETE_PREF_KEY)?.value == "true"
+                    // Anti-Delete: stash last-message references into the in-memory cache
+                    // BEFORE any suspend call. UpdateChatLastMessage arrives on a separate
+                    // thread and may race against this coroutine's suspend points
+                    // (keyValueDao, isMessageOutgoing). By writing the stash first we
+                    // guarantee ChatUpdateHandler always sees it, regardless of scheduling.
+                    val antiDeleteEnabled = antiDeleteEnabledCache
+                    if (antiDeleteEnabled) {
+                        val cachedChat = cache.getChat(update.chatId)
+                        update.messageIds.forEach { messageId ->
+                            if (cachedChat?.lastMessage?.id == messageId) {
+                                cachedChat.lastMessage?.let { msg ->
+                                    cache.antiDeleteProtectedLastMessage[update.chatId] = msg
+                                }
+                                cache.deletedLastMessageChatIds.add(update.chatId)
+                            }
+                        }
+                    }
+                    // Now do the suspend DB work.
                     update.messageIds.forEach { messageId ->
                         // Use DB as source of truth for isOutgoing — the in-memory cache
                         // may not contain this message if it was loaded from DB on a
                         // previous session or after scrolling back in history.
                         val isIncoming = chatLocalDataSource.isMessageOutgoing(update.chatId, messageId) == false
                         if (antiDeleteEnabled && isIncoming) {
-                            // Stash the TDLib Chat.lastMessage reference synchronously so
-                            // UpdateChatLastMessage (which arrives shortly after on the same
-                            // update stream) can keep the deleted message as the chat-list
-                            // preview instead of replacing it. This write is outside any
-                            // coroutine so there is no suspend gap between this and the
-                            // ChatUpdateHandler reading it.
-                            val cachedChat = cache.getChat(update.chatId)
-                            if (cachedChat?.lastMessage?.id == messageId) {
-                                cachedChat.lastMessage?.let { msg ->
-                                    cache.antiDeleteProtectedLastMessage[update.chatId] = msg
-                                }
-                                // Mark this chat so ChatModelFactory sets
-                                // ChatModel.isLastMessageDeleted = true and the chat list
-                                // shows the 🚫 indicator next to the preview.
-                                cache.deletedLastMessageChatIds.add(update.chatId)
-                            }
                             // Copy any downloaded media to app-private storage before TDLib
                             // potentially cleans up its own cached copy in the background.
                             backupMediaBeforeDelete(update.chatId, messageId)
                             chatLocalDataSource.markAsDeleted(update.chatId, messageId)
                         } else {
+                            // Not incoming or anti-delete off — undo the stash if we set it.
+                            cache.antiDeleteProtectedLastMessage.remove(update.chatId)
+                            cache.deletedLastMessageChatIds.remove(update.chatId)
                             chatLocalDataSource.deleteMessage(update.chatId, messageId)
                         }
                     }
