@@ -539,6 +539,11 @@ class ChatCache : ChatsCacheDataSource, UserCacheDataSource {
         }
         chatPermissionsCache[entity.id] = chat.permissions
         onlineMemberCount[entity.id] = entity.onlineCount
+        // Anti-Delete: restore the in-memory set from the persisted flag so the 🚫
+        // indicator survives app restarts without waiting for a new delete event.
+        if (entity.isLastMessageDeleted) {
+            deletedLastMessageChatIds.add(entity.id)
+        }
         putChat(chat)
     }
 
