@@ -271,14 +271,19 @@ fun VideoMessageBubble(
 
 
                 Box(modifier = boxModifier) {
-                    if (content.isViewOnce && !content.isViewOnceOpened && !msg.isDeleted) {
+                    if (content.isViewOnce && !content.isViewOnceOpened) {
                         // ✅ Matches PhotoMessageBubble's view-once overlay exactly:
                         // blurred thumbnail bg, 45% scrim, center icon that swaps
                         // between download / progress-ring / flame depending on
                         // state, "tap to view" label at the bottom. Tap routing is
                         // unchanged — still handled by VideoInteractionOverlay /
                         // onStartDownload below, only what's drawn changed here.
-                        VideoViewOnceOverlay(content = content)
+                        VideoViewOnceOverlay(
+                            content = content,
+                            msg = msg,
+                            isOutgoing = isOutgoing,
+                            showMetadata = showMetadata
+                        )
                     } else if (hasFullVideo || content.supportsStreaming || isProgressivePlayActive) {
                             // Show video player when:
                             // 1. Full video is downloaded (hasFullVideo)
@@ -534,7 +539,10 @@ fun VideoMessageBubble(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun VideoViewOnceOverlay(
-    content: MessageContent.Video
+    content: MessageContent.Video,
+    msg: MessageModel,
+    isOutgoing: Boolean,
+    showMetadata: Boolean
 ) {
     // ✅ Mirrors PhotoMessageBubble's view-once overlay 1:1 — same blur amount,
     // same scrim opacity, same icon sizes/backgrounds, same label placement.
@@ -614,13 +622,28 @@ private fun VideoViewOnceOverlay(
         }
         // Bottom label — same placement/style as the photo bubble.
         Text(
-            text = "Video, tap to view",
+            text = if (msg.isDeleted) "🚫 Deleted · view once" else "Video, tap to view",
             color = Color.White,
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 10.dp)
         )
+        // Anti-Delete: show timestamp + 🚫 icon for deleted view-once videos
+        if (msg.isDeleted && showMetadata) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(6.dp)
+                    .background(
+                        Color.Black.copy(alpha = 0.45f),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                MessageMetadata(msg, isOutgoing, Color.White)
+            }
+        }
     }
 }
 
