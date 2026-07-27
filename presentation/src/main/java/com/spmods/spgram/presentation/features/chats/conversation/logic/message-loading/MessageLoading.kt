@@ -1273,14 +1273,31 @@ internal fun DefaultChatComponent.setupMessageCollectors() {
                 messageIds.forEach(reactionUpdateSuppressedUntil::remove)
                 messageIds.forEach(remappedMessageIds::remove)
                 remappedMessageIds.entries.removeIf { (_, mappedId) -> mappedId in messageIds }
+
+                val antiDeleteEnabled = repositoryMessage.isAntiDeleteEnabledFlow().first()
+
                 _state.update { currentState ->
                     val currentMessages = currentState.messages.toMutableList()
-                    val removed = currentMessages.removeAll { messageIds.contains(it.id) }
-                    if (removed) {
-                        currentState.copy(messages = currentMessages)
-                    } else {
-                        currentState
+                    var changed = false
+                    val toRemove = mutableSetOf<Long>()
+
+                    for (i in currentMessages.indices) {
+                        val msg = currentMessages[i]
+                        if (msg.id !in messageIds) continue
+                        changed = true
+                        if (antiDeleteEnabled && !msg.isOutgoing) {
+                            // Anti-Delete: mark as deleted in UI so the 🚫 bubble
+                            // appears immediately without requiring a re-enter.
+                            currentMessages[i] = msg.copy(isDeleted = true)
+                        } else {
+                            toRemove.add(msg.id)
+                        }
                     }
+
+                    if (!changed) return@update currentState
+                    currentState.copy(
+                        messages = currentMessages.filter { it.id !in toRemove }
+                    )
                 }
             }
         }
