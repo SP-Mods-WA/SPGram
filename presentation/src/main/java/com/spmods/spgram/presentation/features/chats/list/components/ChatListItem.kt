@@ -388,7 +388,8 @@ private fun ChatListMessagePreview(
         chat.lastMessageDate,
         chat.lastMessageText,
         chat.lastMessageEntities,
-        chat.lastMessageContentType
+        chat.lastMessageContentType,
+        chat.isLastMessageDeleted
     ) {
         hasLastMessagePreview(chat)
     }
@@ -411,7 +412,8 @@ private fun ChatListMessagePreview(
         renderEntities,
         chat.lastMessageContentType,
         mediaLabel,
-        hasLastMessage
+        hasLastMessage,
+        chat.isLastMessageDeleted
     ) {
         if (!hasLastMessage) {
             PreviewPayload(renderText, renderEntities)
@@ -709,6 +711,8 @@ private fun shouldHideMediaLabelWhenThumbnailShown(contentType: String): Boolean
 }
 
 private fun hasLastMessagePreview(chat: ChatModel): Boolean {
+    // Anti-Delete: a soft-deleted message always has a preview (the 🚫 indicator).
+    if (chat.isLastMessageDeleted) return true
     return chat.lastMessageId != 0L ||
             chat.lastMessageDate != 0 ||
             chat.lastMessageText.isNotBlank() ||
