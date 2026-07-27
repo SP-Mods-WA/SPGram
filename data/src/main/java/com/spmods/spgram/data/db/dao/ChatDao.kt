@@ -38,4 +38,7 @@ interface ChatDao {
 
     @Query("UPDATE chats SET avatarPath = NULL WHERE avatarPath IS NOT NULL")
     suspend fun clearAvatarPaths()
+
+    @Query("UPDATE chats SET isLastMessageDeleted = :deleted WHERE id = :chatId")
+    suspend fun setLastMessageDeleted(chatId: Long, deleted: Boolean)
 }
