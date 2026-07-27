@@ -46,7 +46,7 @@ interface MessageDao {
     suspend fun updateMediaPathForMessage(chatId: Long, messageId: Long, fileId: Int, path: String)
 
     @Query(
-        "UPDATE messages SET mediaFileId = 0, mediaPath = NULL, mediaThumbnailPath = NULL WHERE (mediaFileId != 0 OR mediaPath IS NOT NULL OR mediaThumbnailPath IS NOT NULL) AND contentType IN ('photo', 'video', 'video_note', 'document', 'gif', 'voice', 'sticker', 'audio')"
+        "UPDATE messages SET mediaFileId = 0, mediaPath = NULL, mediaThumbnailPath = NULL WHERE (mediaFileId != 0 OR mediaPath IS NOT NULL OR mediaThumbnailPath IS NOT NULL) AND contentType IN ('photo', 'video', 'video_note', 'document', 'gif', 'voice', 'sticker', 'audio') AND isDeleted = 0"
     )
     suspend fun clearCachedMediaPaths()
 
