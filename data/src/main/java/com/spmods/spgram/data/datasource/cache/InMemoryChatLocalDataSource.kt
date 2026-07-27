@@ -273,4 +273,11 @@ class InMemoryChatLocalDataSource : ChatLocalDataSource {
             flow.update { it.filterValues { msg -> !msg.isDeleted } }
         }
     }
+
+    override suspend fun setLastMessageDeleted(chatId: Long, deleted: Boolean) {
+        chats.update { current ->
+            val chat = current[chatId] ?: return@update current
+            current + (chatId to chat.copy(isLastMessageDeleted = deleted))
+        }
+    }
 }
