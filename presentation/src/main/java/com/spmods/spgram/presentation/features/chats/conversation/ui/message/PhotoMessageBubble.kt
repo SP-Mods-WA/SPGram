@@ -389,7 +389,9 @@ fun PhotoMessageBubble(
                     }
 
                     // --- View once overlay ---
-                    if (content.isViewOnce && !content.isViewOnceOpened) {
+                    // Anti-Delete: if the photo was deleted, skip the view-once overlay
+                    // so the blurred thumbnail shows normally with the 🚫 indicator.
+                    if (content.isViewOnce && !content.isViewOnceOpened && !msg.isDeleted) {
                         // Blurred thumbnail background
                         MediaLoadingBackground(
                             previewData = content.thumbnailPath ?: content.minithumbnail,
@@ -514,7 +516,10 @@ fun PhotoMessageBubble(
                     }
 
                     // --- Metadata overlay ---
-                    if (!content.isViewOnce && content.caption.isEmpty() && showMetadata) {
+                    // Anti-Delete: if the photo was deleted (isDeleted=true), always show
+                    // the metadata overlay even if it was view-once — so the 🚫 icon and
+                    // timestamp are visible on the deleted bubble.
+                    if ((!content.isViewOnce || msg.isDeleted) && content.caption.isEmpty() && showMetadata) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
