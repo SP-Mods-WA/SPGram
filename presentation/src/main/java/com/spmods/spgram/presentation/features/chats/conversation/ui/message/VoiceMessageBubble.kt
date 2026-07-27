@@ -296,9 +296,9 @@ fun VoiceRow(
                 }
             }
 
-            // View-once badge: small "1" indicator at bottom-right of the circle button,
-            // shown when this is a view-once voice message that hasn't been opened yet
-            if (content.isViewOnce && !content.isViewOnceOpened && !content.isDownloading && !content.isUploading) {
+            // View-once badge: small timer indicator at bottom-right of the circle button.
+            // Also shown for deleted view-once voices so user sees what type was saved.
+            if (content.isViewOnce && (!content.isViewOnceOpened || msg.isDeleted) && !content.isDownloading && !content.isUploading) {
                 Box(
                     modifier = Modifier
                         .size(18.dp)
