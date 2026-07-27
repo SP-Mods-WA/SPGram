@@ -70,4 +70,8 @@ interface ChatLocalDataSource {
 
     // Wipes all anti-delete saved rows (called when feature is turned off).
     suspend fun clearDeletedMessages()
+
+    // Anti-Delete: directly marks the chat entity isLastMessageDeleted without
+    // going through the full model rebuild path — avoids the race with onSaveChat.
+    suspend fun setLastMessageDeleted(chatId: Long, deleted: Boolean)
 }
