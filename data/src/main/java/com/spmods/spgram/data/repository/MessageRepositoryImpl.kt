@@ -315,6 +315,12 @@ class MessageRepositoryImpl(
                             // potentially cleans up its own cached copy in the background.
                             backupMediaBeforeDelete(update.chatId, messageId)
                             chatLocalDataSource.markAsDeleted(update.chatId, messageId)
+                            // Directly persist isLastMessageDeleted on the chat row so the
+                            // ChatUpdateHandler DB fallback always finds the correct flag,
+                            // regardless of whether onSaveChat races or loses.
+                            if (cache.getChat(update.chatId)?.lastMessage?.id == messageId) {
+                                chatLocalDataSource.setLastMessageDeleted(update.chatId, true)
+                            }
                         } else {
                             // Not incoming or anti-delete off — undo the stash if we set it.
                             cache.antiDeleteProtectedLastMessage.remove(update.chatId)
