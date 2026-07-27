@@ -496,35 +496,7 @@ private fun MessageContentSelector(
                 )
             }
 
-            is MessageContent.Photo -> if (msg.isDeleted) {
-                // Anti-Delete: the photo was deleted — show the generic deleted bubble
-                // (🚫 icon + "Message deleted") instead of an image bubble with a broken
-                // or missing media path. TextMessageBubble already handles isDeleted.
-                TextMessageBubble(
-                    content = MessageContent.Text(
-                        text = "",
-                        entities = emptyList(),
-                        webPage = null
-                    ),
-                    msg = msg,
-                    isOutgoing = isOutgoing,
-                    isSameSenderAbove = senderGrouping.isSameSenderAbove,
-                    isSameSenderBelow = senderGrouping.isSameSenderBelow,
-                    fontSize = appearance.fontSize,
-                    letterSpacing = appearance.letterSpacing,
-                    bubbleRadius = appearance.bubbleRadius,
-                    isGroup = isGroup,
-                    showLinkPreviews = false,
-                    onReplyClick = onGoToReply,
-                    onReactionClick = { onReactionClick(msg.id, it) },
-                    onInstantViewClick = onInstantViewClick,
-                    onYouTubeClick = onYouTubeClick,
-                    onClick = onBubbleClick,
-                    onLongClick = onBubbleLongClick,
-                    toProfile = toProfile,
-                    onForwardOriginClick = onForwardOriginClick
-                )
-            } else {
+            is MessageContent.Photo -> {
                 PhotoMessageBubble(
                     content = content,
                     msg = msg,
@@ -550,35 +522,9 @@ private fun MessageContentSelector(
                     modifier = Modifier.wrapContentSize(),
                     downloadUtils = downloadUtils
                 )
-            } // end else (not deleted)
+            }
 
-            is MessageContent.Video -> if (msg.isDeleted) {
-                // Anti-Delete: same redirect as Photo — show deleted bubble.
-                TextMessageBubble(
-                    content = MessageContent.Text(
-                        text = "",
-                        entities = emptyList(),
-                        webPage = null
-                    ),
-                    msg = msg,
-                    isOutgoing = isOutgoing,
-                    isSameSenderAbove = senderGrouping.isSameSenderAbove,
-                    isSameSenderBelow = senderGrouping.isSameSenderBelow,
-                    fontSize = appearance.fontSize,
-                    letterSpacing = appearance.letterSpacing,
-                    bubbleRadius = appearance.bubbleRadius,
-                    isGroup = isGroup,
-                    showLinkPreviews = false,
-                    onReplyClick = onGoToReply,
-                    onReactionClick = { onReactionClick(msg.id, it) },
-                    onInstantViewClick = onInstantViewClick,
-                    onYouTubeClick = onYouTubeClick,
-                    onClick = onBubbleClick,
-                    onLongClick = onBubbleLongClick,
-                    toProfile = toProfile,
-                    onForwardOriginClick = onForwardOriginClick
-                )
-            } else {
+            is MessageContent.Video -> {
                 VideoMessageBubble(
                     content = content,
                     msg = msg,
@@ -604,7 +550,7 @@ private fun MessageContentSelector(
                     downloadUtils = downloadUtils,
                     isAnyViewerOpen = isAnyViewerOpen
                 )
-            } // end else (not deleted)
+            }
 
             is MessageContent.VideoNote -> {
                 VideoNoteBubble(
@@ -621,34 +567,7 @@ private fun MessageContentSelector(
                 )
             }
 
-            is MessageContent.Voice -> if (msg.isDeleted) {
-                // Anti-Delete: deleted voice bubble. If it was view-once, show a
-                // special indicator so the user knows what type was deleted.
-                TextMessageBubble(
-                    content = MessageContent.Text(
-                        text = if (content.isViewOnce) "🎤 View once voice" else "",
-                        entities = emptyList(),
-                        webPage = null
-                    ),
-                    msg = msg,
-                    isOutgoing = isOutgoing,
-                    isSameSenderAbove = senderGrouping.isSameSenderAbove,
-                    isSameSenderBelow = senderGrouping.isSameSenderBelow,
-                    fontSize = appearance.fontSize,
-                    letterSpacing = appearance.letterSpacing,
-                    bubbleRadius = appearance.bubbleRadius,
-                    isGroup = isGroup,
-                    showLinkPreviews = false,
-                    onReplyClick = onGoToReply,
-                    onReactionClick = { onReactionClick(msg.id, it) },
-                    onInstantViewClick = onInstantViewClick,
-                    onYouTubeClick = onYouTubeClick,
-                    onClick = onBubbleClick,
-                    onLongClick = onBubbleLongClick,
-                    toProfile = toProfile,
-                    onForwardOriginClick = onForwardOriginClick
-                )
-            } else {
+            is MessageContent.Voice -> {
                 VoiceMessageBubble(
                     content = content,
                     msg = msg,
