@@ -124,6 +124,13 @@ class ChatUpdateHandler(
                 // clear the deleted-last-message marker so the 🚫 indicator disappears.
                 if (!keepDeletedPreview) {
                     cache.deletedLastMessageChatIds.remove(update.chatId)
+                } else {
+                    // Anti-Delete: we are keeping the deleted message as the preview.
+                    // Ensure this chat is in the set so ChatModelFactory emits
+                    // isLastMessageDeleted = true, and schedule a DB save immediately
+                    // so the persisted ChatEntity reflects isLastMessageDeleted = true
+                    // before any restart can lose the in-memory state.
+                    cache.deletedLastMessageChatIds.add(update.chatId)
                 }
 
                 cache.updateChat(update.chatId) { chat ->
