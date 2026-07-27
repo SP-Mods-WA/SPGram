@@ -621,7 +621,34 @@ private fun MessageContentSelector(
                 )
             }
 
-            is MessageContent.Voice -> {
+            is MessageContent.Voice -> if (msg.isDeleted) {
+                // Anti-Delete: deleted voice bubble. If it was view-once, show a
+                // special indicator so the user knows what type was deleted.
+                TextMessageBubble(
+                    content = MessageContent.Text(
+                        text = if (content.isViewOnce) "🎤 View once voice" else "",
+                        entities = emptyList(),
+                        webPage = null
+                    ),
+                    msg = msg,
+                    isOutgoing = isOutgoing,
+                    isSameSenderAbove = senderGrouping.isSameSenderAbove,
+                    isSameSenderBelow = senderGrouping.isSameSenderBelow,
+                    fontSize = appearance.fontSize,
+                    letterSpacing = appearance.letterSpacing,
+                    bubbleRadius = appearance.bubbleRadius,
+                    isGroup = isGroup,
+                    showLinkPreviews = false,
+                    onReplyClick = onGoToReply,
+                    onReactionClick = { onReactionClick(msg.id, it) },
+                    onInstantViewClick = onInstantViewClick,
+                    onYouTubeClick = onYouTubeClick,
+                    onClick = onBubbleClick,
+                    onLongClick = onBubbleLongClick,
+                    toProfile = toProfile,
+                    onForwardOriginClick = onForwardOriginClick
+                )
+            } else {
                 VoiceMessageBubble(
                     content = content,
                     msg = msg,
