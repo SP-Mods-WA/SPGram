@@ -389,9 +389,7 @@ fun PhotoMessageBubble(
                     }
 
                     // --- View once overlay ---
-                    // Anti-Delete: if the photo was deleted, skip the view-once overlay
-                    // so the blurred thumbnail shows normally with the 🚫 indicator.
-                    if (content.isViewOnce && !content.isViewOnceOpened && !msg.isDeleted) {
+                    if (content.isViewOnce && !content.isViewOnceOpened) {
                         // Blurred thumbnail background
                         MediaLoadingBackground(
                             previewData = content.thumbnailPath ?: content.minithumbnail,
@@ -472,6 +470,7 @@ fun PhotoMessageBubble(
                         }
                         // Timer label bottom
                         val timerLabel = when {
+                            msg.isDeleted -> "🚫 Deleted · view once"
                             content.selfDestructSeconds <= 0 -> "Photo, tap to view"
                             else -> {
                                 val s = content.selfDestructSeconds
@@ -486,6 +485,21 @@ fun PhotoMessageBubble(
                                 .align(Alignment.BottomCenter)
                                 .padding(bottom = 10.dp)
                         )
+                        // Anti-Delete: show timestamp + 🚫 icon for deleted view-once photos
+                        if (msg.isDeleted && showMetadata) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(6.dp)
+                                    .background(
+                                        Color.Black.copy(alpha = 0.45f),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                MessageMetadata(msg, isOutgoing, Color.White)
+                            }
+                        }
                     }
 
                     // --- Upload progress ---
