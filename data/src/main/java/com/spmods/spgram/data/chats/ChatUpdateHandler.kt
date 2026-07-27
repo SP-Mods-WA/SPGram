@@ -122,14 +122,20 @@ class ChatUpdateHandler(
 
                 // If TDLib is setting a genuinely new last message (not our protected one),
                 // clear the deleted-last-message marker so the 🚫 indicator disappears.
+                // Fall back to the persisted DB value in case the stash race was lost —
+                // the DB isLastMessageDeleted flag is written by processCachedUpdate and
+                // survives even when the in-memory set was cleared too early.
                 if (!keepDeletedPreview) {
-                    cache.deletedLastMessageChatIds.remove(update.chatId)
+                    scope.launch(dispatchers.io) {
+                        val persistedDeleted = chatLocalDataSource.getChat(update.chatId)?.isLastMessageDeleted == true
+                        if (persistedDeleted) {
+                            cache.deletedLastMessageChatIds.add(update.chatId)
+                            onTriggerUpdate(update.chatId)
+                        } else {
+                            cache.deletedLastMessageChatIds.remove(update.chatId)
+                        }
+                    }
                 } else {
-                    // Anti-Delete: we are keeping the deleted message as the preview.
-                    // Ensure this chat is in the set so ChatModelFactory emits
-                    // isLastMessageDeleted = true, and schedule a DB save immediately
-                    // so the persisted ChatEntity reflects isLastMessageDeleted = true
-                    // before any restart can lose the in-memory state.
                     cache.deletedLastMessageChatIds.add(update.chatId)
                 }
 
