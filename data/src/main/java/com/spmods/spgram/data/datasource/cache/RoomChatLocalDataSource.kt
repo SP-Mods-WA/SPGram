@@ -141,4 +141,8 @@ class RoomChatLocalDataSource(
     override suspend fun clearDeletedMessages() {
         messageDao.clearDeletedMessages()
     }
+
+    override suspend fun setLastMessageDeleted(chatId: Long, deleted: Boolean) {
+        chatDao.setLastMessageDeleted(chatId, deleted)
+    }
 }
