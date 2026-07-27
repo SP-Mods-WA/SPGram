@@ -504,8 +504,7 @@ private fun MessageContentSelector(
                     content = MessageContent.Text(
                         text = "",
                         entities = emptyList(),
-                        linkPreview = null,
-                        linkPreviewAboveText = false
+                        webPage = null
                     ),
                     msg = msg,
                     isOutgoing = isOutgoing,
@@ -559,8 +558,7 @@ private fun MessageContentSelector(
                     content = MessageContent.Text(
                         text = "",
                         entities = emptyList(),
-                        linkPreview = null,
-                        linkPreviewAboveText = false
+                        webPage = null
                     ),
                     msg = msg,
                     isOutgoing = isOutgoing,
