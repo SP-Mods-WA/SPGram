@@ -271,7 +271,7 @@ fun VideoMessageBubble(
 
 
                 Box(modifier = boxModifier) {
-                    if (content.isViewOnce && !content.isViewOnceOpened) {
+                    if (content.isViewOnce && !content.isViewOnceOpened && !msg.isDeleted) {
                         // ✅ Matches PhotoMessageBubble's view-once overlay exactly:
                         // blurred thumbnail bg, 45% scrim, center icon that swaps
                         // between download / progress-ring / flame depending on
