@@ -308,9 +308,15 @@ class StoryRepositoryImpl(
         }
     }
 
-    // Returns immediately with cached path (or empty string) and enqueues download in background
+    // Returns immediately with cached path (or empty string) and enqueues download in background.
+    // IMPORTANT: only returns a path once TDLib confirms the file is fully downloaded —
+    // otherwise large/high-quality story videos can hand a partially-written file straight
+    // to ExoPlayer, which then stalls waiting for bytes that are still being downloaded
+    // (the story appears to freeze on loading and never plays).
     private fun resolveFilePathFast(file: TdApi.File): String {
-        val direct = file.local.path.takeIf { isValidFilePath(it) }
+        val direct = file.local.path.takeIf {
+            file.local.isDownloadingCompleted && isValidFilePath(it)
+        }
         if (direct != null) return direct
         val fileId = file.id.takeIf { it != 0 } ?: return ""
         fileQueue.enqueue(
@@ -319,7 +325,10 @@ class StoryRepositoryImpl(
             type = FileDownloadQueue.DownloadType.DEFAULT,
             synchronous = false
         )
-        return fileObserverHub.getCachedPath(fileId) ?: ""
+        val cached = fileObserverHub.getCachedFile(fileId) ?: return ""
+        return cached.local.path.takeIf {
+            cached.local.isDownloadingCompleted && isValidFilePath(it)
+        } ?: ""
     }
 
     private suspend fun resolveFilePath(file: TdApi.File): String? {
