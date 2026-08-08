@@ -688,8 +688,11 @@ fun ChatListContent(component: ChatListComponent) {
                                     }
                                     scope2.launch {
                                         runCatching {
-                                            storyViewerStories = storyRepository.getActiveStories(action.chatId)
                                             storyViewerChatId = action.chatId
+                                            storyRepository.observeActiveStories(action.chatId)
+                                                .collect { updatedStories ->
+                                                    storyViewerStories = updatedStories
+                                                }
                                         }.onFailure {
                                             // Story load failed — StoryBar will show error after timeout
                                             android.util.Log.e("ChatListContent", "Failed to load stories for chat ${action.chatId}", it)
