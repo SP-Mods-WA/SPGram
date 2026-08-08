@@ -11,6 +11,8 @@
 <string name="onboarding_page3_desc">Create groups and channels that scale from a few friends to entire communities, without missing a beat.</string>
 <string name="onboarding_page4_title">Welcome to SPGram</string>
 <string name="onboarding_page4_desc">Everything you need to stay close to the people who matter, all in one beautifully simple app.</string>
+<string name="onboarding_already_have_account">Already have an account?</string>
+<string name="onboarding_sign_in">Sign in</string>
         <string name="anti_delete_title">Anti-Delete Messages</string>
 <string name="anti_delete_subtitle">Keep deleted messages and media visible in chats</string>
         <string name="home_screen_preview_title">Home Screen</string>
