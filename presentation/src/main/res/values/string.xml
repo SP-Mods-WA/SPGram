@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+        <string name="onboarding_skip">Skip</string>
+<string name="onboarding_next">Next</string>
+<string name="onboarding_get_started">Get Started</string>
+<string name="onboarding_page1_title">Message at the speed of thought</string>
+<string name="onboarding_page1_desc">SPGram delivers your messages instantly, so conversations always feel like they\'re happening right now.</string>
+<string name="onboarding_page2_title">Your conversations, protected</string>
+<string name="onboarding_page2_desc">End-to-end encryption keeps your chats private. Only you and the people you talk to can read them.</string>
+<string name="onboarding_page3_title">Built for groups and communities</string>
+<string name="onboarding_page3_desc">Create groups and channels that scale from a few friends to entire communities, without missing a beat.</string>
+<string name="onboarding_page4_title">Welcome to SPGram</string>
+<string name="onboarding_page4_desc">Everything you need to stay close to the people who matter, all in one beautifully simple app.</string>
         <string name="anti_delete_title">Anti-Delete Messages</string>
 <string name="anti_delete_subtitle">Keep deleted messages and media visible in chats</string>
         <string name="home_screen_preview_title">Home Screen</string>
