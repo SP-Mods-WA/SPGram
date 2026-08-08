@@ -462,7 +462,13 @@ fun ZoomableImage(
     val applyTransforms = pageIndex == pagerIndex
     val context = LocalContext.current
 
-    var isHighResLoading by remember(data) { mutableStateOf(true) }
+    // Track high-res loading per page (pageIndex), not per path. Once this page has
+    // shown a fully-loaded image, a later path change (e.g. the low-res thumbnail
+    // path getting swapped out for the final full-quality path once download
+    // completes) is treated as an in-place upgrade — it crossfades in smoothly
+    // instead of flashing back to a full-screen loading spinner.
+    var isHighResLoading by remember(pageIndex) { mutableStateOf(true) }
+    var hasShownFullImage by remember(pageIndex) { mutableStateOf(false) }
 
     val thumbnailRequest = remember(data) {
         ImageRequest.Builder(context)
@@ -477,26 +483,32 @@ fun ZoomableImage(
             .data(data)
             .size(Size.ORIGINAL)
             .precision(Precision.EXACT)
-            .crossfade(false)
+            .crossfade(200)
             .build()
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        AsyncImage(
-            model = thumbnailRequest,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    if (applyTransforms) {
-                        translationX = zoomState.offsetX.value
-                        translationY = zoomState.offsetY.value
-                        scaleX = zoomState.scale.value
-                        scaleY = zoomState.scale.value
+        // Thumbnail only needs to be visible until the first full-quality frame
+        // has ever rendered for this page — once it has, keep it out of the
+        // composition so a later path upgrade can't flash the low-res image
+        // behind the crossfade again.
+        if (!hasShownFullImage) {
+            AsyncImage(
+                model = thumbnailRequest,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        if (applyTransforms) {
+                            translationX = zoomState.offsetX.value
+                            translationY = zoomState.offsetY.value
+                            scaleX = zoomState.scale.value
+                            scaleY = zoomState.scale.value
+                        }
                     }
-                }
-        )
+            )
+        }
 
         AsyncImage(
             model = fullRequest,
@@ -513,7 +525,23 @@ fun ZoomableImage(
                     }
                 },
             onState = { state ->
-                isHighResLoading = state is AsyncImagePainter.State.Loading
+                when (state) {
+                    is AsyncImagePainter.State.Loading -> {
+                        // Only show the blocking spinner the first time this page
+                        // loads. A subsequent reload of the *same* page (thumbnail
+                        // path -> real path once the download finishes) upgrades
+                        // quietly via crossfade instead of covering the image again.
+                        isHighResLoading = !hasShownFullImage
+                    }
+                    is AsyncImagePainter.State.Success -> {
+                        isHighResLoading = false
+                        hasShownFullImage = true
+                    }
+                    is AsyncImagePainter.State.Error -> {
+                        isHighResLoading = false
+                    }
+                    else -> Unit
+                }
             }
         )
 
